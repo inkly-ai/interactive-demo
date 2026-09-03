@@ -1,0 +1,29 @@
+{
+  "name": "interactive-demo-monorepo",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Open-source interactive product demos: a React player, an authoring CLI with a local editor, and a static build.",
+  "license": "MIT",
+  "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "npm run build --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "lint": "eslint .",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.20.0",
+    "@types/node": "^22.10.0",
+    "eslint": "^9.20.0",
+    "eslint-plugin-react-hooks": "^5.1.0",
+    "typescript": "^5.7.2",
+    "typescript-eslint": "^8.24.0",
+    "vitest": "^2.1.8"
+  }
+}

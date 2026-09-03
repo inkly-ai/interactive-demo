@@ -1,0 +1,12 @@
+{
+  "name": "@inkly-org/interactive-demo-editor",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Local editor served by the CLI's dev command. Not published.",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  }
+}

@@ -11,7 +11,7 @@ export type MadeWithBadgeProps = {
  * author's product.
  */
 export function MadeWithBadge({
-  href = 'https://github.com/inkly-ai/interactive-demo',
+  href = 'https://github.com/inkly-ai-org/interactive-demo',
   label = 'Made with interactive-demo',
   className,
 }: MadeWithBadgeProps = {}) {

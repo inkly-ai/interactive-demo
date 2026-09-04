@@ -146,7 +146,7 @@ const defaultCss = `
     margin-top: 6px;
 }
 [data-demo-theme="default"] .demo-callout-step {
-    font-family: "Geist Mono", ui-monospace, monospace;
+    font-family: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
     font-size: 11px;
     opacity: 0.85;
 }
@@ -236,7 +236,7 @@ const defaultCss = `
     padding: clamp(40px, 6cqi, 72px);
 }
 [data-demo-theme="default"] .demo-intro-title{
-    font-family: var(--demo-display-font, "Fraunces", "Newsreader", Georgia, serif);
+    font-family: var(--demo-display-font, "Waldenburg", "Inter", ui-sans-serif, system-ui, sans-serif);
     font-weight: 600;
     font-size: clamp(30px, 3.8cqi, 44px);
     line-height: 1.08;
@@ -300,7 +300,7 @@ const defaultCss = `
     }
 }
 [data-demo-theme="default"] .demo-intro-cta{
-    font-family: var(--font-geist, "Geist"), ui-sans-serif, system-ui, sans-serif;
+    font-family: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
     height: 42px;
     padding: 0 18px;
     font-size: 14px;
@@ -399,11 +399,11 @@ const defaultCss = `
     --demo-watermark-fg-hover: rgba(54,54,54,0.76);
 }
 [data-demo-theme="default"] .demo-builtwith-badge-text {
-    font-family: var(--demo-display-font, "Fraunces", "Newsreader", Georgia, "Times New Roman", serif);
+    font-family: var(--demo-display-font, "Waldenburg", "Inter", ui-sans-serif, system-ui, sans-serif);
     font-size: 12px;
     font-weight: 600;
     letter-spacing: 0.2px;
-    /* Newsreader's ascent ≫ descent, so centering the full em box leaves
+    /* The display face's ascent ≫ descent, so centering the full em box leaves
        the cap-block sitting high against the icon (measures ~1px high on
        the cap). Trim the line box to cap-height → baseline so align-items
        centers the actual letterforms, not the metric box with its empty
@@ -453,7 +453,7 @@ const defaultCss = `
    muted subtitle color, including markdown emphasis semantics and the
    mobile breakpoint below. */
 [data-demo-theme="default"] .demo-widget-title {
-    font-family: var(--demo-display-font, "Fraunces", "Newsreader", Georgia, serif);
+    font-family: var(--demo-display-font, "Waldenburg", "Inter", ui-sans-serif, system-ui, sans-serif);
     font-weight: 600;
     font-size: clamp(30px, 3.8cqi, 44px);
     line-height: 1.08;

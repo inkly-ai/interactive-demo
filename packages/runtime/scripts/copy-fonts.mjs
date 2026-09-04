@@ -12,9 +12,8 @@ const outDir = join(root, 'dist', 'fonts');
 mkdirSync(outDir, { recursive: true });
 
 export const FONT_FILES = [
-  '@fontsource/newsreader/files/newsreader-latin-600-normal.woff2',
-  '@fontsource/fraunces/files/fraunces-latin-600-normal.woff2',
-  '@fontsource-variable/geist/files/geist-latin-wght-normal.woff2',
+  '@fontsource-variable/inter/files/inter-latin-wght-normal.woff2',
+  '@fontsource-variable/geist-mono/files/geist-mono-latin-wght-normal.woff2',
 ];
 
 for (const specifier of FONT_FILES) {

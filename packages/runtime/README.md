@@ -85,15 +85,17 @@ font, radius) plus optional scoped CSS.
 
 ## Fonts (optional)
 
-The stylesheet never loads fonts. The default theme's display serif (Fraunces,
-Newsreader) and the Geist UI sans fall back to Georgia and the system sans
-unless you opt in:
+The stylesheet never loads fonts. The UI sans (Inter) and the mono (Geist
+Mono) fall back to the system fonts unless you opt in. The default theme's
+heading stack names "Waldenburg" first; it is not shipped (proprietary) and
+falls back to Inter:
 
 ```ts
 import "@inkly-org/interactive-demo/styles.css";
 import "@inkly-org/interactive-demo/fonts.css"; // self-hosted, no network
 ```
 
-`fonts.css` ships three `@font-face` rules pointing at `dist/fonts/*.woff2`
-(from the fontsource packages, SIL Open Font License). The CLI's `dev` and
+`fonts.css` ships two `@font-face` rules (Inter and Geist Mono, variable
+weights) pointing at `dist/fonts/*.woff2` from the fontsource packages, SIL
+Open Font License. The CLI's `dev` and
 `build` include it automatically as `player-fonts.css` next to `player.css`.

@@ -1,33 +1,27 @@
 /*
- * Optional web fonts for the default theme, self-hosted next to this file
- * under ./fonts/ (copied from the fontsource packages at build, SIL OFL 1.1).
- * The player and the stylesheet never load fonts on their own: link this file
- * (or `@import` it) when you want the display serif and Geist to render the
- * same everywhere instead of falling back to Georgia / the system sans.
+ * Optional web fonts, self-hosted next to this file under ./fonts/ (copied
+ * from the fontsource packages at build, SIL OFL 1.1). The player and the
+ * stylesheet never load fonts on their own: link this file (or `@import` it)
+ * when you want the UI sans and the mono to render the same everywhere
+ * instead of falling back to the system fonts.
  *
- * Fraunces / Newsreader: display headline weight only. Geist: the UI sans as
- * a variable font (100-900). Each swaps in when it loads (font-display: swap).
+ * Inter: the UI/body sans as a variable font (100-900). Geist Mono: the
+ * monospace used for step numbers and code-like labels. The display face
+ * named first in the default theme's heading stack ("Waldenburg") is not
+ * shipped; Inter is its fallback. Each face swaps in when it loads.
  */
 @font-face {
-    font-family: "Newsreader";
-    font-style: normal;
-    font-weight: 600;
-    font-display: swap;
-    src: url("./fonts/newsreader-latin-600-normal.woff2") format("woff2");
-}
-
-@font-face {
-    font-family: "Fraunces";
-    font-style: normal;
-    font-weight: 600;
-    font-display: swap;
-    src: url("./fonts/fraunces-latin-600-normal.woff2") format("woff2");
-}
-
-@font-face {
-    font-family: "Geist";
+    font-family: "Inter";
     font-style: normal;
     font-weight: 100 900;
     font-display: swap;
-    src: url("./fonts/geist-latin-wght-normal.woff2") format("woff2-variations");
+    src: url("./fonts/inter-latin-wght-normal.woff2") format("woff2-variations");
+}
+
+@font-face {
+    font-family: "Geist Mono";
+    font-style: normal;
+    font-weight: 100 900;
+    font-display: swap;
+    src: url("./fonts/geist-mono-latin-wght-normal.woff2") format("woff2-variations");
 }

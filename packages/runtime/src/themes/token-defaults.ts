@@ -7,13 +7,13 @@ export const demoThemeDefaultTokensById = {
     primary: '#5b6cff',
     secondary: '#ebebeb',
     radius: '10px',
-    font: 'Geist, ui-sans-serif, system-ui, sans-serif',
+    font: 'Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif',
   },
   mono: {
     primary: '#5b6cff',
     secondary: '#f5f5f5',
     radius: '10px',
-    font: 'Inter, ui-sans-serif, system-ui, sans-serif',
+    font: 'Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif',
   },
 } satisfies Record<'default' | 'mono', ThemeTokens>;
 

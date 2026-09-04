@@ -4,6 +4,9 @@ import { dirname, extname } from 'node:path';
 import type { AssetEntry, AssetKind } from '@inkly-org/interactive-demo/schema';
 import { ASSETS_DIR } from '../assets.js';
 import { LocalFsWorkspace, type WorkspaceProvider } from '../workspace.js';
+import { MAX_ASSET_BYTES, assertSafeAssetPath, nextGeneratedAssetId } from './asset-helpers.js';
+
+export { MAX_ASSET_BYTES, generatedAssetId } from './asset-helpers.js';
 
 /**
  * Internal HTTP API the local editor uses to read and write a demo. Mounted
@@ -40,8 +43,6 @@ export const EDITOR_API_DEMOS_PREFIX = `${EDITOR_API_PREFIX}demos/`;
 const MANIFEST_PATH = 'assets.json';
 const TEXT_EXTENSIONS = new Set(['.json', '.md', '.txt', '.svg', '.css', '.html', '.js']);
 const MAX_JSON_BODY = 20_000_000;
-/** Largest asset upload accepted, in bytes. The editor enforces the same cap. */
-export const MAX_ASSET_BYTES = 100 * 1024 * 1024;
 
 /** Allowed asset file names: a leading letter or digit, then letters, digits, `.`, `_`, `-`. */
 export const ASSET_NAME_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
@@ -168,31 +169,6 @@ function kindForContentType(contentType: string): AssetKind {
   if (contentType.startsWith('audio/')) return 'audio';
   if (contentType.startsWith('font/')) return 'font';
   return 'other';
-}
-
-function assetIdStem(assetPath: string): string {
-  const fileName = assetPath.split('/').pop() ?? '';
-  const stem = fileName.replace(/\.[^.]+$/, '');
-  const cleaned = stem
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 32);
-  return cleaned || 'asset';
-}
-
-function stablePathHash(value: string): string {
-  let hash = 2166136261;
-  for (let i = 0; i < value.length; i += 1) {
-    hash ^= value.charCodeAt(i);
-    hash = Math.imul(hash, 16777619);
-  }
-  return (hash >>> 0).toString(36).padStart(6, '0').slice(-6);
-}
-
-/** Stable, readable asset id: `<name>-<hash16>-<pathhash>`. */
-export function generatedAssetId(assetPath: string, sha256: string): string {
-  return `${assetIdStem(assetPath)}-${sha256.slice(0, 16)}-${stablePathHash(assetPath)}`;
 }
 
 interface Manifest {
@@ -357,6 +333,7 @@ export async function handleEditorApi(
           : requested;
       const previous = name === requested ? sameName : undefined;
       const relPath = `${ASSETS_DIR}/${name}`;
+      assertSafeAssetPath(relPath);
       await workspace.writeFile(demoDir, relPath, bytes);
       const headerType = String(req.headers['content-type'] ?? '').split(';')[0]?.trim();
       const contentType =
@@ -368,7 +345,7 @@ export async function handleEditorApi(
           : kindForContentType(contentType);
       const now = new Date().toISOString();
       const entry: AssetEntry = {
-        id: previous?.id ?? generatedAssetId(relPath, sha256),
+        id: previous?.id ?? nextGeneratedAssetId(manifest.assets, relPath, sha256),
         path: relPath,
         file: name,
         uri: undefined,
@@ -401,6 +378,7 @@ export async function handleEditorApi(
         return true;
       }
       const relPath = `${ASSETS_DIR}/${name}`;
+      assertSafeAssetPath(relPath);
       await workspace.deleteFile(demoDir, relPath);
       const manifest = await readManifest(workspace, demoDir);
       const next = manifest.assets.filter((entry) => entry.file !== name && entry.path !== relPath);

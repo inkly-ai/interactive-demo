@@ -144,6 +144,13 @@ function mount() {
         rootEl!.style.background = '#f7f7f7';
         return;
       }
+      if (id === 'default') {
+        rootEl!.style.background = '#f5f5f5';
+        rootEl!.style.backgroundImage =
+          'radial-gradient(circle at 1px 1px, rgba(0, 0, 0, 0.08) 0.5px, transparent 1px)';
+        rootEl!.style.backgroundSize = '10px 10px';
+        return;
+      }
       rootEl!.style.background = '#f5f5f7';
     }
 

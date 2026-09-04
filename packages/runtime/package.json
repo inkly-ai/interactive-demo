@@ -28,14 +28,15 @@
       "require": "./dist/themes/index.cjs"
     },
     "./styles.css": "./dist/styles.css",
-    "./player.js": "./dist/player.js"
+    "./player.js": "./dist/player.js",
+    "./schema/demo.config.json": "./dist/schema/demo.config.json"
   },
   "files": [
     "dist",
     "README.md"
   ],
   "scripts": {
-    "build": "tsup && cp src/theme/styles.css dist/styles.css",
+    "build": "tsup && cp src/theme/styles.css dist/styles.css && node scripts/emit-json-schema.mjs",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
   },
@@ -44,8 +45,6 @@
     "react-dom": ">=18.0.0"
   },
   "dependencies": {
-    "react-markdown": "^10.1.0",
-    "remark-gfm": "^4.0.1",
     "zod": "^3.24.1"
   },
   "devDependencies": {
@@ -56,6 +55,9 @@
     "jsdom": "^25.0.1",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
-    "tsup": "^8.3.5"
+    "react-markdown": "^10.1.0",
+    "remark-gfm": "^4.0.1",
+    "tsup": "^8.3.5",
+    "zod-to-json-schema": "^3.25.2"
   }
 }

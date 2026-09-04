@@ -13,8 +13,8 @@ export default defineConfig([
     dts: true,
     sourcemap: false,
     clean: true,
-    external: ["react", "react-dom"],
-    noExternal: ["react-markdown", "remark-gfm", "zod"],
+    external: ["react", "react-dom", "zod"],
+    noExternal: ["react-markdown", "remark-gfm"],
     outExtension({ format }) {
       return { js: format === "cjs" ? ".cjs" : ".js" };
     },

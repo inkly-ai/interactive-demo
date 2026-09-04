@@ -93,8 +93,8 @@ export async function runInit(options: InitOptions): Promise<InitResult> {
 
   if (!silent) {
     const next = options.noStarterDemo
-      ? `Next steps:\n  cd ${name}\n  interactive-demo init --demo <slug>\n  interactive-demo dev`
-      : `Next steps:\n  cd ${name}\n  interactive-demo dev\n  open http://localhost:3000`;
+      ? `Next steps:\n  cd ${name}\n  npm install\n  npx interactive-demo init --demo <slug>\n  npm run dev`
+      : `Next steps:\n  cd ${name}\n  npm install\n  npm run dev\n  open http://localhost:3000`;
     process.stdout.write(
       `Scaffolded ${options.noStarterDemo ? 'empty project' : 'project'} ${name} at ${dir}\n\n${next}\n`,
     );

@@ -89,11 +89,11 @@ describe('page header', () => {
   // The starter pins its own theme; drop it so the project-level theme is what the header sees.
   const config = parseDemo({ ...(starterDemoConfig('tour', 'My Tour') as object), theme: undefined });
 
-  it('renders the project name, a slash and the demo title, with no buttons by default', () => {
+  it('renders the demo title with no crumb and no buttons by default', () => {
     const html = renderDemoPage({ template, config, assets: [], project: { name: 'Acme Demos' } });
     expect(html).toContain('<header class="demo-page-bar">');
-    expect(html).toContain('<a href="/" class="demo-page-hub-name">Acme Demos</a>');
-    expect(html).toContain('<span class="demo-page-slash" aria-hidden="true">/</span>');
+    expect(html).not.toContain('demo-page-hub-name');
+    expect(html).not.toContain('demo-page-slash');
     expect(html).toContain('<span class="demo-page-demo-name">My Tour</span>');
     expect(html).toContain('<span class="demo-page-cta-scope" data-theme="default"></span>');
     expect(html).not.toContain('demo-page-cta is-primary');
@@ -148,7 +148,7 @@ describe('page header', () => {
       demoTitle: '"Quoted"',
       themeId: 'default',
     });
-    expect(header).toContain('A &lt;b&gt;');
+    expect(header).not.toContain('A <b>');
     expect(header).toContain('X &amp; Y');
     expect(header).toContain('&quot;Quoted&quot;');
     expect(header).toContain('src="https://cdn.example/logo.png"');

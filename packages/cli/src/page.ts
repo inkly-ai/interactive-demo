@@ -197,16 +197,6 @@ export function renderPageHeader(input: {
       '<span class="demo-page-divider" aria-hidden="true"></span>',
     );
   }
-  // The project name is the crumb before the demo title; skip it when the
-  // brand word already says the same thing (the scaffold defaults brand.name
-  // to the project name).
-  const projectName = input.project?.name?.trim() ?? '';
-  if (projectName && projectName.toLowerCase() !== brandWord.toLowerCase()) {
-    parts.push(
-      `<a href="/" class="demo-page-hub-name">${escapeHtml(projectName)}</a>`,
-      '<span class="demo-page-slash" aria-hidden="true">/</span>',
-    );
-  }
   parts.push(`<span class="demo-page-demo-name">${escapeHtml(input.demoTitle)}</span>`);
   const ctas: string[] = [];
   if (brand?.secondaryCta) ctas.push(externalLink('demo-page-cta is-secondary', brand.secondaryCta));

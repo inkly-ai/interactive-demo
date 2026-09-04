@@ -1,0 +1,3006 @@
+/* Structural defaults for tokens the runtime no longer injects.
+   The 4-token cascade (primary, secondary, font, radius) flows through
+   `<Demo.Root>`'s inline style; the rest (bg, fg, primary-fg,
+   secondary-fg, font-size, controls-bg) live as fixed defaults so the
+   structural CSS keeps rendering without authored tokens. Themes that
+   need different surfaces override them directly in their preset CSS. */
+@property --zoom {
+  syntax: "<number>";
+  inherits: true;
+  initial-value: 1;
+}
+
+@property --focal-x {
+  syntax: "<number>";
+  inherits: true;
+  initial-value: 0.5;
+}
+
+@property --focal-y {
+  syntax: "<number>";
+  inherits: true;
+  initial-value: 0.5;
+}
+
+.demo-root {
+  --demo-bg: #ffffff;
+  --demo-fg: #0a0a0a;
+  --demo-primary-fg: #ffffff;
+  --demo-secondary-fg: #18181b;
+  --demo-font-size: 14px;
+  color: var(--demo-fg);
+  /* No background here on purpose: the player card (`.demo-player-shell`)
+     already paints `var(--demo-bg)` as its own surface, and this wrapper
+     extends to whatever width its parent gives it — so any bg here leaks
+     out past the card. The host (e.g. the /d/[slug] wrapper or an
+     embedding page) is responsible for whatever sits behind the demo. */
+  background: transparent;
+  font-family: var(--demo-font);
+  font-size: var(--demo-font-size);
+}
+
+.demo-player {
+  position: relative;
+  display: grid;
+  gap: 0;
+  /* Single width constraint that honors both a horizontal cap AND a
+     vertical cap WITHOUT breaking the declared aspect ratio:
+     `width = min(container - gutter, max-w, max-h × ratio,
+     (host-h - gutter - player chrome) × ratio)`. Whichever bound binds
+     first decides the size; aspect-ratio on `.demo-player-shell`
+     derives height from this width, so the ratio is always preserved.
+     The ratio falls back to 16/9 until a content step (or the demo's
+     explicit `aspectRatio`) lands in the CSS vars.
+
+     The `100cqh` term makes the player shrink when the host's height
+     is constrained — it resolves against the nearest `container-type:
+     size` ancestor (or falls back to the small viewport, which matches
+     the host area when the bundle runs inside an iframe).
+
+     The `--demo-shadow-gutter` inset is subtracted from BOTH the
+     container-width and container-height terms so the player stops
+     a small distance before its containing block's edge. Kept very
+     small (2px each side) by design — the visual contract is "player
+     hugs the canvas edge." A side effect is that the shell's
+     box-shadow gets clipped inside iframes; hosts that want a fully
+     visible shadow should either provide extra outer padding on the
+     iframe or override `--demo-shadow-gutter` to something larger.
+
+     The gutter is intentionally NOT declared on `.demo-player` itself
+     so that ancestors (host frames, embed wrappers, mobile shells)
+     can set `--demo-shadow-gutter: 0` to opt into a fully edge-to-edge
+     player. Inheritance + the `var(..., 20px)` fallback gives the same
+     default as before for anything that doesn't override it. */
+  width: min(
+    calc(100% - var(--demo-shadow-gutter, 20px)),
+    1100px,
+    calc(618.75px * var(--demo-stage-w, 16) / var(--demo-stage-h, 9)),
+    calc(
+      max(
+        0px,
+        100cqh - var(--demo-shadow-gutter, 20px) -
+          var(--demo-vertical-chrome-h, 0px)
+      ) * var(--demo-stage-w, 16) / var(--demo-stage-h, 9)
+    )
+  );
+  /* Floor at the narrowest mobile viewport we target (iPhone SE / older
+     small Androids at 320 CSS px). Below this the player would overflow
+     its container rather than shrink — preferred to a layout where the
+     control bar collapses past usability. */
+  min-width: 320px;
+  margin-inline: auto;
+  container-type: inline-size;
+  container-name: demo-player;
+  /* Single source of truth for the mobile footer's rendered height.
+     It is declared on the container itself because rules inside
+     `@container demo-player (...)` only style descendants, not the
+     queried container. */
+  --demo-mobile-footer-h: 44px;
+  /* Establish a compositing layer here too — some themes move the
+     rounded `overflow: hidden` clip up to `.demo-player`
+     instead of the shell, and the same rounded-corner
+     bleed bug applies. Cheap to set universally and only matters when
+     the theme actually clips at this level. */
+  isolation: isolate;
+}
+
+.demo-player:has(> .demo-header),
+.demo-player:has(> .demo-mobile-footer) {
+  --demo-vertical-chrome-h: var(--demo-header-h, 51px);
+}
+
+/* Fullscreen. The player normally caps at 1100px (plus a 618.75px design
+   height term) so it sits as a card on the page. When the host frame
+   (`.demo-root`, the element `FullscreenButton` promotes) enters
+   fullscreen, drop those design caps and let the player grow to fill the
+   screen — aspect ratio is still preserved by the height-derived width
+   term, now measured against the viewport instead of the host card. */
+.demo-root:fullscreen {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  background: #000;
+}
+
+.demo-root:fullscreen .demo-player,
+.demo-player:fullscreen {
+  --demo-shadow-gutter: 0px;
+  max-width: none;
+  width: min(
+    100%,
+    calc(
+      max(0px, 100vh - var(--demo-vertical-chrome-h, 0px)) *
+        var(--demo-stage-w, 16) / var(--demo-stage-h, 9)
+    )
+  );
+}
+
+.demo-player-shell {
+  position: relative;
+  width: 100%;
+  /* Owns the aspect-ratio + visible chrome so the cover slot stays sized
+     and looks like a single card as Stage / Intro / Outro swap in.
+     Height derives from `width` via this ratio — and `.demo-player`
+     already clamps width to honor both the horizontal and vertical
+     caps, so adding a `max-height` here would only break the ratio. */
+  aspect-ratio: var(--demo-stage-w, 16) / var(--demo-stage-h, 9);
+  /* Intentionally NOT `overflow: hidden`: hotspot/message annotations are
+     allowed to spill past the rounded card border and stack above the
+     header (see `.demo-annotation-layer`'s z-index). The visible card
+     identity still comes from the border + shadow + radius below — and
+     child backdrops carry their own rounding so corners stay clean. */
+  background: var(--demo-bg);
+  background-clip: padding-box;
+  border-radius: var(--demo-radius);
+  border: 1px solid color-mix(in srgb, var(--demo-fg) 14%, transparent);
+  box-shadow: 0 18px 42px rgb(0 0 0 / 12%);
+  outline: none;
+  /* No `isolation: isolate` here — annotations need to compete with the
+     sibling `.demo-header`'s stacking order to render above it when they
+     overflow upward. The outer `.demo-player` still isolates so embeds
+     don't bleed into surrounding page chrome. */
+  --ctrl-btn: 32px;
+  --ctrl-btn-primary: 36px;
+  --ctrl-icon: 18px;
+  --ctrl-indicator-fs: 12px;
+  --ctrl-row-gap: 6px;
+  --ctrl-stack-gap: 8px;
+  --ctrl-pad-x: 16px;
+  --ctrl-pad-top: 22px;
+  --ctrl-pad-bot: 12px;
+  --ctrl-segment-h: 14px;
+  --ctrl-track-h: 4px;
+  --ctrl-track-active-h: 5px;
+  --ctrl-track-hover-h: 7px;
+  --caption-fs: 16px;
+}
+
+.demo-player-shell::after {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  bottom: 0;
+  height: calc(
+    var(--ctrl-pad-top) + var(--ctrl-segment-h) + var(--ctrl-stack-gap) +
+      var(--ctrl-btn) + var(--ctrl-pad-bot)
+  );
+  z-index: 5;
+  border-radius: 0 0 var(--demo-radius) var(--demo-radius);
+  background: var(
+    --demo-controls-bg,
+    linear-gradient(
+      to top,
+      rgb(0 0 0 / 58%),
+      rgb(0 0 0 / 26%) 62%,
+      transparent
+    )
+  );
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 200ms ease;
+}
+
+.demo-player-shell:has(.demo-controls:hover)::after,
+.demo-player-shell:has(.demo-controls:focus-within)::after,
+.demo-player-shell[data-controls="always"]::after {
+  opacity: 1;
+}
+
+.demo-player-shell[data-size='sm'] {
+  --ctrl-btn: 26px;
+  --ctrl-btn-primary: 30px;
+  --ctrl-icon: 14px;
+  --ctrl-indicator-fs: 11px;
+  --ctrl-row-gap: 4px;
+  --ctrl-stack-gap: 6px;
+  --ctrl-pad-x: 12px;
+  --ctrl-pad-top: 16px;
+  --ctrl-pad-bot: 8px;
+  --ctrl-segment-h: 12px;
+  --ctrl-track-h: 3px;
+  --ctrl-track-active-h: 4px;
+  --ctrl-track-hover-h: 6px;
+  --caption-fs: 14px;
+}
+
+.demo-player-shell:focus-visible {
+  outline: 2px solid var(--demo-primary);
+  outline-offset: 2px;
+}
+
+.demo-player-shell[data-size='lg'] {
+  --ctrl-btn: 42px;
+  --ctrl-btn-primary: 48px;
+  --ctrl-icon: 24px;
+  --ctrl-indicator-fs: 13px;
+  --ctrl-row-gap: 8px;
+  --ctrl-stack-gap: 10px;
+  --ctrl-pad-x: 24px;
+  --ctrl-pad-top: 32px;
+  --ctrl-pad-bot: 18px;
+  --ctrl-segment-h: 16px;
+  --ctrl-track-h: 5px;
+  --ctrl-track-active-h: 6px;
+  --ctrl-track-hover-h: 8px;
+  --caption-fs: 18px;
+}
+
+.demo-stage {
+  position: absolute;
+  inset: 0;
+  /* Intentionally NOT `overflow: hidden`: messages anchored near the
+     stage edge must be allowed to spill out so they can stack above
+     surrounding chrome. The actual background image is still clipped
+     by `.demo-stage-inner` (which carries `overflow: hidden`), so the
+     rounded card look stays intact. */
+  /* Chrome (bg, border, shadow, radius) lives on `.demo-player-shell`
+     so Stage / Intro / Outro share the same card. */
+  /* Inherit the parent's rounding so the inner image clip matches the
+     player's curved corners — keeps child background colors / images
+     from showing a hard rectangle inside the rounded frame. */
+  border-radius: inherit;
+  transition:
+    --zoom 600ms cubic-bezier(0.4, 0, 0.2, 1),
+    --focal-x 600ms cubic-bezier(0.4, 0, 0.2, 1),
+    --focal-y 600ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Header above the shell owns the rounded top corners; flatten the shell's
+   top so the two pieces meet flush. (`.demo-stage` no longer has its own
+   chrome, but mirroring the rule keeps custom layouts consistent if a
+   theme reapplies it.) */
+.demo-player:has(.demo-header) .demo-player-shell,
+.demo-player:has(.demo-header) .demo-stage {
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+
+.demo-stage-inner {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  /* Carries the rounded clip that `.demo-stage` used to: the scaled
+     image stays inside the card while the sibling annotation layer is
+     free to spill out. The zoom transform applies to the child
+     `<img>` (below), not this box — that way `overflow: hidden` here
+     clips the scaled visual to the stage rectangle instead of letting
+     a scaled `inner` paint over the header. */
+  overflow: hidden;
+  border-radius: inherit;
+  contain: paint;
+  isolation: isolate;
+}
+
+.demo-stage-inner[data-zoomable] {
+  cursor: zoom-out;
+}
+
+.demo-stage-inner[data-zoomable][data-zoomed-out] {
+  cursor: zoom-in;
+}
+
+.demo-stage-image {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  user-select: none;
+  /* Pinned to the bottom of the player's z-stack — controls,
+     annotations, footer, and cover content all paint above. */
+  position: relative;
+  z-index: 0;
+  /* Zoom transform lives on the image itself rather than its parent
+     so the parent's `overflow: hidden` clips the scaled visual to the
+     stage box. Origin / scale are driven by the same CSS vars the
+     stage publishes, so the focal-point math is identical. */
+  transform-origin: calc(var(--focal-x) * 100%) calc(var(--focal-y) * 100%);
+  transform: translateZ(0) scale(var(--zoom, 1));
+  /* Zoom/focal interpolation happens on the registered inherited
+     custom properties published by `.demo-stage`, not on `transform`
+     itself. That keeps the image and annotation planes on the same
+     intermediate value throughout the zoom animation. */
+  transition: none;
+  backface-visibility: hidden;
+  will-change: transform;
+}
+
+.demo-stage-effect-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  transform-origin: calc(var(--focal-x) * 100%) calc(var(--focal-y) * 100%);
+  transform: translateZ(0) scale(var(--zoom, 1));
+  transition: none;
+  backface-visibility: hidden;
+  will-change: transform;
+}
+
+.demo-stage-html {
+  display: block;
+  border: 0;
+  background: #fff;
+  position: absolute;
+  z-index: 0;
+  max-width: none;
+  max-height: none;
+}
+
+.demo-annotation-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  /* Sit above everything else in the player frame — including the
+     sibling `.demo-header` (z-10 in extends-header mode) and the
+     `.demo-controls` strip (z-6). When a message anchored near a stage
+     edge overflows, it should paint on top of those rather than be
+     hidden behind them. */
+  z-index: 50;
+  /* This layer is the source-asset coordinate plane for target markers:
+     pointer dots, area outlines, and blur regions. It shares the exact
+     zoom transform used by the asset so targets stay pinned to source
+     content throughout zoom/pan motion. Message chrome counter-scales below
+     so its text stays visually stable while the target point follows the
+     zoomed screenshot. */
+  transform-origin: calc(var(--focal-x) * 100%) calc(var(--focal-y) * 100%);
+  transform: translateZ(0) scale(var(--zoom, 1));
+  transition: none;
+  backface-visibility: hidden;
+  will-change: transform;
+}
+
+.demo-annotation-layer > * {
+  pointer-events: auto;
+}
+
+.demo-annotation-point {
+  position: absolute;
+  top: calc(var(--y) * 100%);
+  left: calc(var(--x) * 100%);
+  /* `position: absolute` with only `left` set defaults to shrink-to-fit
+     width, which collapses to min-content as available space (= stage
+     width − left) approaches zero — i.e. the message turns into a
+     single-word-per-line column whenever the anchor nears the right
+     edge. Pinning to max-content makes the layout box independent of
+     position, so the box stays the same width whether the anchor sits
+     at x=0.1 or x=0.95. Inner max-widths on the label/callout still
+     wrap long text. */
+  width: max-content;
+  transform: translate(-50%, -50%) scale(calc(1 / var(--zoom, 1)));
+  transform-origin: 50% 50%;
+  transition: top 600ms cubic-bezier(0.4, 0, 0.2, 1),
+    left 600ms cubic-bezier(0.4, 0, 0.2, 1),
+    transform 600ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.demo-hotspot-pointer.demo-annotation-point {
+  width: 0;
+  height: 0;
+  transform: none;
+  transform-origin: center;
+  /* Travel duration defaults to 600ms; the simulated cursor overrides
+     --pointer-travel-ms per-move so longer glides take proportionally
+     longer (distance-scaled). */
+  transition: top var(--pointer-travel-ms, 600ms) cubic-bezier(0.4, 0, 0.2, 1),
+    left var(--pointer-travel-ms, 600ms) cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ── Simulated cursor (Screen-Studio style) ─────────────────────────────
+   Rendered for message hotspots with variant "cursor". The visible glyph
+   lives on a full-stage `.demo-sim-cursor-track` that is positioned with a
+   GPU-composited `transform: translate(x%, y%)` (NOT top/left) — that is
+   what keeps the glide crisp on the compositor thread instead of paint-
+   bound. The hit target + hover-reveal card stay on the point wrapper.
+
+   State is driven by attributes on the track:
+     • traveling ([data-moving])  → arrow, motion-blurred, distance-scaled
+     • arrived   (default)        → pointing hand (popped in) over a pulsing
+                                     "radar" dot marking where it points
+     • pressing  ([data-pressing])→ hand depresses + ripple ring pings out */
+.demo-sim-cursor-track {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  /* Translate a full-stage box by a % of its OWN size (= the stage), which
+     lands the origin-anchored glyph exactly on (x, y). Compositor-only. */
+  transform: translate3d(calc(var(--x) * 100%), calc(var(--y) * 100%), 0);
+  /* Crisp Screen-Studio-style easing: decisive ease-in, long soft landing.
+     Longhand so the --pointer-travel-ms var reliably drives the duration
+     (the distance-scaled value set per-move from JS). */
+  transition-property: transform;
+  transition-duration: var(--pointer-travel-ms, 600ms);
+  transition-timing-function: cubic-bezier(0.45, 0.05, 0.15, 1);
+  will-change: transform;
+  z-index: 2;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .demo-sim-cursor-track {
+    transition: none;
+  }
+}
+
+.demo-sim-cursor {
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform-origin: 0 0;
+  transform: scale(calc(1 / var(--zoom, 1)));
+  transition: transform 150ms cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: transform, filter;
+}
+
+.demo-sim-cursor-glyph {
+  position: absolute;
+  display: block;
+  filter: drop-shadow(0 3px 5px rgb(0 0 0 / 35%));
+  transition:
+    opacity 130ms ease,
+    transform 240ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Tip alignment: pin each glyph so its pointing tip lands on the origin;
+   transform-origin matches that tip so scale animations pivot there. */
+.demo-sim-cursor-arrow {
+  left: -1px;
+  top: -1px;
+  transform-origin: 1px 1px;
+}
+
+.demo-sim-cursor-hand {
+  left: -13px;
+  top: -3px;
+  transform-origin: 13px 3px;
+}
+
+/* Arrived (default): hand visible, arrow gone. */
+.demo-sim-cursor-arrow {
+  opacity: 0;
+  transform: scale(0.9);
+}
+
+.demo-sim-cursor-hand {
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* Traveling: arrow visible (slightly enlarged for energy), hand shrinks
+   away. When movement ends the hand transitions 0.5 → 1 through the
+   overshoot easing above, giving a "pop" on arrival with no keyframes. */
+.demo-sim-cursor-track[data-moving] .demo-sim-cursor-arrow {
+  opacity: 1;
+  transform: scale(1.06);
+}
+
+.demo-sim-cursor-track[data-moving] .demo-sim-cursor-hand {
+  opacity: 0;
+  transform: scale(0.5);
+}
+
+/* Motion blur during the glide, scaled by travel distance (--cursor-blur). */
+.demo-sim-cursor-track[data-moving] .demo-sim-cursor {
+  filter: blur(var(--cursor-blur, 2px));
+}
+
+/* The hand is the clickable hit area once arrived (the rest of the track
+   stays pointer-events:none). Re-enabled only when not moving so a click
+   can't land mid-glide. */
+.demo-sim-cursor-track:not([data-moving]) .demo-sim-cursor-hand {
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+/* Hover (state-driven [data-hover]) slightly enlarges the hand — pivots on
+   the fingertip so the tip stays pinned to the point. */
+.demo-sim-cursor-track[data-hover]:not([data-moving]) .demo-sim-cursor-hand {
+  transform: scale(1.14);
+}
+
+/* Click press: depress the whole cursor + ping the ripple ring. */
+.demo-sim-cursor-track[data-pressing] .demo-sim-cursor {
+  transform: scale(calc(0.86 / var(--zoom, 1)));
+}
+
+/* ── Destination reticle ─────────────────────────────────────────────────
+   A hollow center (donut) marking exactly where the hand points, wrapped by
+   a slowly-pulsing halo ring. On hover the center fills solid. Only shown
+   once arrived — and it must vanish INSTANTLY when a move starts (not fade
+   while translating, which looks like the pulse "flies off" with the
+   cursor). The center is the .demo-sim-cursor-dot (a ring); ::before is the
+   slow halo. */
+.demo-sim-cursor-dot {
+  position: absolute;
+  left: 0;
+  top: 0;
+  /* border-box so the 3px border is INSIDE the 16px box — otherwise the
+     border box is 22px and the -8px margin no longer centers it on the
+     origin (the point the hand tips at), which threw the dot off-center. */
+  box-sizing: border-box;
+  width: 16px;
+  height: 16px;
+  margin: -8px 0 0 -8px;
+  border-radius: 999px;
+  border: 3px solid var(--demo-primary);
+  background: transparent;
+  /* No 1/zoom here — the parent .demo-sim-cursor already counter-scales for
+     zoom (like the hand/arrow). Applying it again double-shrank the dot. */
+  transform-origin: 50% 50%;
+  opacity: 0;
+  transition:
+    opacity 180ms ease 100ms,
+    background-color 160ms ease;
+}
+
+/* Slow-pulsing halo ring. */
+.demo-sim-cursor-dot::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 42px;
+  height: 42px;
+  border-radius: 999px;
+  border: 2px solid var(--demo-primary);
+  transform: translate(-50%, -50%) scale(0.85);
+  opacity: 0.4;
+}
+
+.demo-sim-cursor-track:not([data-moving]) .demo-sim-cursor-dot {
+  opacity: 1;
+  /* Subtle breathing on the hollow center, in sync with the halo. */
+  animation: demo-sim-cursor-dot-pulse 2000ms ease-in-out infinite;
+}
+
+.demo-sim-cursor-track:not([data-moving]) .demo-sim-cursor-dot::before {
+  animation: demo-sim-cursor-pulse 2000ms ease-out infinite;
+}
+
+/* Hover fills the hollow center solid. */
+.demo-sim-cursor-track[data-hover]:not([data-moving]) .demo-sim-cursor-dot {
+  background: var(--demo-primary);
+}
+
+/* Vanish instantly on move start — no transition, so the reticle never
+   travels with the cursor. */
+.demo-sim-cursor-track[data-moving] .demo-sim-cursor-dot {
+  opacity: 0;
+  transition: none;
+}
+
+.demo-sim-cursor-ring {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 16px;
+  height: 16px;
+  margin: -8px 0 0 -8px;
+  border-radius: 999px;
+  border: 2px solid var(--demo-primary);
+  opacity: 0;
+  transform: scale(0.3);
+}
+
+.demo-sim-cursor-track[data-pressing] .demo-sim-cursor-ring {
+  animation: demo-sim-cursor-ping 440ms ease-out;
+}
+
+/* Hover-reveal card: in cursor mode the message card is hidden until the
+   viewer hovers the cursor/card (state-driven [data-hover]). Kept in layout
+   (opacity, not display) so auto-anchor can still measure it. */
+.demo-hotspot-pointer[data-cursor] .demo-hotspot-label {
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    opacity 160ms ease,
+    transform 280ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.demo-hotspot-pointer[data-cursor][data-hover]:not([data-moving])
+  .demo-hotspot-label,
+.demo-hotspot-pointer[data-cursor][data-auto]:not([data-moving])
+  .demo-hotspot-label,
+.demo-hotspot-pointer[data-cursor][data-show-message]:not([data-moving])
+  .demo-hotspot-label {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* In cursor mode the wrapper only carries the (invisible) hit target + the
+   hover card, so snap it to the point instead of gliding — the visible
+   motion belongs to the track. Keeps the click area ready on arrival. */
+.demo-hotspot-pointer[data-cursor].demo-annotation-point {
+  transition: none;
+}
+
+/* Outer ring ping — hidden+small until the inner dot hits its contraction
+   trough at EXACTLY 50%, then radiates outward and fades. Same 2000ms
+   duration as the inner heartbeat, started in the same frame, with the
+   appear-frame locked to the inner's 50% trough — so they stay phase-locked
+   (ring fires precisely as the center is smallest). */
+@keyframes demo-sim-cursor-pulse {
+  0%,
+  46% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.6);
+  }
+  50% {
+    opacity: 0.7;
+    transform: translate(-50%, -50%) scale(0.7);
+  }
+  80% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(1.8);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(1.8);
+  }
+}
+
+/* Center reticle "heartbeat" — expand→contract with the trough at EXACTLY
+   50%, the same frame the outer ring pings. No 1/zoom (the parent counter-
+   scales), matching the other glyphs. */
+@keyframes demo-sim-cursor-dot-pulse {
+  0%,
+  100% {
+    transform: scale(1.3);
+  }
+  50% {
+    transform: scale(0.85);
+  }
+}
+
+@keyframes demo-sim-cursor-ping {
+  0% {
+    opacity: 0.6;
+    transform: scale(0.3);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(3);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .demo-sim-cursor-track[data-moving] .demo-sim-cursor {
+    filter: none;
+  }
+  .demo-sim-cursor-track[data-pressing] .demo-sim-cursor-ring,
+  .demo-sim-cursor-track .demo-sim-cursor-dot,
+  .demo-sim-cursor-track .demo-sim-cursor-dot::before {
+    animation: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .demo-stage,
+  .demo-stage-image,
+  .demo-stage-effect-layer,
+  .demo-annotation-layer,
+  .demo-annotation-point,
+  .demo-annotation-region,
+  .demo-hotspot-pointer.demo-annotation-point {
+    transition: none;
+  }
+}
+
+.demo-annotation-region {
+  position: absolute;
+  top: calc(var(--y) * 100%);
+  left: calc(var(--x) * 100%);
+  width: calc(var(--w) * 100%);
+  height: calc(var(--h) * 100%);
+  transition: none;
+}
+
+.demo-hotspot-pointer {
+  --hotspot-bg: var(--demo-primary);
+  --hotspot-fg: var(--demo-primary-fg);
+  --hotspot-accent: var(--demo-primary);
+  --hotspot-radius: 8px;
+  --hotspot-pointer-gap: calc(17px / var(--zoom, 1));
+
+  display: block;
+  color: var(--hotspot-fg);
+  background: transparent;
+}
+
+.demo-hotspot-trigger {
+  display: grid;
+  place-items: center;
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  transform: translate(-50%, -50%) scale(calc(1 / var(--zoom, 1)));
+  transform-origin: center;
+}
+
+.demo-hotspot-dot {
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  background: var(--hotspot-bg);
+  box-shadow: 0 0 0 6px color-mix(in srgb, var(--hotspot-bg) 22%, transparent);
+  animation: demo-hotspot-pulse 1000ms ease-out infinite;
+}
+
+.demo-hotspot-label {
+  position: absolute;
+  display: grid;
+  gap: 6px;
+  padding: 16px;
+  border-radius: var(--hotspot-radius);
+  color: var(--hotspot-fg);
+  background: var(--hotspot-bg);
+  box-shadow: 0 16px 36px rgb(0 0 0 / 26%);
+  font: inherit;
+  text-align: var(--hotspot-text-align, left);
+  white-space: normal;
+  opacity: 1;
+  cursor: pointer;
+  width: max-content;
+  max-width: min(300px, 44cqi);
+  transition:
+    opacity 180ms ease,
+    transform 280ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Hover lift — pointer, callout, and area message cards scale up
+   slightly on hover to signal clickability. Anchored variants compose
+   the scale onto their existing transforms so the card grows in place. */
+.demo-hotspot-callout,
+.demo-hotspot-area-message {
+  transition: transform 280ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.demo-hotspot-label:hover,
+.demo-hotspot-label:focus-visible {
+  transform: scale(1.03);
+}
+
+.demo-hotspot-pointer.demo-hotspot-anchor-right .demo-hotspot-label {
+  left: var(--hotspot-pointer-gap);
+  top: 50%;
+  transform-origin: 0% 50%;
+  transform: translate(
+      var(--hotspot-label-shift-x, 0px),
+      calc(-50% + var(--hotspot-label-shift-y, 0px))
+    )
+    scale(calc(1 / var(--zoom, 1)));
+}
+
+.demo-hotspot-pointer.demo-hotspot-anchor-left .demo-hotspot-label {
+  right: var(--hotspot-pointer-gap);
+  top: 50%;
+  transform-origin: 100% 50%;
+  transform: translate(
+      var(--hotspot-label-shift-x, 0px),
+      calc(-50% + var(--hotspot-label-shift-y, 0px))
+    )
+    scale(calc(1 / var(--zoom, 1)));
+}
+
+.demo-hotspot-pointer.demo-hotspot-anchor-bottom .demo-hotspot-label {
+  left: 50%;
+  top: var(--hotspot-pointer-gap);
+  transform-origin: 50% 0%;
+  transform: translate(
+      calc(-50% + var(--hotspot-label-shift-x, 0px)),
+      var(--hotspot-label-shift-y, 0px)
+    )
+    scale(calc(1 / var(--zoom, 1)));
+}
+
+.demo-hotspot-pointer.demo-hotspot-anchor-top .demo-hotspot-label {
+  left: 50%;
+  bottom: var(--hotspot-pointer-gap);
+  transform-origin: 50% 100%;
+  transform: translate(
+      calc(-50% + var(--hotspot-label-shift-x, 0px)),
+      var(--hotspot-label-shift-y, 0px)
+    )
+    scale(calc(1 / var(--zoom, 1)));
+}
+
+.demo-hotspot-pointer.demo-hotspot-anchor-right .demo-hotspot-label:hover,
+.demo-hotspot-pointer.demo-hotspot-anchor-right .demo-hotspot-label:focus-visible {
+  transform: translate(
+      var(--hotspot-label-shift-x, 0px),
+      calc(-50% + var(--hotspot-label-shift-y, 0px))
+    )
+    scale(calc(1.03 / var(--zoom, 1)));
+}
+
+.demo-hotspot-pointer.demo-hotspot-anchor-left .demo-hotspot-label:hover,
+.demo-hotspot-pointer.demo-hotspot-anchor-left .demo-hotspot-label:focus-visible {
+  transform: translate(
+      var(--hotspot-label-shift-x, 0px),
+      calc(-50% + var(--hotspot-label-shift-y, 0px))
+    )
+    scale(calc(1.03 / var(--zoom, 1)));
+}
+
+.demo-hotspot-pointer.demo-hotspot-anchor-bottom .demo-hotspot-label:hover,
+.demo-hotspot-pointer.demo-hotspot-anchor-bottom .demo-hotspot-label:focus-visible {
+  transform: translate(
+      calc(-50% + var(--hotspot-label-shift-x, 0px)),
+      var(--hotspot-label-shift-y, 0px)
+    )
+    scale(calc(1.03 / var(--zoom, 1)));
+}
+
+.demo-hotspot-pointer.demo-hotspot-anchor-top .demo-hotspot-label:hover,
+.demo-hotspot-pointer.demo-hotspot-anchor-top .demo-hotspot-label:focus-visible {
+  transform: translate(
+      calc(-50% + var(--hotspot-label-shift-x, 0px)),
+      var(--hotspot-label-shift-y, 0px)
+    )
+    scale(calc(1.03 / var(--zoom, 1)));
+}
+
+.demo-hotspot-callout.demo-hotspot-anchor-auto:hover,
+.demo-hotspot-callout.demo-hotspot-anchor-auto:focus-visible {
+  transform: translate(-50%, -50%) scale(calc(1.03 / var(--zoom, 1)));
+}
+
+.demo-hotspot-callout.demo-hotspot-anchor-top:hover,
+.demo-hotspot-callout.demo-hotspot-anchor-top:focus-visible {
+  transform: translate(-50%, calc(-100% - 12px))
+    scale(calc(1.03 / var(--zoom, 1)));
+}
+
+.demo-hotspot-callout.demo-hotspot-anchor-bottom:hover,
+.demo-hotspot-callout.demo-hotspot-anchor-bottom:focus-visible {
+  transform: translate(-50%, 12px) scale(calc(1.03 / var(--zoom, 1)));
+}
+
+.demo-hotspot-callout.demo-hotspot-anchor-left:hover,
+.demo-hotspot-callout.demo-hotspot-anchor-left:focus-visible {
+  transform: translate(calc(-100% - 12px), -50%)
+    scale(calc(1.03 / var(--zoom, 1)));
+}
+
+.demo-hotspot-callout.demo-hotspot-anchor-right:hover,
+.demo-hotspot-callout.demo-hotspot-anchor-right:focus-visible {
+  transform: translate(12px, -50%) scale(calc(1.03 / var(--zoom, 1)));
+}
+
+.demo-hotspot-pointer[data-moving] .demo-hotspot-label {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0ms linear, transform 0ms linear;
+}
+
+.demo-hotspot-pointer[data-anchor-settling] .demo-hotspot-label {
+  transition: opacity 0ms linear, transform 0ms linear;
+}
+
+/* Auto-anchor not yet resolved: keep the label hidden (and un-transitioned, so
+   anchor changes while hidden don't slide) until the probe's final pass marks
+   it ready. The pulsing dot still shows; only the text card waits. Removing
+   this attribute reveals the card via the base label opacity transition with
+   its transform already at the resolved side — a fade-in, never a slide. */
+.demo-hotspot-pointer[data-anchor-pending] .demo-hotspot-label {
+  opacity: 0;
+  pointer-events: none;
+  transition: none;
+}
+
+.demo-stage[data-annotation-motion] .demo-hotspot-label,
+.demo-stage[data-annotation-motion] .demo-hotspot-callout,
+.demo-stage[data-annotation-motion] .demo-hotspot-area-message {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0ms linear, transform 0ms linear;
+}
+
+.demo-stage[data-annotation-edit-mode] .demo-hotspot-trigger,
+.demo-stage[data-annotation-edit-mode] .demo-hotspot-label,
+.demo-stage[data-annotation-edit-mode] .demo-hotspot-callout,
+.demo-stage[data-annotation-edit-mode] .demo-hotspot-area-message {
+  transition: transform 600ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .demo-hotspot-label {
+    transition: none;
+  }
+}
+
+.demo-hotspot-label-text {
+  display: block;
+}
+
+.demo-hotspot-pointer.demo-hotspot-anchor-left {
+  flex-direction: row-reverse;
+}
+
+.demo-hotspot-pointer.demo-hotspot-anchor-top,
+.demo-hotspot-pointer.demo-hotspot-anchor-bottom {
+  flex-direction: column;
+  align-items: center;
+}
+
+.demo-hotspot-pointer.demo-hotspot-anchor-top {
+  flex-direction: column-reverse;
+}
+
+.demo-hotspot-callout {
+  --hotspot-bg: var(--demo-primary);
+  --hotspot-fg: var(--demo-primary-fg);
+  --hotspot-accent: var(--demo-primary);
+  --hotspot-radius: 8px;
+
+  display: grid;
+  gap: 6px;
+  padding: 16px;
+  border-radius: var(--hotspot-radius);
+  color: var(--hotspot-fg);
+  background: var(--hotspot-bg);
+  box-shadow: 0 16px 36px rgb(0 0 0 / 26%);
+  text-align: var(--hotspot-text-align, left);
+  cursor: pointer;
+  font: inherit;
+  width: max-content;
+  max-width: min(300px, 44cqi);
+}
+
+.demo-hotspot-callout:focus-visible,
+.demo-hotspot-area-message:focus-visible,
+.demo-hotspot-label:focus-visible {
+  outline: none;
+}
+
+.demo-hotspot-callout.demo-hotspot-anchor-auto {
+  transform: translate(-50%, -50%) scale(calc(1 / var(--zoom, 1)));
+}
+
+.demo-hotspot-callout.demo-hotspot-anchor-top {
+  transform: translate(-50%, calc(-100% - 12px))
+    scale(calc(1 / var(--zoom, 1)));
+}
+
+.demo-hotspot-callout.demo-hotspot-anchor-bottom {
+  transform: translate(-50%, 12px) scale(calc(1 / var(--zoom, 1)));
+}
+
+.demo-hotspot-callout.demo-hotspot-anchor-left {
+  transform: translate(calc(-100% - 12px), -50%)
+    scale(calc(1 / var(--zoom, 1)));
+}
+
+.demo-hotspot-callout.demo-hotspot-anchor-right {
+  transform: translate(12px, -50%) scale(calc(1 / var(--zoom, 1)));
+}
+
+.demo-callout-body,
+.demo-hotspot-label-text {
+  font-size: 14px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+/* Reset margins around block elements emitted by the markdown renderer
+   (react-markdown wraps lines in <p> by default, and lists ship with
+   browser default margins/padding). Targets the three markdown-rendered
+   surfaces so authors can paste rich content without it looking bolted
+   on. */
+.demo-callout-body p,
+.demo-hotspot-label-text p,
+.demo-text-annotation p {
+  margin: 0;
+}
+.demo-callout-body p + p,
+.demo-hotspot-label-text p + p,
+.demo-text-annotation p + p {
+  margin-top: 6px;
+}
+.demo-callout-body ul,
+.demo-hotspot-label-text ul,
+.demo-text-annotation ul {
+  list-style: disc outside;
+  margin: 4px 0;
+  padding-inline-start: 1.25em;
+}
+.demo-callout-body ol,
+.demo-hotspot-label-text ol,
+.demo-text-annotation ol {
+  list-style: decimal outside;
+  margin: 4px 0;
+  padding-inline-start: 1.25em;
+}
+.demo-callout-body li,
+.demo-hotspot-label-text li,
+.demo-text-annotation li {
+  margin: 2px 0;
+}
+.demo-callout-body a,
+.demo-hotspot-label-text a,
+.demo-text-annotation a {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.demo-callout-body a:hover,
+.demo-hotspot-label-text a:hover,
+.demo-text-annotation a:hover {
+  text-decoration-thickness: 2px;
+}
+
+.demo-callout-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 6px;
+}
+
+.demo-callout-step {
+  font-size: 12px;
+  opacity: 0.8;
+}
+
+.demo-callout-nav {
+  display: flex;
+  gap: 4px;
+}
+
+.demo-callout-nav-button {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border-radius: 6px;
+  color: var(--demo-primary-fg);
+  background: rgb(255 255 255 / 16%);
+  cursor: pointer;
+  transition: transform 80ms ease, background 120ms ease;
+}
+
+.demo-callout-nav-button:hover:not(:disabled) {
+  background: rgb(255 255 255 / 28%);
+}
+
+.demo-callout-nav-button:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.demo-callout-nav-button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.demo-callout-nav-button .demo-icon {
+  width: 18px;
+  height: 18px;
+}
+
+.demo-callout-nav-button-text {
+  width: auto;
+  min-width: 56px;
+  height: 30px;
+  padding: 0 12px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.demo-hotspot-area {
+  --hotspot-bg: var(--demo-primary);
+  --hotspot-fg: var(--demo-primary-fg);
+  --hotspot-accent: var(--demo-primary);
+  --hotspot-radius: 8px;
+
+  pointer-events: none;
+}
+
+.demo-hotspot-area-outline {
+  position: absolute;
+  inset: 0;
+  padding: 0;
+  border: 2px solid var(--hotspot-bg);
+  border-radius: var(--hotspot-radius);
+  background: color-mix(in srgb, var(--hotspot-bg) 14%, transparent);
+  box-shadow: 0 0 0 9999px color-mix(in srgb, var(--demo-fg) 28%, transparent);
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+.demo-hotspot-area-message {
+  position: absolute;
+  display: grid;
+  gap: 6px;
+  padding: 14px;
+  border-radius: var(--hotspot-radius);
+  color: var(--hotspot-fg);
+  background: var(--hotspot-bg);
+  box-shadow: 0 16px 36px rgb(0 0 0 / 26%);
+  text-align: var(--hotspot-text-align, left);
+  cursor: pointer;
+  font: inherit;
+  pointer-events: auto;
+  width: max-content;
+  max-width: min(300px, 44cqi);
+  transition: transform 280ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .demo-hotspot-area-message {
+    transition: none;
+  }
+}
+
+.demo-hotspot-area.demo-hotspot-anchor-auto .demo-hotspot-area-message {
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(calc(1 / var(--zoom, 1)));
+}
+
+.demo-hotspot-area.demo-hotspot-anchor-top .demo-hotspot-area-message {
+  bottom: 100%;
+  left: 50%;
+  transform: translate(-50%, -12px) scale(calc(1 / var(--zoom, 1)));
+  transform-origin: 50% 100%;
+}
+
+.demo-hotspot-area.demo-hotspot-anchor-bottom .demo-hotspot-area-message {
+  top: 100%;
+  left: 50%;
+  transform: translate(-50%, 12px) scale(calc(1 / var(--zoom, 1)));
+  transform-origin: 50% 0%;
+}
+
+.demo-hotspot-area.demo-hotspot-anchor-left .demo-hotspot-area-message {
+  right: 100%;
+  top: 50%;
+  transform: translate(-12px, -50%) scale(calc(1 / var(--zoom, 1)));
+  transform-origin: 100% 50%;
+}
+
+.demo-hotspot-area.demo-hotspot-anchor-right .demo-hotspot-area-message {
+  left: 100%;
+  top: 50%;
+  transform: translate(12px, -50%) scale(calc(1 / var(--zoom, 1)));
+  transform-origin: 0% 50%;
+}
+
+.demo-hotspot-area.demo-hotspot-anchor-auto .demo-hotspot-area-message:hover,
+.demo-hotspot-area.demo-hotspot-anchor-auto .demo-hotspot-area-message:focus-visible {
+  transform: translate(-50%, -50%) scale(calc(1.03 / var(--zoom, 1)));
+}
+
+.demo-hotspot-area.demo-hotspot-anchor-top .demo-hotspot-area-message:hover,
+.demo-hotspot-area.demo-hotspot-anchor-top .demo-hotspot-area-message:focus-visible {
+  transform: translate(-50%, -12px) scale(calc(1.03 / var(--zoom, 1)));
+}
+
+.demo-hotspot-area.demo-hotspot-anchor-bottom .demo-hotspot-area-message:hover,
+.demo-hotspot-area.demo-hotspot-anchor-bottom .demo-hotspot-area-message:focus-visible {
+  transform: translate(-50%, 12px) scale(calc(1.03 / var(--zoom, 1)));
+}
+
+.demo-hotspot-area.demo-hotspot-anchor-left .demo-hotspot-area-message:hover,
+.demo-hotspot-area.demo-hotspot-anchor-left .demo-hotspot-area-message:focus-visible {
+  transform: translate(-12px, -50%) scale(calc(1.03 / var(--zoom, 1)));
+}
+
+.demo-hotspot-area.demo-hotspot-anchor-right .demo-hotspot-area-message:hover,
+.demo-hotspot-area.demo-hotspot-anchor-right .demo-hotspot-area-message:focus-visible {
+  transform: translate(12px, -50%) scale(calc(1.03 / var(--zoom, 1)));
+}
+
+.demo-stage[data-annotation-motion] .demo-annotation-region {
+  transition: none;
+}
+
+/* Snap the annotation *position* on video steps — the overlay appears
+   only once the recorded gesture has played through, so it should land
+   in place rather than sliding in. This targets the positioning
+   containers only (the pointer wrapper and the area region); the message
+   cards keep their own transition so the hover-scale lift still animates
+   (matching image steps). Callouts are excluded because the positioning
+   element and the hover-scaled card are one and the same — they have no
+   auto-anchor pass to slide, so there's nothing to snap. */
+.demo-stage[data-background-type='video']
+  .demo-annotation-point:not(.demo-hotspot-callout),
+.demo-stage[data-background-type='video'] .demo-annotation-region {
+  transition: none;
+}
+
+/* The pointer's attention pulse is an in-place animation (an expanding
+   box-shadow ring), independent of the pan transition disabled above. It
+   should play on every stage type — image, video, and HTML — so the dot
+   stays a live affordance. Only `prefers-reduced-motion` (below) turns it
+   off. */
+
+.demo-stage[data-background-type='video']
+  .demo-hotspot-pointer[data-moving]
+  .demo-hotspot-label {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0ms linear, transform 0ms linear;
+}
+
+.demo-blur-annotation {
+  backdrop-filter: blur(var(--blur));
+  background: rgb(255 255 255 / 18%);
+  pointer-events: none;
+}
+
+.demo-text-annotation {
+  max-width: min(320px, 50cqi);
+  padding: 6px 8px;
+  border-radius: calc(var(--demo-radius) * 0.5);
+  background: color-mix(in srgb, var(--demo-bg) 88%, transparent);
+  line-height: 1.3;
+  box-shadow: 0 8px 18px rgb(0 0 0 / 12%);
+}
+
+.demo-caption {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: 16px;
+  z-index: 3;
+  max-width: min(720px, calc(100% - 48px));
+  padding: 8px 14px;
+  border-radius: 10px;
+  color: #ffffff;
+  background: rgb(0 0 0 / 78%);
+  font-size: var(--caption-fs);
+  font-weight: 500;
+  line-height: 1.35;
+  text-align: center;
+  pointer-events: none;
+  transition: bottom 200ms ease;
+}
+
+.demo-player-shell:has(.demo-controls:hover) .demo-caption,
+.demo-player-shell:has(.demo-controls:focus-within) .demo-caption {
+  bottom: calc(
+    var(--ctrl-pad-bot) + var(--ctrl-btn) + var(--ctrl-stack-gap) +
+      var(--ctrl-segment-h) + 12px
+  );
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .demo-caption {
+    transition: none;
+  }
+}
+
+.demo-controls {
+  position: absolute;
+  inset-inline: 0;
+  bottom: 0;
+  /* Above intro/outro (z-5) so the player bar stays interactable on the
+     cover screens — the user explicitly opted into this behavior. */
+  z-index: 6;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ctrl-stack-gap);
+  padding: var(--ctrl-pad-top) var(--ctrl-pad-x) var(--ctrl-pad-bot);
+  border-radius: 0 0 var(--demo-radius) var(--demo-radius);
+  background: transparent;
+  pointer-events: auto;
+  opacity: 0;
+  transition: opacity 200ms ease;
+}
+
+/* Hover-reveal: only the controls' own bottom region acts as the hover
+   trigger, so the rest of the stage stays uncluttered. Focus inside also
+   keeps them visible for keyboard users; consumers can opt into always-on
+   via `controls="always"` (set as `data-controls="always"` on the shell). */
+.demo-controls:hover,
+.demo-controls:focus-within,
+.demo-player-shell[data-controls="always"] .demo-controls {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .demo-player-shell::after,
+  .demo-controls {
+    transition: opacity 120ms ease;
+  }
+}
+
+.demo-controls-row {
+  display: flex;
+  align-items: center;
+  gap: var(--ctrl-row-gap);
+  pointer-events: none;
+}
+
+.demo-controls-row > * {
+  pointer-events: auto;
+}
+
+/* Minimal controls: no progress segments, just two clusters pushed to
+   opposite ends — prev/next on the left, mute (voiceover only) + copy
+   link + fullscreen on the right. */
+.demo-controls-minimal .demo-controls-row {
+  justify-content: space-between;
+}
+
+.demo-controls-group {
+  display: flex;
+  align-items: center;
+  gap: var(--ctrl-row-gap);
+  pointer-events: auto;
+}
+
+/* Copy-link confirmation tint. The bar foreground is white, so lift the
+   checkmark to the theme accent for a beat after a successful copy. */
+.demo-control-share[data-copied] {
+  color: var(--demo-primary, #ffffff);
+}
+
+.demo-controls-row .demo-step-indicator {
+  margin-left: auto;
+  /* Default to the theme's foreground so the indicator stays legible on
+     light controls (cream / white themes). Themes whose controls strip
+     is intentionally dark (monochrome black,
+     bold black, etc.) explicitly override this to a light tone. */
+  color: var(--demo-step-indicator-color, var(--demo-fg));
+}
+
+.demo-control-button {
+  display: grid;
+  place-items: center;
+  width: var(--ctrl-btn);
+  height: var(--ctrl-btn);
+  padding: 0;
+  border-radius: 999px;
+  color: #ffffff;
+  background: transparent;
+  cursor: pointer;
+  pointer-events: auto;
+  transition: transform 80ms ease, background 120ms ease;
+}
+
+.demo-control-primary {
+  width: var(--ctrl-btn-primary);
+}
+
+.demo-control-button:hover:not(:disabled) {
+  background: rgb(255 255 255 / 12%);
+}
+
+.demo-control-button:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.demo-control-button:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.demo-icon {
+  display: block;
+  width: var(--ctrl-icon);
+  height: var(--ctrl-icon);
+  flex: 0 0 auto;
+}
+
+.demo-progress {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  pointer-events: auto;
+}
+
+.demo-progress-segments {
+  display: flex;
+  align-items: center;
+  gap: clamp(6px, 0.8cqi, 12px);
+  flex: 1;
+  min-width: 0;
+}
+
+.demo-progress-segment {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex: 1 1 0;
+  min-width: 18px;
+  height: var(--ctrl-segment-h);
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  transition: flex-grow 260ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.demo-progress-segment[data-active] {
+  flex-grow: 2.4;
+}
+
+.demo-progress-segment-track {
+  position: relative;
+  flex: 1;
+  height: var(--ctrl-track-h);
+  border-radius: 999px;
+  overflow: hidden;
+  background: rgb(255 255 255 / 36%);
+  transition: background 200ms ease, height 200ms ease;
+}
+
+.demo-progress-segment[data-active] .demo-progress-segment-track {
+  height: var(--ctrl-track-active-h);
+  background: color-mix(in srgb, var(--demo-primary) 32%, rgb(255 255 255 / 28%));
+}
+
+.demo-progress-segment:hover .demo-progress-segment-track,
+.demo-progress-segment:focus-visible .demo-progress-segment-track {
+  height: var(--ctrl-track-hover-h);
+  background: rgb(255 255 255 / 52%);
+}
+
+.demo-progress-segment[data-active]:hover .demo-progress-segment-track,
+.demo-progress-segment[data-active]:focus-visible .demo-progress-segment-track {
+  height: var(--ctrl-track-hover-h);
+  background: color-mix(in srgb, var(--demo-primary) 32%, rgb(255 255 255 / 28%));
+}
+
+.demo-progress-segment-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: inherit;
+  background: var(--demo-primary);
+  /* No transition: TICK fires every animation frame and sets the width
+     directly, so native rAF rendering already paints a smooth fill.
+     A CSS transition would interpolate on top of those updates and
+     leave the visual width permanently lagging behind state. */
+}
+
+.demo-progress-segment-preview {
+  position: absolute;
+  bottom: calc(100% + 12px);
+  left: 50%;
+  width: clamp(160px, 18cqi, 240px);
+  border-radius: 8px;
+  overflow: hidden;
+  background: rgb(20 20 20 / 92%);
+  border: 1px solid rgb(255 255 255 / 14%);
+  box-shadow: 0 12px 28px rgb(0 0 0 / 40%);
+  /* Centered over the segment. `--preview-shift` (set by ProgressBar's
+     positioning handler) nudges it horizontally only as much as needed to
+     keep it inside the player on edge segments — it stays 0 (fully
+     centered) everywhere else. */
+  transform: translateX(calc(-50% + var(--preview-shift, 0px))) translateY(6px);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 160ms ease, transform 160ms ease, visibility 160ms ease;
+  z-index: 9;
+}
+
+.demo-progress-segment-preview img {
+  display: block;
+  width: 100%;
+  /* Track the live player ratio (set on the demo root) so the scrub
+     thumbnail matches the frame it previews; falls back to 16:9. */
+  aspect-ratio: var(--demo-stage-w, 16) / var(--demo-stage-h, 9);
+  object-fit: cover;
+}
+
+.demo-progress-segment-preview-cover {
+  position: relative;
+  display: block;
+  width: 100%;
+  aspect-ratio: var(--demo-stage-w, 16) / var(--demo-stage-h, 9);
+  overflow: hidden;
+  background: var(--demo-bg);
+}
+
+.demo-progress-segment-preview-label {
+  display: block;
+  padding: 4px 8px 6px;
+  color: #ffffff;
+  font-size: 12px;
+  line-height: 1.2;
+}
+
+.demo-progress-segment:hover .demo-progress-segment-preview,
+.demo-progress-segment:focus-visible .demo-progress-segment-preview {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(calc(-50% + var(--preview-shift, 0px))) translateY(0);
+}
+
+/* Edge segments stay centered over the segment too; the preview would be
+   up to 240px wide and overflow the player's left/right boundary on the
+   first/last (narrow) segments, so ProgressBar measures and sets
+   `--preview-shift` to nudge it just enough to stay inside the player —
+   it remains 0 (fully centered) everywhere there's room. Pure CSS can't
+   clamp an absolutely-positioned card to a non-parent boundary, hence the
+   JS handler. */
+
+.demo-controls:has(.demo-progress-segment:hover),
+.demo-controls:has(.demo-progress-segment:focus-visible) {
+  z-index: 8;
+}
+
+.demo-step-indicator {
+  min-width: 48px;
+  font-size: var(--ctrl-indicator-fs);
+  text-align: right;
+}
+
+.demo-chapters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.demo-chapter-button {
+  min-height: 34px;
+  padding: 0 12px;
+  border: 1px solid color-mix(in srgb, var(--demo-fg) 14%, transparent);
+  border-radius: calc(var(--demo-radius) * 0.75);
+  color: var(--demo-fg);
+  background: var(--demo-bg);
+  font: inherit;
+  cursor: pointer;
+}
+
+.demo-chapter-button[aria-current='step'] {
+  color: var(--demo-primary-fg);
+  border-color: var(--demo-primary);
+  background: var(--demo-primary);
+}
+
+@keyframes demo-hotspot-pulse {
+  0% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--demo-primary) 45%, transparent);
+  }
+  100% {
+    box-shadow: 0 0 0 18px transparent;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .demo-stage-image,
+  .demo-annotation-layer {
+    transition: none;
+  }
+
+  .demo-hotspot-dot {
+    animation: none;
+  }
+
+  .demo-hotspot-label,
+  .demo-hotspot-callout,
+  .demo-hotspot-area-message {
+    transition: none;
+  }
+}
+
+/* CC toggle active state */
+.demo-control-cc[data-active] {
+  background: rgb(255 255 255 / 18%);
+}
+
+/* Cover screen.
+ *
+ * Naming heads-up: every cover-step selector uses the legacy
+ * `.demo-intro-*` prefix even though the schema-level step kind is
+ * `cover`. This is intentional — themes (both in-package and the
+ * presets under `themes/`) target these
+ * selectors as a styling contract. The DOM hooks stay frozen; only
+ * the schema was renamed (intro → cover) when the widget grid landed.
+ *
+ * Inside the cover, the new widget-grid structure lives under
+ * `.demo-cover-grid > .demo-widget.demo-widget-<type>`. Those names
+ * ARE the new contract — themes opt into per-widget styling there.
+ */
+.demo-intro {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: grid;
+  padding: clamp(24px, 4cqi, 64px);
+  /* Match the parent's rounding so the intro's own backdrop (color +
+     bg-image set by themes) paints with rounded corners instead of a
+     hard rectangle that the shell then clips. Without this, the shell's
+     own bg (different color in many themes) shows through the
+     anti-aliased clip edge at the rounded corners. The header rule
+     above zeroes the top corners when a header is present, so this
+     resolves to rounded *bottom* corners only — matching what the
+     viewer sees of the cover. */
+  border-radius: inherit;
+  background: var(--demo-bg);
+  color: var(--demo-fg);
+}
+
+/* Optional full-bleed background image for intro/outro cover steps.
+   Sits behind the title/description/preview content so themes can use
+   it as a hero photo or texture. Authors can dial visibility down via
+   theme CSS if the content needs more contrast. */
+.demo-intro-background-image{
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  pointer-events: none;
+  /* Match the cover's rounding so the image itself paints rounded,
+     not just clipped — same fix as on `.demo-intro`. */
+  border-radius: inherit;
+}
+
+.demo-intro:not([data-glass]) .demo-intro-background-image {
+  filter: blur(var(--demo-cover-background-blur, 0px));
+  transform: scale(var(--demo-cover-background-scale, 1));
+  transform-origin: center;
+}
+
+.demo-intro-background-overlay{
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  border-radius: inherit;
+}
+
+/* Glassmorphism cover background. The first contentful image is rendered
+   full-bleed via `.demo-intro-background-image`, then blurred with a
+   translucent frosted veil painted over it for the glassy look. */
+.demo-intro[data-glass] .demo-intro-background-image {
+  filter: blur(var(--demo-glass-blur, 28px)) saturate(1.35);
+}
+
+.demo-intro-glass-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.5),
+    rgba(255, 255, 255, 0.22)
+  );
+  -webkit-backdrop-filter: blur(var(--demo-glass-overlay-blur, 1px)) saturate(1.2);
+  backdrop-filter: blur(var(--demo-glass-overlay-blur, 1px)) saturate(1.2);
+}
+
+/* When the demo opts into `chrome.backgroundImageExtendsHeader`, the
+   active cover step's image is lifted to the player-frame level so it
+   stretches behind both the header and the shell. The shell + header
+   sit on top of this layer in stacking order (they come later in DOM
+   and have implicit z-index from their backgrounds). To let the image
+   actually show through the cover content, .demo-intro suppresses
+   its own backdrop when both this flag is on and a per-step
+   backgroundImage is set. */
+.demo-player-background-image {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  pointer-events: none;
+  /* When `bgExtendsHeader` is on, this image is lifted to the player
+     level and stretches behind the header. Match the player's rounding
+     so the image paints the rounded shape instead of being clipped at
+     the corner edge by an ancestor with a different background color. */
+  border-radius: inherit;
+}
+.demo-player[data-bg-extends-header] .demo-intro[data-has-background-image]{
+  background: transparent;
+}
+/* Shell sits between the player-level image and the cover content — if
+   it keeps its own solid background, the image is hidden in the stage
+   area. Forcing it transparent doesn't break content steps because
+   they paint a full-bleed image inside .demo-stage on top of it. */
+.demo-player[data-bg-extends-header] .demo-player-shell {
+  background: transparent;
+}
+
+/* Overlap the header onto the shell so the shell fills the full
+   player frame. The active step (intro/outro/content) thus paints
+   edge-to-edge — its image / theme backdrop runs behind the header
+   without any visible chrome strip above it. Header floats on top via
+   `align-self: start` + a higher stacking order. */
+.demo-player[data-bg-extends-header] {
+  grid-template-rows: 1fr;
+}
+.demo-player[data-bg-extends-header] > .demo-header {
+  grid-row: 1;
+  grid-column: 1;
+  align-self: start;
+  width: 100%;
+  z-index: 10;
+}
+.demo-player[data-bg-extends-header] > .demo-player-shell {
+  grid-row: 1;
+  grid-column: 1;
+}
+
+/* Optional dim overlay rendered between the backdrop (theme CSS bg
+   and/or per-step background image) and the cover content. Opacity is
+   set inline from `step.backgroundDim` (0..1). */
+.demo-intro-dim{
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background: #000;
+  pointer-events: none;
+}
+
+.demo-intro > .demo-cover-grid,
+.demo-intro > .demo-intro-attribution{
+  position: relative;
+  z-index: 1;
+}
+
+/* Outer cover host. A cover holds exactly one widget, centered in the
+   player. `.demo-intro` (set to `place-items: center` below) centers its
+   single grid item; the grid itself just caps the content width. */
+.demo-intro {
+  place-items: center;
+}
+
+.demo-cover-grid {
+  --demo-cover-widget-gap: clamp(20px, 3.5cqi, 40px);
+  --demo-cover-widget-half-gap: clamp(10px, 1.75cqi, 20px);
+
+  display: grid;
+  width: 100%;
+  max-width: 1080px;
+  justify-items: center;
+  text-align: center;
+}
+
+/* Embed covers go edge to edge: the grid is taken out of flow and
+   stretched over the whole cover so the iframe fully covers the
+   background. (`.demo-intro` is the positioning context — it already
+   holds the absolutely-positioned backdrop image + dim.) */
+.demo-cover-grid[data-widget-type='embed'] {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  max-width: none;
+  display: block;
+}
+
+/* Each widget cell. `.demo-widget` is the shared wrapper;
+   `.demo-widget-<type>` is the per-type hook. */
+.demo-widget {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+  width: 100%;
+  align-items: center;
+}
+
+/* Headline widget renders the legacy `.demo-intro-content` block inside
+   so existing theme CSS keeps working unchanged. Centered by default
+   (a single-widget splash); the image-split rules below left-align it
+   when an image sits beside the copy. */
+.demo-widget-headline .demo-intro-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 520px;
+  width: 100%;
+  align-items: center;
+  text-align: center;
+}
+
+/* --- Optional widget image (headline / form) ----------------------- */
+/* `.demo-widget-split` wraps the widget's copy and its optional image.
+   `data-image-position` drives the arrangement: `right` / `left` place
+   the image beside the copy; `top` (the stacked layout) puts the
+   headline on top and the image below it. */
+.demo-widget-split {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--demo-cover-widget-gap);
+  width: 100%;
+}
+.demo-widget-split[data-image-position='right'] {
+  flex-direction: row;
+}
+.demo-widget-split[data-image-position='left'] {
+  flex-direction: row-reverse;
+}
+.demo-widget-split[data-image-position='top'] {
+  flex-direction: column;
+  align-items: center;
+}
+
+/* Beside-the-copy layouts read as a content/media split, so left-align
+   the copy rather than centering it. */
+.demo-widget-split[data-image-position='left'] .demo-intro-content,
+.demo-widget-split[data-image-position='right'] .demo-intro-content {
+  align-items: flex-start;
+  text-align: left;
+}
+
+/* In a side-by-side split the copy column and the image share the row. */
+.demo-widget-split[data-image-position='left'] > .demo-intro-content,
+.demo-widget-split[data-image-position='right'] > .demo-intro-content,
+.demo-widget-split[data-image-position='left'] > .demo-widget-form-content,
+.demo-widget-split[data-image-position='right'] > .demo-widget-form-content {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+/* The image frame holds the picture at its natural aspect ratio (set
+   inline from naturalWidth/naturalHeight when known). */
+.demo-widget-image-frame {
+  position: relative;
+  flex: 1 1 0;
+  min-width: 0;
+  width: 100%;
+  max-width: 560px;
+  max-height: 70cqh;
+  border-radius: var(--demo-radius, 8px);
+  overflow: hidden;
+  background: color-mix(in srgb, var(--demo-fg) 6%, transparent);
+  box-shadow: 0 24px 60px -24px color-mix(in srgb, var(--demo-fg) 35%, transparent);
+}
+.demo-widget-image {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Stacked (`top`) standard image: in a column the side-by-side
+   `flex: 1 1 0` collapses the frame to near-zero height. Size it by its
+   aspect ratio instead (set inline from natural dims) so it stays
+   visible below the headline, capped so a tall image can't crowd out the
+   copy. */
+.demo-widget-split[data-image-position='top'] > .demo-widget-image-frame {
+  flex: 0 0 auto;
+  width: min(100%, 560px);
+  max-height: 46cqh;
+  margin-inline: auto;
+}
+
+/* --- Hero image — full bleed (Supademo-style) ----------------------- */
+/* `hero` (the default) makes the image the focal point: the frame is
+   pulled out of flow and positioned against `.demo-intro` so it bleeds
+   past the player edge like a screenshot, while the copy keeps one half
+   of the cover. (The pre-merge two-widget hero positioned the media
+   *cell*; here the same treatment lands on the lone widget's image
+   frame.) `.demo-intro` keeps its padding for the copy and clips the
+   bleed at its rounded edge. */
+.demo-cover-grid:has(.demo-widget-image-frame[data-layout='hero']) {
+  /* Drop the grid's `position: relative` so the absolutely-positioned
+     frame resolves against `.demo-intro` (the full cover) instead of the
+     narrower cover-grid track. */
+  position: static;
+}
+.demo-intro:has(.demo-widget-image-frame[data-layout='hero']) {
+  overflow: hidden;
+}
+
+/* Side-by-side hero: the widget hugs the copy and is justified to one
+   half of the cover (opposite the bleed), so the widget box — and the
+   editor's selection outline, which tracks `.demo-widget` — never crosses
+   into the bleeding image. The image frame is absolute and occupies no
+   track. */
+.demo-cover-grid:has(
+    .demo-widget-split[data-image-position='right']
+      > .demo-widget-image-frame[data-layout='hero']
+  ) {
+  justify-items: start;
+}
+.demo-cover-grid:has(
+    .demo-widget-split[data-image-position='left']
+      > .demo-widget-image-frame[data-layout='hero']
+  ) {
+  justify-items: end;
+}
+.demo-cover-grid:has(
+    .demo-widget-split[data-image-position='left']
+      > .demo-widget-image-frame[data-layout='hero']
+  ) > .demo-widget,
+.demo-cover-grid:has(
+    .demo-widget-split[data-image-position='right']
+      > .demo-widget-image-frame[data-layout='hero']
+  ) > .demo-widget {
+  width: 50%;
+  max-width: 50%;
+}
+.demo-widget-split[data-image-position='left']:has(
+    > .demo-widget-image-frame[data-layout='hero']
+  ),
+.demo-widget-split[data-image-position='right']:has(
+    > .demo-widget-image-frame[data-layout='hero']
+  ) {
+  position: static;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 100%;
+}
+.demo-widget-split[data-image-position='left']:has(
+    > .demo-widget-image-frame[data-layout='hero']
+  ) > .demo-intro-content,
+.demo-widget-split[data-image-position='right']:has(
+    > .demo-widget-image-frame[data-layout='hero']
+  ) > .demo-intro-content,
+.demo-widget-split[data-image-position='left']:has(
+    > .demo-widget-image-frame[data-layout='hero']
+  ) > .demo-widget-form-content,
+.demo-widget-split[data-image-position='right']:has(
+    > .demo-widget-image-frame[data-layout='hero']
+  ) > .demo-widget-form-content {
+  align-items: flex-start;
+  text-align: left;
+  max-width: none;
+  width: 100%;
+  margin-inline: 0;
+}
+
+/* The bleeding frame — pulled out of flow, sized + placed against the
+   cover. 60% wide, top 10% in, height 110% so it bleeds off the bottom;
+   `left`/`right` pick the horizontal bleed side and only the visible
+   inner corner is rounded. */
+.demo-widget-split[data-image-position='left']
+  > .demo-widget-image-frame[data-layout='hero'],
+.demo-widget-split[data-image-position='right']
+  > .demo-widget-image-frame[data-layout='hero'] {
+  position: absolute;
+  top: 10%;
+  height: 110%;
+  width: 60%;
+  max-width: none;
+  max-height: none;
+  z-index: 2;
+  background: none;
+  box-shadow: 0 24px 60px -24px color-mix(in srgb, var(--demo-fg) 35%, transparent);
+}
+.demo-widget-split[data-image-position='right']
+  > .demo-widget-image-frame[data-layout='hero'] {
+  left: calc(50% + var(--demo-cover-widget-half-gap));
+  right: auto;
+  border-radius: 12px 0 0 0;
+}
+.demo-widget-split[data-image-position='right']
+  > .demo-widget-image-frame[data-layout='hero']
+  .demo-widget-image {
+  object-position: left top;
+}
+.demo-widget-split[data-image-position='left']
+  > .demo-widget-image-frame[data-layout='hero'] {
+  right: calc(50% + var(--demo-cover-widget-half-gap));
+  left: auto;
+  border-radius: 0 12px 0 0;
+}
+.demo-widget-split[data-image-position='left']
+  > .demo-widget-image-frame[data-layout='hero']
+  .demo-widget-image {
+  object-position: right top;
+}
+
+/* Stacked hero (top): the headline sits on top and the image fills the
+   lower half, bleeding off the BOTTOM edge. The cover-grid takes the top
+   half and centers the copy within it, so the headline isn't jammed
+   against the player's top edge. */
+.demo-intro:has(
+    .demo-widget-split[data-image-position='top']
+      > .demo-widget-image-frame[data-layout='hero']
+  ) {
+  align-items: start;
+}
+.demo-cover-grid:has(
+    .demo-widget-split[data-image-position='top']
+      > .demo-widget-image-frame[data-layout='hero']
+  ) {
+  height: 50%;
+  align-items: center;
+}
+.demo-widget-split[data-image-position='top']
+  > .demo-widget-image-frame[data-layout='hero'] {
+  position: absolute;
+  bottom: auto;
+  top: calc(50% + var(--demo-cover-widget-half-gap));
+  height: 60%;
+  left: 10%;
+  right: 10%;
+  width: auto;
+  max-width: none;
+  max-height: none;
+  z-index: 2;
+  background: none;
+  border-radius: 12px 12px 0 0;
+  box-shadow: 0 24px 60px -24px color-mix(in srgb, var(--demo-fg) 35%, transparent);
+}
+.demo-widget-split[data-image-position='top']
+  > .demo-widget-image-frame[data-layout='hero']
+  .demo-widget-image {
+  object-position: center top;
+}
+
+/* The hero image fills its (now positioned) frame. */
+.demo-widget-image-frame[data-layout='hero'] {
+  flex: none;
+}
+.demo-widget-image-frame[data-layout='hero'] .demo-widget-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: inherit;
+}
+
+@container demo-player (max-width: 640px) {
+  .demo-widget-split {
+    flex-direction: column-reverse;
+  }
+  /* The stacked layout keeps the headline on top on every viewport. */
+  .demo-widget-split[data-image-position='top'],
+  .demo-widget-split[data-image-position='top']:has(
+      > .demo-widget-image-frame[data-layout='hero']
+    ) {
+    flex-direction: column;
+  }
+  .demo-widget-split .demo-intro-content {
+    align-items: center;
+    text-align: center;
+  }
+  /* A narrow player has no room to bleed — collapse the hero back to a
+     contained, rounded image stacked above the copy. Undo the absolute
+     positioning + split grid from the desktop hero rules. */
+  .demo-intro:has(.demo-widget-image-frame[data-layout='hero']) {
+    align-items: center;
+  }
+  .demo-widget-split:has(> .demo-widget-image-frame[data-layout='hero']) {
+    display: flex;
+    flex-direction: column-reverse;
+    gap: var(--demo-cover-widget-gap);
+  }
+  .demo-widget-split:has(> .demo-widget-image-frame[data-layout='hero'])
+    > .demo-intro-content,
+  .demo-widget-split:has(> .demo-widget-image-frame[data-layout='hero'])
+    > .demo-widget-form-content {
+    grid-column: auto;
+    grid-row: auto;
+    align-items: center;
+    text-align: center;
+    max-width: 420px;
+  }
+  .demo-widget-image-frame[data-layout='hero'] {
+    position: static;
+    inset: auto;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 16 / 9;
+    border-radius: var(--demo-radius, 8px);
+  }
+}
+
+/* Form widget. Pure default — themes can restyle entirely. The cell
+   centers in a single-widget splash; the inner `.demo-widget-form-content`
+   caps the field stack at a comfortable reading width. */
+.demo-widget-form {
+  width: 100%;
+  align-self: stretch;
+}
+.demo-widget-form .demo-widget-form-content {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  max-width: 420px;
+  margin-inline: auto;
+}
+.demo-widget-form .demo-widget-form-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+}
+/* The form's own logo. Anchored to the start of the form column. */
+.demo-widget-form .demo-widget-logo {
+  display: block;
+  height: 40px;
+  width: auto;
+  max-width: 60%;
+  object-fit: contain;
+  align-self: flex-start;
+}
+.demo-widget-form .demo-widget-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+  width: 100%;
+  text-align: left;
+}
+.demo-widget-form .demo-widget-field-input {
+  padding: 10px 12px;
+  border: 1px solid var(--demo-secondary, #e4e4e7);
+  border-radius: var(--demo-radius, 8px);
+  background: var(--demo-bg, #fff);
+  color: var(--demo-fg, #0a0a0a);
+  font: inherit;
+  width: 100%;
+  box-sizing: border-box;
+}
+/* The select element drops the browser's default chrome (which ignores
+   --demo-bg / --demo-fg) so dropdowns look like inputs from the same
+   theme. */
+.demo-widget-form select.demo-widget-field-input {
+  appearance: none;
+  background-image: linear-gradient(
+      45deg,
+      transparent 50%,
+      var(--demo-fg, #0a0a0a) 50%
+    ),
+    linear-gradient(
+      -45deg,
+      transparent 50%,
+      var(--demo-fg, #0a0a0a) 50%
+    );
+  background-position:
+    calc(100% - 18px) 50%,
+    calc(100% - 12px) 50%;
+  background-size:
+    6px 6px,
+    6px 6px;
+  background-repeat: no-repeat;
+  padding-right: 32px;
+}
+/* Submit shares the headline CTA's visual treatment so a form's primary
+   action reads as the same kind of button as a cover CTA — stretched
+   full-width inside the form column. */
+.demo-widget-form .demo-widget-submit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 10px 18px;
+  border: 0;
+  border-radius: calc(var(--demo-radius, 8px) * 0.75);
+  background: var(--demo-primary, #5b3df5);
+  color: var(--demo-primary-fg, #fff);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  box-sizing: border-box;
+  transition: filter 120ms ease, transform 80ms ease;
+}
+.demo-widget-form .demo-widget-submit:hover {
+  filter: brightness(0.94);
+}
+.demo-widget-form .demo-widget-submit:active {
+  transform: translateY(1px);
+}
+
+/* Embed widget — full-bleed iframe covering the whole player. The cell
+   and iframe stretch over the absolutely-positioned cover grid. */
+.demo-widget-embed {
+  position: absolute;
+  inset: 0;
+  display: block;
+}
+.demo-widget-embed .demo-widget-embed-frame {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  display: block;
+  background: var(--demo-secondary, #f4f4f5);
+}
+
+/* Empty-state placeholder for an embed with no URL yet. Fills the same
+   full-bleed surface the iframe would, with centered prompt copy over a
+   dotted backdrop (matches the editor canvas) rather than a flat gray. */
+.demo-widget-embed .demo-widget-embed-empty {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: clamp(24px, 5cqi, 64px);
+  text-align: center;
+  background-color: var(--demo-bg, #ffffff);
+  background-image: radial-gradient(
+    circle at 1px 1px,
+    color-mix(in srgb, var(--demo-fg, #0a0a0a) 16%, transparent) 1px,
+    transparent 1.5px
+  );
+  background-size: 14px 14px;
+  color: var(--demo-fg, #0a0a0a);
+}
+.demo-widget-embed-empty-body {
+  max-width: 420px;
+}
+.demo-widget-embed-empty-title {
+  margin: 0 0 8px;
+  font-size: clamp(18px, 3cqi, 22px);
+  font-weight: 600;
+}
+.demo-widget-embed-empty-text {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+  opacity: 0.65;
+}
+
+/* Optional title/description shared by form/embed/media widgets. */
+.demo-widget-title {
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0;
+  color: var(--demo-fg);
+}
+.demo-widget-description {
+  font-size: 14px;
+  color: var(--demo-fg);
+  opacity: 0.75;
+  margin: 0;
+}
+
+/* Preview thumbnail — opt-in via intro.preview. The package places it
+   simply; themes are expected to add 3D treatment (oblique, gradient).
+   The `aspect-ratio: 4 / 3` here is the fallback for previews that
+   don't declare natural dimensions; when the author passes
+   naturalWidth/naturalHeight, an inline `style.aspect-ratio` on the
+   container overrides this. Sizes flow through CSS custom properties
+   (`--demo-preview-max-width` / `--demo-preview-max-height`) so themes
+   can resize without redeclaring the whole rule. */
+.demo-intro-preview{
+  width: 100%;
+  max-width: var(--demo-preview-max-width, 880px);
+  max-height: var(--demo-preview-max-height, 660px);
+  aspect-ratio: 4 / 3;
+  border-radius: 14px;
+  overflow: hidden;
+  background: var(--demo-bg);
+}
+
+.demo-intro-preview-image{
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Legacy `.demo-intro[data-has-preview]` rule removed — the cover step
+   no longer carries a top-level `preview`. A cover renders a single
+   widget inside `.demo-cover-grid`; headline / form widgets carry their
+   image via `.demo-widget-split` (see rules near the top of this
+   section). */
+
+/* Attribution chip — host-supplied, bottom-right of the screen. */
+.demo-intro-attribution{
+  position: absolute;
+  right: 16px;
+  bottom: 16px;
+  font-size: 12px;
+  color: color-mix(in srgb, var(--demo-fg) 55%, transparent);
+}
+
+.demo-intro-logo {
+  display: block;
+  height: 40px;
+  width: auto;
+  max-width: 60%;
+  object-fit: contain;
+  /* The `.demo-intro-content` flex column controls horizontal placement
+     via `align-items`; the logo inherits that so it tracks the headline
+     copy (centered in splashes, left in 2-col horizontal layouts). */
+}
+
+.demo-intro-title {
+  margin: 0;
+  font-size: clamp(22px, 5cqi, 34px);
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+}
+
+.demo-intro-title strong,
+.demo-intro-description strong {
+  color: var(--demo-primary);
+  font-weight: bolder;
+}
+
+.demo-intro-title em {
+  font-style: italic;
+}
+
+.demo-intro-description {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.5;
+  opacity: 0.75;
+}
+
+.demo-intro-actions {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: 14px;
+  row-gap: 10px;
+  margin-top: 4px;
+}
+
+.demo-intro-actions > .demo-intro-cta {
+  margin-top: 0;
+}
+
+.demo-intro-cta {
+  /* No `align-self` here — the CTA inherits its horizontal position
+     from the `.demo-intro-content` flex column's `align-items`, which
+     the image-split rules above flip between center (no image) and
+     flex-start (image beside the copy). Hard-coding `align-self:
+     flex-start` here used to pin the button left in all layouts. */
+  padding: 10px 18px;
+  border-radius: calc(var(--demo-radius) * 0.75);
+  background: var(--demo-primary);
+  color: var(--demo-primary-fg);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  transition: filter 120ms ease, transform 80ms ease;
+  /* Cancel browser/anchor defaults so url-action CTAs (rendered as
+     <a>) look identical to button-action CTAs. */
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+  border: 0;
+}
+
+.demo-intro-cta:hover {
+  filter: brightness(0.94);
+}
+
+.demo-intro-cta:active {
+  transform: translateY(1px);
+}
+
+/* Mobile container-query defaults for the cover/intro typography.
+   Scoped to the `.demo-player` container at the SAME 640px breakpoint
+   the rest of this stylesheet uses for "mobile" behavior (cover-grid
+   collapses to a single column at 640px above; mobile footer turns on
+   at 640px below). Using a smaller threshold here would create a dead
+   zone where the cover-grid has already stacked but the type / media /
+   attribution overrides hadn't kicked in yet. These are *base-layer*
+   defaults — themes that ship their own `[data-demo-theme="X"] .demo-intro-*`
+   rules also ship a matching `@container demo-player (max-width: 640px)`
+   block at the same selector specificity, so the cascade resolves
+   cleanly without any `!important`.
+
+   The attribution chip is repositioned to the bottom-LEFT corner on
+   mobile (vs. its in-flow position in the cover grid on larger
+   screens). With the player running full-bleed inside a mobile frame,
+   this lands the chip at the bottom-left of the visible page. */
+@container demo-player (max-width: 640px) {
+  .demo-intro {
+    padding: 20px;
+  }
+
+  /* Headline always centers on mobile. The desktop image-split rule
+     left-aligns the headline next to its image, but on a narrow player
+     the split stacks (image on top), so the copy reads better centered. */
+  .demo-widget-headline .demo-intro-content {
+    align-items: center;
+    text-align: center;
+    gap: 12px;
+  }
+
+  .demo-intro-logo {
+    height: 32px;
+  }
+
+  .demo-intro-title {
+    font-size: 20px;
+    line-height: 1.2;
+    letter-spacing: -0.01em;
+  }
+
+  .demo-intro-description {
+    font-size: 13px;
+    line-height: 1.4;
+  }
+
+  .demo-intro-actions {
+    column-gap: 10px;
+    row-gap: 8px;
+    margin-top: 2px;
+  }
+
+  .demo-intro-cta {
+    padding: 8px 14px;
+    font-size: 12.5px;
+    border-radius: calc(var(--demo-radius) * 0.6);
+  }
+
+  .demo-intro > .demo-intro-attribution {
+    position: absolute;
+    left: 12px;
+    bottom: 12px;
+    right: auto;
+    top: auto;
+    z-index: 2;
+  }
+
+}
+
+.demo-intro-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  max-width: 360px;
+}
+
+.demo-intro-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  text-align: left;
+}
+
+.demo-intro-field-label {
+  font-size: 13px;
+  font-weight: 500;
+  opacity: 0.85;
+}
+
+.demo-intro-field-input {
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, var(--demo-fg) 16%, transparent);
+  border-radius: 8px;
+  background: var(--demo-bg);
+  color: var(--demo-fg);
+  font: inherit;
+  font-size: 14px;
+}
+
+.demo-intro-field-input:focus-visible {
+  outline: 2px solid var(--demo-primary);
+  outline-offset: 1px;
+  border-color: transparent;
+}
+
+/* Header (default layout) */
+.demo-header {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border: 1px solid color-mix(in srgb, var(--demo-fg) 14%, transparent);
+  border-bottom: 0;
+  border-radius: var(--demo-radius) var(--demo-radius) 0 0;
+  background: var(--demo-bg);
+  color: var(--demo-fg);
+  font-size: 13px;
+  line-height: 1.2;
+  box-sizing: border-box;
+  /* Sit above stage annotations so messages anchored near the top do not
+     cover the browser chrome. */
+  position: relative;
+  z-index: 60;
+}
+
+.demo-header-leading {
+  justify-self: start;
+}
+
+.demo-header-actions {
+  justify-self: end;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.demo-header-lights {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 4px;
+}
+
+.demo-header-light {
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  background: currentColor;
+  opacity: 0.85;
+}
+
+.demo-header-light[data-color='red'] {
+  color: #ff5f57;
+}
+
+.demo-header-light[data-color='yellow'] {
+  color: #febc2e;
+}
+
+.demo-header-light[data-color='green'] {
+  color: #28c840;
+}
+
+.demo-header-title-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 30px;
+  min-width: clamp(220px, 36cqi, 380px);
+  max-width: clamp(220px, 50cqi, 520px);
+  padding: 0 14px;
+  border-radius: 9px;
+  background: var(--demo-bg);
+  color: var(--demo-fg);
+}
+
+/* Linked variant: when `brand.logoHref` is set the pill renders as an
+   anchor. Reset the link styling so it reads identically to the div. */
+a.demo-header-title-pill {
+  color: inherit;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.demo-header-title-icon {
+  flex: 0 0 auto;
+  width: 14px;
+  height: 14px;
+  border-radius: 4px;
+  background: var(--demo-primary);
+}
+
+.demo-header-title-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 500;
+}
+
+.demo-header-action {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  color: inherit;
+  background: transparent;
+  cursor: pointer;
+  transition: background 120ms ease;
+}
+
+.demo-header-action:hover {
+  background: color-mix(in srgb, currentColor 10%, transparent);
+}
+
+.demo-header-action .demo-icon {
+  width: 16px;
+  height: 16px;
+}
+
+.demo-header-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  max-width: 132px;
+  height: 28px;
+  padding: 0 10px;
+  border: 1px solid color-mix(in srgb, var(--demo-fg) 16%, transparent);
+  border-radius: 7px;
+  color: var(--demo-fg);
+  background: transparent;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+  text-decoration: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition:
+    background 120ms ease,
+    border-color 120ms ease,
+    transform 120ms ease;
+}
+
+.demo-header-cta:hover {
+  transform: translateY(-1px);
+}
+
+.demo-header-cta.is-secondary {
+  background: color-mix(in srgb, var(--demo-fg) 5%, transparent);
+}
+
+.demo-header-cta.is-secondary:hover {
+  background: color-mix(in srgb, var(--demo-fg) 9%, transparent);
+  border-color: color-mix(in srgb, var(--demo-fg) 22%, transparent);
+}
+
+.demo-header-cta.is-primary {
+  border-color: var(--demo-primary);
+  background: var(--demo-primary);
+  color: var(--demo-primary-fg);
+}
+
+.demo-header-cta.is-primary:hover {
+  border-color: color-mix(in srgb, var(--demo-primary) 88%, black);
+  background: color-mix(in srgb, var(--demo-primary) 90%, black);
+}
+
+.demo-header-locale {
+  display: inline-flex;
+  align-items: center;
+  height: 28px;
+  margin-right: 2px;
+}
+
+.demo-header-locale-select {
+  appearance: none;
+  -webkit-appearance: none;
+  height: 28px;
+  padding: 0 22px 0 10px;
+  border: 1px solid color-mix(in srgb, var(--demo-fg) 18%, transparent);
+  border-radius: 6px;
+  background-color: transparent;
+  background-image: linear-gradient(
+      45deg,
+      transparent 50%,
+      currentColor 50%
+    ),
+    linear-gradient(135deg, currentColor 50%, transparent 50%);
+  background-position:
+    calc(100% - 12px) 12px,
+    calc(100% - 8px) 12px;
+  background-size:
+    4px 4px,
+    4px 4px;
+  background-repeat: no-repeat;
+  color: inherit;
+  font: inherit;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: background-color 120ms ease, border-color 120ms ease;
+}
+
+.demo-header-locale-select:hover {
+  background-color: color-mix(in srgb, currentColor 8%, transparent);
+}
+
+.demo-header-locale-select:focus-visible {
+  outline: 2px solid var(--demo-primary);
+  outline-offset: 2px;
+}
+
+/* Mobile footer (hidden on desktop) */
+.demo-mobile-footer {
+  display: none;
+}
+
+/* Small-viewport behavior is gated on `data-mobile-footer-message="on"`
+   (set by `<Demo>` from `demo.chrome.mobileFooterMessage`, default on).
+   When the flag is off, hotspot messages stay visible at every size and
+   the mobile footer is never rendered. */
+@container demo-player (max-width: 640px) {
+  [data-mobile-footer-message="on"] .demo-player-shell .demo-controls {
+    display: none;
+  }
+
+  [data-mobile-footer-message="on"] .demo-player-shell .demo-caption {
+    bottom: 10px;
+    max-width: calc(100% - 32px);
+    padding: 5px 9px;
+    border-radius: 8px;
+    font-size: 11px;
+    line-height: 1.25;
+  }
+
+  [data-mobile-footer-message="on"] .demo-player-shell:has(.demo-controls:hover) .demo-caption,
+  [data-mobile-footer-message="on"] .demo-player-shell:has(.demo-controls:focus-within) .demo-caption {
+    bottom: 10px;
+  }
+
+  /* Hotspot message UI is replaced by the mobile footer; only the spatial
+     indicator (pointer dot / area outline) stays visible. */
+  [data-mobile-footer-message="on"] .demo-player-shell .demo-hotspot-label,
+  [data-mobile-footer-message="on"] .demo-player-shell .demo-hotspot-callout,
+  [data-mobile-footer-message="on"] .demo-player-shell .demo-hotspot-area-message {
+    display: none;
+  }
+
+  /* Drop the card's lift shadow + bottom border + bottom rounding so it
+     merges flush into the mobile footer instead of floating above a
+     visible gap. Applies to cover steps too now that <MobileFooter />
+     is rendered on the cover (see DefaultLayout in `ui/layouts.tsx`).
+     Targets `.demo-player-shell` (the asset/cover image area) and
+     `.demo-stage` (which inherits the shell's radius) so both sides of
+     the seam are flat.
+
+     Anchored on `.demo-player[data-mobile-footer-message="on"]` (rather
+     than the bare attribute selector) to bump specificity to (0,3,0).
+     Themes may ship
+     `[data-demo-theme="X"] .demo-player-shell { border-radius: inherit }`
+     at (0,2,0) and — because theme CSS is injected at runtime *after*
+     this stylesheet — would otherwise win the cascade on a tie. */
+  .demo-player[data-mobile-footer-message="on"] .demo-player-shell,
+  .demo-player[data-mobile-footer-message="on"] .demo-stage {
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+  }
+  .demo-player[data-mobile-footer-message="on"] .demo-stage {
+    box-shadow: none;
+    border-bottom: 0;
+  }
+
+  [data-mobile-footer-message="on"] .demo-mobile-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    width: 100%;
+    padding: 6px 10px;
+    border-radius: 0 0 var(--demo-radius) var(--demo-radius);
+    background: var(--demo-primary);
+    color: var(--demo-primary-fg);
+    font-size: 12px;
+    line-height: 1.35;
+    /* Fixed height — must match the footer-height CSS var below so
+       covers and content render at the same total height (no layout
+       jump on transitions). The 28px nav buttons + 6 top + 6 bottom
+       padding fit a 40px footer; we ship 44px to leave 4px of breathing
+       room for the 2-line text clamp above the buttons. */
+    height: var(--demo-mobile-footer-h);
+    box-sizing: border-box;
+  }
+
+  [data-mobile-footer-message="on"] .demo-mobile-footer-message {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    max-height: calc(2 * 1.35em);
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  [data-mobile-footer-message="on"] .demo-mobile-footer-message :is(p, ul, ol) {
+    display: inline;
+    margin: 0;
+  }
+
+  [data-mobile-footer-message="on"] .demo-mobile-footer-message a {
+    color: inherit;
+    text-decoration: underline;
+  }
+
+  [data-mobile-footer-message="on"] .demo-mobile-footer-step {
+    font-variant-numeric: tabular-nums;
+    opacity: 0.85;
+  }
+
+  [data-mobile-footer-message="on"] .demo-mobile-footer-nav {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex: 0 0 auto;
+  }
+
+  [data-mobile-footer-message="on"] .demo-mobile-footer-button {
+    display: grid;
+    place-items: center;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border: 0;
+    border-radius: 999px;
+    color: var(--demo-primary-fg);
+    background: transparent;
+    cursor: pointer;
+  }
+
+  [data-mobile-footer-message="on"] .demo-mobile-footer-button:hover:not(:disabled) {
+    background: rgb(255 255 255 / 18%);
+  }
+
+  [data-mobile-footer-message="on"] .demo-mobile-footer-button:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+
+  [data-mobile-footer-message="on"] .demo-mobile-footer-button .demo-icon {
+    width: 16px;
+    height: 16px;
+  }
+
+  /* Note: the cover-step `padding-bottom: var(--demo-mobile-footer-h)`
+     reserve that used to live here was removed when <MobileFooter />
+     was changed to render on cover steps too (see DefaultLayout in
+     `ui/layouts.tsx`). With the footer always present as a sibling
+     below the shell, height stays consistent across cover↔content
+     transitions without a padding-based reserve — and keeping the
+     padding would have doubled the bottom space on covers. */
+
+  /* Drop the chrome header on narrow viewports — its title pill +
+     action cluster eat too much vertical space on mobile, and the
+     mobile footer already covers the only chrome the user needs
+     (step nav). Author-provided `Header` slots inherit this rule;
+     consumers that want it back can override with their own media
+     query. */
+  .demo-header {
+    display: none;
+  }
+
+  /* With the header gone the player-shell again owns the top
+     corners. The `:has(.demo-header)` rule near the top that
+     flattens the shell's top radius doesn't apply here because the
+     header is hidden but still in the DOM — restore the rounding
+     so the card looks intact. */
+  .demo-player-shell {
+    border-top-left-radius: var(--demo-radius);
+    border-top-right-radius: var(--demo-radius);
+  }
+  .demo-player:has(.demo-header) .demo-stage {
+    border-top-left-radius: var(--demo-radius);
+    border-top-right-radius: var(--demo-radius);
+  }
+
+  /* Drop the intro/outro preview media on mobile — the side-by-side
+     layout collapses into a single column with the copy getting the full
+     width. The preview is decorative chrome on small viewports, not the
+     focal point.
+
+     The cover media is a `.demo-widget-image-frame` inside
+     `.demo-widget-split` (the legacy `.demo-intro-preview` class this rule
+     used to target is no longer rendered — the cover was refactored to a
+     widget-image, which is why this hide silently stopped working). Hide
+     the frame, and since the `hero` layout reserves half the cover for the
+     copy widget (see the `.demo-cover-grid:has(...hero) > .demo-widget`
+     rules above), reclaim that to full width too. */
+  .demo-intro .demo-widget-image-frame {
+    display: none;
+  }
+  /* Selector matches the desktop hero 50%-width rule exactly so it wins on
+     source order — a looser selector would lose on specificity and leave
+     the copy stuck at half width. */
+  .demo-cover-grid:has(
+      .demo-widget-split[data-image-position='left']
+        > .demo-widget-image-frame[data-layout='hero']
+    ) > .demo-widget,
+  .demo-cover-grid:has(
+      .demo-widget-split[data-image-position='right']
+        > .demo-widget-image-frame[data-layout='hero']
+    ) > .demo-widget {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  /* With the media gone, the side-by-side layout's left-alignment no
+     longer makes sense — re-center the copy (title, subtitle, CTA) so the
+     single-column cover reads centered. `.demo-intro-content` is a centered
+     flex column by default; the side-by-side + hero rules above left-align
+     it, so both are reverted here. The hero selector is replicated exactly
+     to win on source order against its (0,5,0) desktop counterpart. */
+  .demo-intro .demo-widget-split .demo-intro-content {
+    align-items: center;
+    text-align: center;
+  }
+  .demo-widget-split[data-image-position='left']:has(
+      > .demo-widget-image-frame[data-layout='hero']
+    ) > .demo-intro-content,
+  .demo-widget-split[data-image-position='right']:has(
+      > .demo-widget-image-frame[data-layout='hero']
+    ) > .demo-intro-content {
+    align-items: center;
+    text-align: center;
+  }
+
+  /* Undo the `data-bg-extends-header` overlap layout at mobile. That
+     mode stacks header + shell into a single 1fr grid row so the
+     header floats above the stage backdrop — useful on desktop but
+     pointless on mobile (header is hidden) and actively harmful:
+     the implicit row created for the mobile footer competes with
+     the shell's intrinsic aspect-ratio sizing, which lets the
+     stage's image paint over where the footer should sit. Reverting
+     to auto-sized rows in source order keeps the shell and footer
+     stacked cleanly. */
+  .demo-player[data-bg-extends-header] {
+    grid-template-rows: auto;
+  }
+  .demo-player[data-bg-extends-header] > .demo-player-shell {
+    grid-row: auto;
+    grid-column: auto;
+  }
+
+  /* Belt-and-braces: explicitly stack the footer above the stage so
+     even if a theme reintroduces an overlap, the footer wins. */
+  .demo-mobile-footer {
+    position: relative;
+    z-index: 2;
+  }
+}
+
+/* Button primitive animation variants.
+ *
+ * Base `.demo-button` is added by the primitive so variant-specific
+ * effects can layer in pseudo-elements without fighting the host
+ * theme's button styling. Variants attach via `demo-button-shimmer`,
+ * `demo-button-ripple`, `demo-button-pulse`. */
+.demo-button {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.demo-button-label {
+  position: relative;
+  z-index: 1;
+}
+
+/* Shimmer: a soft highlight sweeps across the button on a loop. */
+.demo-button-shimmer-fx {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(
+    110deg,
+    transparent 30%,
+    rgb(255 255 255 / 45%) 50%,
+    transparent 70%
+  );
+  background-size: 200% 100%;
+  background-position: 200% 0;
+  mix-blend-mode: overlay;
+  transform: translateZ(0);
+  will-change: background-position;
+  animation: demo-button-shimmer-sweep 2400ms linear infinite;
+}
+
+@keyframes demo-button-shimmer-sweep {
+  to {
+    background-position: -200% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .demo-button-shimmer-fx {
+    animation: none;
+  }
+}

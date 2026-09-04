@@ -61,17 +61,21 @@ async function writeProjectFixture(root: string): Promise<void> {
   await writeDemo(root, 'pricing-tour', 'Pricing Tour');
 }
 
+/**
+ * Occupy a port in a low, fixed range rather than an OS-assigned ephemeral
+ * one: the cascade under test scans upward from the occupied port, and near
+ * the top of the ephemeral range there may be no free port left.
+ */
 async function occupyPort(): Promise<{ server: NetServer; port: number }> {
-  const server = createNetServer();
-  await new Promise<void>((resolve, reject) => {
-    server.once('error', reject);
-    server.listen(0, '127.0.0.1', () => resolve());
-  });
-  const address = server.address();
-  if (!address || typeof address === 'string') {
-    throw new Error('failed to occupy test port');
+  for (let port = 4310; port < 4400; port += 1) {
+    const server = createNetServer();
+    const bound = await new Promise<boolean>((resolve) => {
+      server.once('error', () => resolve(false));
+      server.listen(port, '127.0.0.1', () => resolve(true));
+    });
+    if (bound) return { server, port };
   }
-  return { server, port: address.port };
+  throw new Error('failed to occupy a test port in 4310-4399');
 }
 
 async function closeNetServer(server: NetServer): Promise<void> {

@@ -2565,6 +2565,13 @@
     z-index: 2;
   }
 
+  /* The "Made with" badge (rendered inside <PlayerShell />, NOT to be
+     confused with the cover-step's `.demo-intro-attribution` slot) is
+     hidden on mobile: at this size it belongs to the page, not the
+     player card. */
+  .demo-builtwith-badge {
+    display: none;
+  }
 }
 
 .demo-intro-form {
@@ -2843,8 +2850,19 @@ a.demo-header-title-pill {
   }
 
   [data-mobile-footer-message="on"] .demo-player-shell:has(.demo-controls:hover) .demo-caption,
-  [data-mobile-footer-message="on"] .demo-player-shell:has(.demo-controls:focus-within) .demo-caption {
+  [data-mobile-footer-message="on"] .demo-player-shell:has(.demo-controls:focus-within) .demo-caption,
+  [data-mobile-footer-message="on"] .demo-player-shell:has(.demo-builtwith-badge:hover) .demo-caption,
+  [data-mobile-footer-message="on"] .demo-player-shell:has(.demo-builtwith-badge:focus-visible) .demo-caption {
     bottom: 10px;
+  }
+
+  [data-mobile-footer-message="on"] .demo-player-shell .demo-builtwith-badge,
+  [data-mobile-footer-message="on"] .demo-player-shell:has(.demo-controls:hover) .demo-builtwith-badge,
+  [data-mobile-footer-message="on"] .demo-player-shell:has(.demo-controls:focus-within) .demo-builtwith-badge,
+  [data-mobile-footer-message="on"] .demo-player-shell:has(.demo-controls):has(.demo-builtwith-badge:hover) .demo-builtwith-badge,
+  [data-mobile-footer-message="on"] .demo-player-shell:has(.demo-controls):has(.demo-builtwith-badge:focus-visible) .demo-builtwith-badge,
+  [data-mobile-footer-message="on"] .demo-player-shell[data-controls="always"] .demo-builtwith-badge {
+    transform: none;
   }
 
   /* Hotspot message UI is replaced by the mobile footer; only the spatial
@@ -3114,4 +3132,27 @@ a.demo-header-title-pill {
   .demo-button-shimmer-fx {
     animation: none;
   }
+}
+
+/* Shown by the standalone player when the page has no config or the
+   config fails validation. */
+.demo-error {
+  margin: 16px;
+  padding: 16px;
+  border: 1px solid #e5484d;
+  border-radius: 8px;
+  background: #fff5f5;
+  color: #1d1d1d;
+  font: 14px/1.5 ui-sans-serif, system-ui, sans-serif;
+}
+
+.demo-error h2 {
+  margin: 0 0 8px;
+  font-size: 16px;
+}
+
+.demo-error pre {
+  margin: 0;
+  white-space: pre-wrap;
+  font: 12px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
 }

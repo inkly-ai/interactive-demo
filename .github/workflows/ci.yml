@@ -19,3 +19,8 @@ jobs:
       - run: npm run typecheck
       - run: npm run lint
       - run: npm test
+      - name: Validate and build the example project
+        run: |
+          node ../../packages/cli/dist/cli.js validate
+          node ../../packages/cli/dist/cli.js build
+        working-directory: examples/getting-started

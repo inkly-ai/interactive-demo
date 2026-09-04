@@ -16,7 +16,7 @@
 import { createElement } from 'react';
 import { createRoot } from 'react-dom/client';
 import { Demo } from './ui/Demo';
-import type { AssetEntry } from './schema';
+import { DemoSchema, type AssetEntry } from './schema';
 import { resolveDemoTheme } from './themes/resolve';
 
 function readJson<T>(id: string, fallback: T): T {
@@ -69,8 +69,24 @@ function mount() {
     return;
   }
 
+  const parsed = DemoSchema.safeParse(config);
+  if (!parsed.success) {
+    const issues = parsed.error.issues
+      .map((issue) => `${issue.path.join('.') || '(root)'}: ${issue.message}`)
+      .join('\n');
+    root.render(
+      createElement(
+        'div',
+        { className: 'demo-error' },
+        createElement('h2', null, 'Invalid demo config'),
+        createElement('pre', null, issues),
+      ),
+    );
+    return;
+  }
+
   const theme = resolveDemoTheme({
-    demoTheme: (config as { theme?: { preset?: string } }).theme,
+    demoTheme: parsed.data.theme,
   });
   ensureThemeStyle(theme.themeId, theme.css);
 
@@ -79,7 +95,7 @@ function mount() {
       'div',
       { className: 'demo-wrap' },
       createElement(Demo, {
-        config,
+        config: parsed.data,
         themeId: theme.themeId,
         assets: Array.isArray(assets) ? assets : [],
         resolveAssetUrl,

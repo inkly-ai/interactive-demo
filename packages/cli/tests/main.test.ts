@@ -33,8 +33,8 @@ describe('interactive-demo help', () => {
     expect(stdout).toContain('dev');
     expect(stdout).toContain('validate');
     expect(stdout).toContain('build');
-    // No remote-service commands, no capture yet, no removed commands.
-    for (const gone of ['sync', 'snapshot', 'login', 'lock', 'animation', 'capture-html']) {
+    // No removed commands (publish/login replace the old sync/snapshot flow).
+    for (const gone of ['sync', 'snapshot', 'lock', 'animation', 'capture-html']) {
       expect(stdout).not.toContain(gone);
     }
   });

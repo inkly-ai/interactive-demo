@@ -618,16 +618,124 @@
     }
 }
 
+/* Sonner toast — themed to the Neutral design language.
+   Classes are attached via <Toaster toastOptions={{ classNames }} /> in
+   src/components/ui/sonner.tsx. Color tokens (--normal-*, --success-*,
+   --error-*, --warning-*) come from the Toaster's inline `style` prop,
+   which sonner reads to drive richColors. */
+.demo-toast {
+    font-family:
+        "Geist", ui-sans-serif, system-ui, -apple-system,
+        sans-serif !important;
+    border-radius: 12px !important;
+    padding: 12px 14px !important;
+    /* leave room for the close button pinned at the trailing edge */
+    padding-right: 38px !important;
+    gap: 10px !important;
+    align-items: flex-start !important;
+    box-shadow: var(--shadow-menu) !important;
+    font-size: 13px !important;
+}
+.demo-toast-title {
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    line-height: 1.35 !important;
+    letter-spacing: 0 !important;
+}
+.demo-toast-description {
+    font-size: 12.5px !important;
+    line-height: 1.4 !important;
+    color: color-mix(
+        in oklab,
+        currentColor 65%,
+        transparent
+    ) !important;
+}
+.demo-toast-icon {
+    margin-top: 1px !important;
+}
+.demo-toast-loader {
+    color: var(--accent) !important;
+}
+/* Action button = primary 3D pill (small) */
+.demo-toast-action {
+    background: var(--accent) !important;
+    background-image: linear-gradient(
+        to bottom,
+        color-mix(in oklab, var(--accent) 88%, white) 0%,
+        var(--accent) 100%
+    ) !important;
+    color: #ffffff !important;
+    border: 1px solid var(--accent-ink) !important;
+    border-radius: 8px !important;
+    box-shadow: var(--shadow-primary-lift) !important;
+    padding: 4px 10px !important;
+    font-size: 12.5px !important;
+    font-weight: 500 !important;
+    height: auto !important;
+    transition:
+        box-shadow 120ms ease,
+        transform 80ms ease;
+}
+.demo-toast-action:hover {
+    box-shadow: var(--shadow-primary-lift-hover) !important;
+}
+.demo-toast-action:active {
+    box-shadow: var(--shadow-primary-press) !important;
+    transform: translateY(1px);
+}
+/* Cancel button = secondary 3D pill */
+.demo-toast-cancel {
+    background: var(--surface) !important;
+    background-image: linear-gradient(
+        to bottom,
+        #ffffff 0%,
+        var(--surface) 100%
+    ) !important;
+    color: var(--ink-strong) !important;
+    border: 1px solid var(--line) !important;
+    border-radius: 8px !important;
+    box-shadow: var(--shadow-lift) !important;
+    padding: 4px 10px !important;
+    font-size: 12.5px !important;
+    font-weight: 500 !important;
+    height: auto !important;
+}
+.demo-toast-cancel:hover {
+    box-shadow: var(--shadow-lift-hover) !important;
+}
+/* Close button — pinned inside the toast at the trailing (right) edge,
+   vertically centered, overriding sonner's default top-left placement. */
+.demo-toast-close {
+    position: absolute !important;
+    left: auto !important;
+    right: 10px !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+    background: transparent !important;
+    border: none !important;
+    color: var(--ink-2) !important;
+    box-shadow: none !important;
+    transition: color 120ms ease;
+}
+.demo-toast-close:hover {
+    background: transparent !important;
+    color: var(--ink-strong) !important;
+    box-shadow: none !important;
+}
+
 body {
     font-family:
-        ui-sans-serif, system-ui, -apple-system,
+        "Geist", ui-sans-serif, system-ui, -apple-system,
         "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 }
 
 @theme inline {
     /* Sans (body, UI, small headings like CardTitle) */
-    --font-sans: ui-sans-serif, system-ui, sans-serif;
-    --font-heading: ui-sans-serif, system-ui, sans-serif;
+    --font-sans: "Geist", ui-sans-serif, system-ui, sans-serif;
+    --font-heading: "Geist", ui-sans-serif, system-ui, sans-serif;
+    --font-serif: "Instrument Serif", Georgia, serif;
+    --font-fraunces: "Fraunces", Georgia, "Times New Roman", serif;
     --color-sidebar-ring: var(--sidebar-ring);
     --color-sidebar-border: var(--sidebar-border);
     --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);

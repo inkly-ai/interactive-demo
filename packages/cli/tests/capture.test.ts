@@ -12,8 +12,11 @@ import {
   RECORDER_SCRIPT,
   parseRecorderPayload,
 } from '../src/capture/recorder';
+import { Cdp, isOwnedProfileDir, openTargetPage, profileDirPattern } from '../src/capture/chrome';
 import {
+  CorruptSessionError,
   labelFor,
+  listSessions,
   listSessionStates,
   liveScreens,
   readDroppedKeys,
@@ -27,7 +30,15 @@ import {
   type CaptureSession,
   type CapturedScreen,
 } from '../src/capture/session';
-import { readPngSize, selectPreClickFrame, trimToMotionBurst } from '../src/capture/steps';
+import {
+  FfmpegMissingError,
+  captureVideoStep,
+  readPngSize,
+  selectPreClickFrame,
+  trimToMotionBurst,
+  writeVideoFromFrames,
+  type VideoFrame,
+} from '../src/capture/steps';
 import { assembleCapturedDemo, slugifyName, uniqueDemoSlug, writeDemoFolder } from '../src/capture/output';
 import { dispatchCapture } from '../src/capture/index';
 import { main } from '../src/main';
@@ -161,13 +172,13 @@ describe('in-page recorder', () => {
   it('parses event payloads from either binding and rejects garbage', () => {
     const click = { x: 0.2, y: 0.4, label: 'Go' };
     const page = { url: 'https://a.test/', title: 'A', viewport: { width: 10, height: 10 }, scroll: { x: 0, y: 0, maxX: 0, maxY: 0 } };
-    expect(parseRecorderPayload(RECORDER_EVENT_BINDING, JSON.stringify({ type: 'click', click, page }))).toEqual({
+    expect(parseRecorderPayload(RECORDER_EVENT_BINDING, JSON.stringify({ type: 'click', click, page }))).toMatchObject({
       type: 'click',
       click,
       page,
     });
     expect(parseRecorderPayload(RECORDER_EVENT_BINDING, JSON.stringify({ type: 'scroll', click: null, page }))?.type).toBe('scroll');
-    expect(parseRecorderPayload(RECORDER_CLICK_BINDING, JSON.stringify(click))).toEqual({ type: 'click', click, page: null });
+    expect(parseRecorderPayload(RECORDER_CLICK_BINDING, JSON.stringify(click))).toMatchObject({ type: 'click', click, page: null });
     expect(parseRecorderPayload('other', JSON.stringify(click))).toBeNull();
     expect(parseRecorderPayload(RECORDER_EVENT_BINDING, '{not json')).toBeNull();
     expect(parseRecorderPayload(RECORDER_EVENT_BINDING, 42)).toBeNull();
@@ -383,5 +394,208 @@ describe('capture help', () => {
     out.length = 0;
     expect(await main(['help'], io)).toBe(0);
     expect(out.join('')).toContain('capture    Record a click-through');
+  });
+});
+
+describe('recorder payload validation', () => {
+  const page = { url: 'https://a.test/', title: 'A', viewport: { width: 10, height: 10 }, scroll: { x: 0, y: 0, maxX: 0, maxY: 0 } };
+
+  it('rejects a click without finite normalized coordinates', () => {
+    expect(parseRecorderPayload(RECORDER_CLICK_BINDING, JSON.stringify({ x: 'nope', y: 0.5 }))).toBeNull();
+    expect(parseRecorderPayload(RECORDER_CLICK_BINDING, JSON.stringify({ x: Infinity, y: 0.5 }))).toBeNull();
+    expect(parseRecorderPayload(RECORDER_CLICK_BINDING, JSON.stringify([1, 2]))).toBeNull();
+    expect(parseRecorderPayload(RECORDER_EVENT_BINDING, JSON.stringify({ type: 'click', click: { x: null }, page }))).toBeNull();
+  });
+
+  it('clamps coordinates and caps strings', () => {
+    const long = 'x'.repeat(5000);
+    const event = parseRecorderPayload(
+      RECORDER_CLICK_BINDING,
+      JSON.stringify({ x: 7, y: -1, label: long, selector: long, tag: long, elementId: long, outerHTML: long }),
+    );
+    expect(event?.click).toMatchObject({ x: 1, y: 0 });
+    expect(event?.click?.label).toHaveLength(200);
+    expect(event?.click?.selector).toHaveLength(1000);
+    expect(event?.click?.tag).toHaveLength(50);
+    expect(event?.click?.elementId).toHaveLength(100);
+    expect(event?.click?.outerHTML).toHaveLength(2000);
+  });
+
+  it('only keeps http(s) navigation urls and sane viewports', () => {
+    const forged = { ...page, viewport: { width: -5, height: 1e9 }, navigationUrl: 'javascript:alert(1)' };
+    const event = parseRecorderPayload(RECORDER_EVENT_BINDING, JSON.stringify({ type: 'scroll', click: null, page: forged }));
+    expect(event?.page?.navigationUrl).toBeNull();
+    expect(event?.page?.viewport).toEqual({ width: 1440, height: 16_384 });
+    const ok = parseRecorderPayload(
+      RECORDER_EVENT_BINDING,
+      JSON.stringify({ type: 'click', click: { x: 0.1, y: 0.1 }, page: { ...page, navigationUrl: 'https://b.test/x' } }),
+    );
+    expect(ok?.page?.navigationUrl).toBe('https://b.test/x');
+  });
+});
+
+describe('process ownership', () => {
+  let home: string;
+
+  beforeEach(async () => {
+    home = await mkdtemp(join(tmpdir(), 'interactive-demo-capture-own-'));
+    process.env.INTERACTIVE_DEMO_CAPTURE_HOME = home;
+  });
+
+  afterEach(async () => {
+    delete process.env.INTERACTIVE_DEMO_CAPTURE_HOME;
+    await rm(home, { recursive: true, force: true });
+  });
+
+  it('only owns temp profiles and named profiles under the capture home', () => {
+    expect(isOwnedProfileDir(join(tmpdir(), 'interactive-demo-capture-abc123'))).toBe(true);
+    expect(isOwnedProfileDir(join(home, 'profiles', 'acme'))).toBe(true);
+    expect(isOwnedProfileDir(join(home, 'profiles', 'acme', 'Default'))).toBe(false);
+    expect(isOwnedProfileDir('/Users/me/code/interactive-demo/chrome-profile')).toBe(false);
+    expect(isOwnedProfileDir(null)).toBe(false);
+  });
+
+  it('anchors the pgrep pattern so acme never matches acme-2', () => {
+    const pattern = profileDirPattern('/tmp/p/acme');
+    const re = new RegExp(pattern.replace('[[:space:]]', '\\s'));
+    expect(re.test('chrome --user-data-dir=/tmp/p/acme --headless')).toBe(true);
+    expect(re.test('chrome --user-data-dir=/tmp/p/acme')).toBe(true);
+    expect(re.test('chrome --user-data-dir=/tmp/p/acme-2 --headless')).toBe(false);
+    expect(re.test('chrome --user-data-dir=/tmp/p/acme/x')).toBe(false);
+    expect(profileDirPattern('/tmp/a.b(c)')).toContain('a\\.b\\(c\\)');
+  });
+});
+
+describe('opening the target page', () => {
+  function fakeCdp(overrides: Record<string, unknown>): Cdp {
+    return {
+      on: () => () => undefined,
+      send: async (method: string) => {
+        if (method === 'Target.createTarget') return { targetId: 't1' };
+        if (method === 'Target.attachToTarget') return { sessionId: 's1' };
+        if (method in overrides) return overrides[method] as Record<string, unknown>;
+        return {};
+      },
+    } as unknown as Cdp;
+  }
+
+  it('fails when navigation reports an error', async () => {
+    const cdp = fakeCdp({ 'Page.navigate': { errorText: 'net::ERR_CONNECTION_REFUSED' } });
+    await expect(openTargetPage(cdp, 'http://127.0.0.1:9/', 1440, 900, 1_500)).rejects.toThrow(
+      /Could not load http:\/\/127\.0\.0\.1:9\/: net::ERR_CONNECTION_REFUSED/,
+    );
+  });
+
+  it('refuses a session on the browser error page', async () => {
+    const cdp = fakeCdp({ 'Target.getTargetInfo': { targetInfo: { url: 'chrome-error://chromewebdata/' } } });
+    await expect(openTargetPage(cdp, 'https://nowhere.invalid/', 1440, 900, 200)).rejects.toThrow(
+      /showed an error page/,
+    );
+  });
+});
+
+describe('corrupt session files', () => {
+  let home: string;
+  const out: string[] = [];
+  let write: typeof process.stdout.write;
+
+  beforeEach(async () => {
+    home = await mkdtemp(join(tmpdir(), 'interactive-demo-capture-corrupt-'));
+    process.env.INTERACTIVE_DEMO_CAPTURE_HOME = home;
+    out.length = 0;
+    write = process.stdout.write.bind(process.stdout);
+    process.stdout.write = ((chunk: string | Uint8Array) => {
+      out.push(String(chunk));
+      return true;
+    }) as typeof process.stdout.write;
+  });
+
+  afterEach(async () => {
+    process.stdout.write = write;
+    delete process.env.INTERACTIVE_DEMO_CAPTURE_HOME;
+    await rm(home, { recursive: true, force: true });
+  });
+
+  it('names the file, surfaces it in auto-resolve, and cancel cleans it up', async () => {
+    await mkdir(join(home, 'sessions'), { recursive: true });
+    await writeFile(sessionPath('bad'), '{"id": "bad", ');
+    await expect(readSessionState('bad')).rejects.toBeInstanceOf(CorruptSessionError);
+    await expect(readSessionState('bad')).rejects.toThrow(/bad\.json is not valid JSON/);
+    expect((await listSessions()).map((s) => [s.id, s.state, typeof s.error])).toEqual([['bad', null, 'string']]);
+    expect(await listSessionStates()).toEqual([]);
+    await expect(dispatchCapture({ cwd: home, subcommand: 'status', args: { _: [] } })).rejects.toThrow(
+      /not valid JSON.*capture cancel --session bad/,
+    );
+    expect(await dispatchCapture({ cwd: home, subcommand: 'cancel', args: { _: [], session: 'bad' } })).toBe(0);
+    expect(JSON.parse(out.join(''))).toMatchObject({ ok: true, session: { id: 'bad' }, recovered: true });
+    await expect(stat(sessionPath('bad'))).rejects.toThrow();
+    expect(await listSessions()).toEqual([]);
+  });
+});
+
+describe('video without ffmpeg', () => {
+  let home: string;
+  const savedPath = process.env.PATH;
+
+  beforeEach(async () => {
+    home = await mkdtemp(join(tmpdir(), 'interactive-demo-capture-noffmpeg-'));
+    process.env.INTERACTIVE_DEMO_CAPTURE_HOME = home;
+    // An empty PATH: no ffmpeg anywhere.
+    process.env.PATH = home;
+  });
+
+  afterEach(async () => {
+    process.env.PATH = savedPath;
+    delete process.env.INTERACTIVE_DEMO_CAPTURE_HOME;
+    await rm(home, { recursive: true, force: true });
+  });
+
+  /** 12 distinct frames over 2.2s — enough motion to reach ffmpeg. */
+  const frames = (): VideoFrame[] =>
+    Array.from({ length: 12 }, (_, i) => ({
+      data: Buffer.concat([tinyPng(1440, 900), Buffer.from([i])]).toString('base64'),
+      receivedAt: 1_000 + i * 200,
+    }));
+
+  it('reports a missing ffmpeg as a typed error', async () => {
+    await expect(
+      writeVideoFromFrames({ frames: frames(), captureDir: join(home, 'cap'), index: 1, fps: 30 }),
+    ).rejects.toBeInstanceOf(FfmpegMissingError);
+  });
+
+  it('records the click as a still image instead of dropping it', async () => {
+    const captureDir = join(home, 'cap');
+    const state: CaptureSession = {
+      id: 'v1',
+      createdAt: '2026-01-01T00:00:00.000Z',
+      url: 'https://a.test/',
+      name: 'A',
+      chromePid: null,
+      profileDir: null,
+      keepProfile: false,
+      browserWsUrl: 'ws://127.0.0.1:1/x',
+      browserDebuggingUrl: 'http://127.0.0.1:1',
+      chromeLogPath: null,
+      attached: true,
+      tabUrl: 'https://a.test/',
+      targetId: 't1',
+      width: 1440,
+      height: 900,
+      screens: [],
+      recordVideo: true,
+      captureDir,
+    };
+    const meta = {
+      viewport: { width: 1440, height: 900 },
+      sourceUrl: 'https://a.test/',
+      title: 'A',
+      click: { x: 0.5, y: 0.5, label: 'Go' },
+      scroll: { x: 0, y: 0, maxX: 0, maxY: 0 },
+    };
+    const next = await captureVideoStep(state, frames(), meta.click, meta, tinyPng(1440, 900).toString('base64'));
+    const screens = next.screens ?? [];
+    expect(screens).toHaveLength(1);
+    expect(screens[0]).toMatchObject({ kind: 'image', click: { label: 'Go' } });
+    expect((await stat(screens[0]!.pngPath ?? '')).isFile()).toBe(true);
   });
 });

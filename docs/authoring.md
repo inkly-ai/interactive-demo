@@ -17,7 +17,7 @@ my-demos/
 
 `interactive-demo.json` needs only a `name`. `demos` is an optional list
 that fixes the order `dev` lists demos in; demos are discovered by walking
-`demos/`, so a folder is enough. `theme` names the preset (only `mono`
+`demos/`, so a folder is enough. `theme` names the preset (`default` or `mono`
 ships) and `tokens` overrides its colours, font and radius for every demo.
 
 Add a demo with `interactive-demo init --demo <slug>`, import a folder with
@@ -35,7 +35,7 @@ The full field list is in [schema.md](schema.md). The shape:
   "version": 1,
   "title": "Onboarding",
   "subtitle": "From sign-up to first project",
-  "theme": { "preset": "mono", "tokens": { "primary": "#5b6cff" } },
+  "theme": { "preset": "default", "tokens": { "primary": "#5b6cff" } },
   "chrome": { "controls": "full", "autoplay": false, "branding": true },
   "chapters": [{ "id": "setup", "title": "Setup", "stepIds": ["s1", "s2"] }],
   "steps": [ … ]

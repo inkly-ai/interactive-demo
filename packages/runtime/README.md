@@ -80,5 +80,5 @@ import { DemoSchema, parseDemo } from '@inkly-org/interactive-demo/schema';
 import { resolveDemoTheme, demoThemePresets } from '@inkly-org/interactive-demo/themes';
 ```
 
-One preset ships (`mono`). A preset is four tokens (primary, secondary,
+Two presets ship: `default` (indigo accent, dotted canvas, serif display headings) and `mono` (flat, white paper, black ink). A preset is four tokens (primary, secondary,
 font, radius) plus optional scoped CSS.

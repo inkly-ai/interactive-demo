@@ -35,7 +35,7 @@ const DEFAULT_DEMO_THEME = {
   tokens: {
     primary: '#5b6cff',
     secondary: '#ebebeb',
-    font: 'ui-sans-serif, system-ui, sans-serif',
+    font: 'Geist, ui-sans-serif, system-ui, sans-serif',
     radius: '10px',
   },
 } as const;
@@ -56,9 +56,10 @@ const PLACEHOLDER_HEIGHT = 1080;
 
 /**
  * The placeholder screenshot bytes for a scaffolded demo. A self-contained
- * 16:9 SVG (no external refs) written to the demo's assets folder so the
- * content step renders something the moment it's added. The author swaps it
- * for a real capture.
+ * 16:9 SVG (no external refs) the CLI writes to the demo's `assets/` so the
+ * middle content step renders something the moment it's added. The author
+ * swaps it for a real capture (run `interactive-demo capture`, or upload a
+ * screenshot in the editor and point the step at it).
  */
 export function placeholderSvg(): string {
   const w = PLACEHOLDER_WIDTH;
@@ -72,8 +73,8 @@ export function placeholderSvg(): string {
   </defs>
   <rect width="100%" height="100%" fill="url(#bg)"/>
   <rect x="60" y="60" width="${w - 120}" height="${h - 120}" rx="28" fill="none" stroke="#c7ccdb" stroke-width="3" stroke-dasharray="14 14"/>
-  <text x="50%" y="47%" text-anchor="middle" dominant-baseline="middle" font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif" font-size="84" font-weight="600" fill="#1f2937">Your screenshot goes here</text>
-  <text x="50%" y="56%" text-anchor="middle" dominant-baseline="middle" font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif" font-size="38" fill="#6b7280">Replace assets/${PLACEHOLDER_FILE} with a capture of your product</text>
+  <text x="50%" y="47%" text-anchor="middle" dominant-baseline="middle" font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif" font-size="84" font-weight="700" fill="#4f46e5">Your captured screen goes here</text>
+  <text x="50%" y="56%" text-anchor="middle" dominant-baseline="middle" font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif" font-size="38" font-weight="500" fill="#5b6478">Run interactive-demo capture, or upload a screenshot in the editor and point this step at it.</text>
 </svg>`;
 }
 
@@ -100,10 +101,12 @@ export function starterAssetsManifest(input: { sha256: string; size?: number }):
 }
 
 /**
- * Starter demo: a three-step shell — an intro cover, one content step on the
- * placeholder screenshot, and an outro cover — ready to be filled with a real
- * capture. A fresh, opaque `id` is minted via `generateDemoId()`; a demo's
- * identity is permanent and independent of its folder slug.
+ * Starter demo (the pre-pivot `captureStarterDemoConfig`): a three-step
+ * shell — an intro cover, one content step on the placeholder screenshot,
+ * and an outro cover — ready to be filled with a real capture. A fresh,
+ * opaque `id` is minted via `generateDemoId()`; a demo's identity is
+ * permanent and independent of its folder slug. The outro's "Learn more"
+ * link became a "Replay" restart so the starter carries no external URL.
  */
 export function starterDemoConfig(slug: string, title?: string): unknown {
   return {
@@ -147,7 +150,7 @@ export function starterDemoConfig(slug: string, title?: string): unknown {
           objectFit: 'cover',
         },
         script:
-          'Describe what is happening on this screen. Replace the placeholder with a real capture, then add hotspots in the editor.',
+          "Describe what's happening on this screen. Replace the placeholder with a real capture: run `interactive-demo capture`, or upload a screenshot in the editor and point this step at it.",
         advance: { trigger: 'click' },
         annotations: [],
       },

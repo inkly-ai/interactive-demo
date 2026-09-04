@@ -421,7 +421,11 @@ async function runStart(cwd: string, args: ParsedArgs): Promise<number> {
         listenerPid: readyState.listenerPid ?? listener.pid,
         listenerReadyAt: readyState.listenerReadyAt,
       },
-      next: `Click through the product in the Chrome window, then run \`${BIN} capture stop\`.`,
+      next:
+        `Click through the product in the Chrome window, then run \`${BIN} capture stop\`. ` +
+        (readyState.recordVideo === true
+          ? 'Clicks that follow scrolling or typing are recorded as short videos; other clicks as stills.'
+          : 'Every click is recorded as a still.'),
     });
     return 0;
   } catch (err) {

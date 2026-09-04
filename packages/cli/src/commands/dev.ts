@@ -96,11 +96,24 @@ interface LoadedDemo {
   assets: AssetEntry[];
 }
 
+interface BrokenDemo {
+  slug: string;
+  configPath: string;
+  /** Why the demo could not be loaded (unreadable, not JSON, schema errors). */
+  error: string;
+}
+
 interface ProjectState {
   project: ProjectConfig;
   projectPath: string;
   demos: LoadedDemo[];
   bySlug: Map<string, LoadedDemo>;
+  /**
+   * Demos whose folder was discovered but whose config does not load. They
+   * stay routable so `/` and `/<slug>/` explain the problem instead of the
+   * demo silently vanishing; fixing the file hot-reloads it back in.
+   */
+  broken: Map<string, BrokenDemo>;
 }
 
 async function readDemoAssets(configPath: string): Promise<AssetEntry[]> {
@@ -203,19 +216,24 @@ async function loadProjectState(
   }
 
   const demos: LoadedDemo[] = [];
+  const broken = new Map<string, BrokenDemo>();
+  const markBroken = (d: { slug: string; configPath: string }, error: string) => {
+    onWarn(`${d.slug}: ${error}`);
+    broken.set(d.slug, { slug: d.slug, configPath: d.configPath, error });
+  };
   for (const d of discovered) {
     let demoRaw: string;
     try {
       demoRaw = await readFile(d.configPath, 'utf8');
     } catch (err) {
-      onWarn(`Skipping ${d.slug}: failed to read demo.config.json (${(err as Error).message})`);
+      markBroken(d, `failed to read demo.config.json (${(err as Error).message})`);
       continue;
     }
     let demoJson: unknown;
     try {
       demoJson = JSON.parse(demoRaw);
     } catch (err) {
-      onWarn(`Skipping ${d.slug}: demo.config.json is not valid JSON (${(err as Error).message})`);
+      markBroken(d, `demo.config.json is not valid JSON (${(err as Error).message})`);
       continue;
     }
     // Heal-before-parse so an id-less config renders instead of being
@@ -225,7 +243,7 @@ async function loadProjectState(
     try {
       config = healDemoConfig(demoJson).config;
     } catch (err) {
-      onWarn(`Skipping ${d.slug}: demo.config.json failed schema validation: ${(err as Error).message}`);
+      markBroken(d, `demo.config.json failed schema validation: ${(err as Error).message}`);
       continue;
     }
     demos.push({
@@ -240,7 +258,7 @@ async function loadProjectState(
   const bySlug = new Map<string, LoadedDemo>();
   for (const d of ordered) bySlug.set(d.slug, d);
 
-  return { project, projectPath, demos: ordered, bySlug };
+  return { project, projectPath, demos: ordered, bySlug, broken };
 }
 
 const MIME: Record<string, string> = {
@@ -308,6 +326,18 @@ function findDemoRoute(
     }
   }
   return null;
+}
+
+/** Exact `/<slug>` or `/<slug>/` match against the broken-demo set. */
+function findBrokenDemoRoute(pathname: string, state: ProjectState): BrokenDemo | null {
+  let decoded: string;
+  try {
+    decoded = decodeURIComponent(pathname);
+  } catch {
+    return null;
+  }
+  const slug = decoded.replace(/^\/+/, '').replace(/\/+$/, '');
+  return slug ? (state.broken.get(slug) ?? null) : null;
 }
 
 async function canListenOnDevHost(port: number): Promise<boolean> {
@@ -425,6 +455,12 @@ function renderIndexPage(state: ProjectState, editorAvailable: boolean): string 
         : '';
       return `      <li><a href="${href}">${escapeHtml(title)}</a> <code>${escapeHtml(d.slug)}</code>${edit}</li>`;
     })
+    .concat(
+      [...state.broken.values()].map((d) => {
+        const slugPath = d.slug.split('/').map(encodeURIComponent).join('/');
+        return `      <li class="broken"><a href="/${slugPath}/">${escapeHtml(d.slug)}</a> <span class="error">${escapeHtml(d.error)}</span></li>`;
+      }),
+    )
     .join('\n');
   return `<!doctype html>
 <html lang="en">
@@ -438,6 +474,7 @@ function renderIndexPage(state: ProjectState, editorAvailable: boolean): string 
       ul { padding-left: 20px; line-height: 1.8; }
       code { color: #6b6b6b; font-size: 12px; }
       a.edit { margin-left: 8px; font-size: 12px; color: #5b6cff; }
+      li.broken .error { margin-left: 8px; font-size: 12px; color: #b3261e; }
     </style>
   </head>
   <body>
@@ -445,6 +482,37 @@ function renderIndexPage(state: ProjectState, editorAvailable: boolean): string 
     <ul>
 ${items || '      <li>No demos yet. Run <code>interactive-demo init --demo &lt;slug&gt;</code>.</li>'}
     </ul>
+  </body>
+</html>
+`;
+}
+
+/**
+ * The `/<slug>/` page for a demo whose config does not load. Minimal
+ * markup with the runtime's `.demo-error` panel; served through Vite like
+ * a normal demo page so the client script reloads it once the file is
+ * fixed.
+ */
+function renderBrokenDemoPage(demo: BrokenDemo): string {
+  return `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>${escapeHtml(demo.slug)} (error)</title>
+    <link rel="stylesheet" href="/__demo/player.css" />
+    <style>
+      body { margin: 0; font-family: ui-sans-serif, system-ui, sans-serif; }
+      .demo-error { margin: 16px; padding: 16px; border: 1px solid #e5484d; border-radius: 8px; background: #fff5f5; }
+      .demo-error pre { white-space: pre-wrap; }
+    </style>
+  </head>
+  <body>
+    <div class="demo-error">
+      <h2>Demo "${escapeHtml(demo.slug)}" could not be loaded</h2>
+      <pre>${escapeHtml(demo.error)}</pre>
+      <p>Fix <code>${escapeHtml(relative(process.cwd(), demo.configPath) || demo.configPath)}</code>; this page reloads when it parses again.</p>
+    </div>
   </body>
 </html>
 `;
@@ -566,15 +634,29 @@ export async function runDev(options: DevOptions): Promise<DevHandle> {
                 res,
                 200,
                 'application/json; charset=utf-8',
-                JSON.stringify(state.demos.map((d) => ({ slug: d.slug, title: d.config.title ?? d.slug }))),
+                JSON.stringify([
+                  ...state.demos.map((d) => ({ slug: d.slug, title: d.config.title ?? d.slug })),
+                  ...[...state.broken.values()].map((d) => ({ slug: d.slug, title: d.slug, error: d.error })),
+                ]),
               );
               return;
             }
             if (pathname.startsWith('/__demo/demo/')) {
-              const slug = decodeURIComponent(pathname.slice('/__demo/demo/'.length));
+              let slug: string;
+              try {
+                slug = decodeURIComponent(pathname.slice('/__demo/demo/'.length));
+              } catch {
+                send(res, 400, 'text/plain; charset=utf-8', 'Malformed demo slug');
+                return;
+              }
               const v = validateDemoPathSlug(slug);
               if (!v.ok) {
                 send(res, 400, 'text/plain; charset=utf-8', v.reason);
+                return;
+              }
+              const brokenDemo = state.broken.get(slug);
+              if (brokenDemo) {
+                send(res, 422, 'application/json; charset=utf-8', JSON.stringify({ slug, error: brokenDemo.error }));
                 return;
               }
               const demo = state.bySlug.get(slug);
@@ -587,6 +669,21 @@ export async function runDev(options: DevOptions): Promise<DevHandle> {
                 200,
                 'application/json; charset=utf-8',
                 JSON.stringify({ demo: demo.config, assets: assetsForPage(demo.assets) }),
+              );
+              return;
+            }
+
+            const brokenRoute = findBrokenDemoRoute(pathname, state);
+            if (brokenRoute) {
+              if (!pathname.endsWith('/')) {
+                res.statusCode = 302;
+                res.setHeader('location', `${pathname}/`);
+                res.end();
+                return;
+              }
+              vite.transformIndexHtml(pathname, renderBrokenDemoPage(brokenRoute)).then(
+                (transformed) => send(res, 200, 'text/html; charset=utf-8', transformed),
+                (err) => send(res, 500, 'text/plain; charset=utf-8', (err as Error).message),
               );
               return;
             }
@@ -662,7 +759,7 @@ export async function runDev(options: DevOptions): Promise<DevHandle> {
                   res,
                   404,
                   'text/plain; charset=utf-8',
-                  `No such demo: "${trimmed}". Known demos: ${[...state.bySlug.keys()].join(', ') || '(none)'}\n`,
+                  `No such demo: "${trimmed}". Known demos: ${[...state.bySlug.keys(), ...state.broken.keys()].join(', ') || '(none)'}\n`,
                 );
                 return;
               }
@@ -700,20 +797,32 @@ export async function runDev(options: DevOptions): Promise<DevHandle> {
     awaitWriteFinish: { stabilityThreshold: 60, pollInterval: 20 },
   });
 
+  // Events that arrive while a reload is in flight mark the state dirty and
+  // trigger one more pass once it finishes, so a burst of writes (an editor
+  // save touching several files) never leaves the last one unread.
   let reloadPending = false;
+  let reloadDirty = false;
   const refresh = async () => {
-    if (reloadPending) return;
+    if (reloadPending) {
+      reloadDirty = true;
+      return;
+    }
     reloadPending = true;
     try {
-      const next = await loadProjectState(projectRoot, warn, standalone ?? undefined);
-      state = next;
-      try {
-        server.ws.send({ type: 'full-reload' });
-      } catch {
-        // The websocket may not be up yet; the next request serves fresh state anyway.
-      }
-    } catch (err) {
-      warn(`Reload failed: ${(err as Error).message}`);
+      do {
+        reloadDirty = false;
+        try {
+          const next = await loadProjectState(projectRoot, warn, standalone ?? undefined);
+          state = next;
+          try {
+            server.ws.send({ type: 'full-reload' });
+          } catch {
+            // The websocket may not be up yet; the next request serves fresh state anyway.
+          }
+        } catch (err) {
+          warn(`Reload failed: ${(err as Error).message}`);
+        }
+      } while (reloadDirty);
     } finally {
       reloadPending = false;
     }

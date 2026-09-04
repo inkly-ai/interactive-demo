@@ -283,13 +283,67 @@ describe('runDev project endpoints', () => {
     expect(refreshed).toBe(false);
   });
 
-  it('excludes invalid demos from the listing but still starts', async () => {
+  it('keeps an invalid demo routable and explains the error instead of dropping it', async () => {
     await mkdir(join(root, 'demos', 'broken'), { recursive: true });
     await writeFile(join(root, 'demos', 'broken', 'demo.config.json'), '{ not json', 'utf8');
     handle = await runDev({ cwd: root, port: 0, silent: true });
-    const body = (await (await fetch(`${handle.url}__demo/demos`)).json()) as Array<{ slug: string }>;
-    expect(body.map((d) => d.slug)).not.toContain('broken');
-    expect(body).toHaveLength(2);
+
+    const body = (await (await fetch(`${handle.url}__demo/demos`)).json()) as Array<{ slug: string; error?: string }>;
+    expect(body).toHaveLength(3);
+    expect(body.find((d) => d.slug === 'broken')?.error).toMatch(/not valid JSON/);
+
+    const index = await (await fetch(handle.url)).text();
+    expect(index).toContain('href="/broken/"');
+    expect(index).toContain('not valid JSON');
+
+    const detail = await fetch(`${handle.url}__demo/demo/broken`);
+    expect(detail.status).toBe(422);
+    expect(((await detail.json()) as { error: string }).error).toMatch(/not valid JSON/);
+
+    const page = await fetch(`${handle.url}broken/`);
+    expect(page.status).toBe(200);
+    const html = await page.text();
+    expect(html).toContain('class="demo-error"');
+    expect(html).toContain('not valid JSON');
+    expect(html).toContain('/@vite/client');
+
+    // Fixing the file brings the demo back through the normal reload path.
+    await writeFile(
+      join(root, 'demos', 'broken', 'demo.config.json'),
+      JSON.stringify(minimalDemoConfig('broken', 'Fixed Now'), null, 2),
+      'utf8',
+    );
+    let status = 422;
+    for (let i = 0; i < 60; i += 1) {
+      await new Promise((r) => setTimeout(r, 50));
+      status = (await fetch(`${handle.url}__demo/demo/broken`)).status;
+      if (status === 200) break;
+    }
+    expect(status).toBe(200);
+  });
+
+  it('returns 400 for a malformed percent-encoding in the demo route', async () => {
+    handle = await runDev({ cwd: root, port: 0, silent: true });
+    const res = await fetch(`${handle.url}__demo/demo/%E0`);
+    expect(res.status).toBe(400);
+    expect(await res.text()).toMatch(/Malformed/);
+  });
+
+  it('serves the last of a burst of config writes', async () => {
+    handle = await runDev({ cwd: root, port: 0, silent: true });
+    const configPath = join(root, 'demos', 'getting-started', 'demo.config.json');
+    const base = JSON.parse(await readFile(configPath, 'utf8'));
+    for (let n = 1; n <= 5; n += 1) {
+      await writeFile(configPath, JSON.stringify({ ...base, title: `Burst ${n}` }, null, 2), 'utf8');
+    }
+    let served = '';
+    for (let i = 0; i < 80; i += 1) {
+      await new Promise((r) => setTimeout(r, 50));
+      const res = await fetch(`${handle.url}__demo/demo/getting-started`);
+      served = ((await res.json()) as { demo: { title: string } }).demo.title;
+      if (served === 'Burst 5') break;
+    }
+    expect(served).toBe('Burst 5');
   });
 
   it('orders demos the way the project file lists them', async () => {
@@ -337,6 +391,28 @@ describe('runDev standalone demo (no project file, served in place)', () => {
     expect(body.demo.title).toBe('Website Tour');
     const page = await fetch(`${handle.url}website-tour/`);
     expect(page.status).toBe(200);
+  });
+
+  it('renders the error page when the standalone config breaks, and recovers', async () => {
+    handle = await runDev({ cwd: demoDir, port: 0, silent: true });
+    const configPath = join(demoDir, 'demo.config.json');
+    const good = await readFile(configPath, 'utf8');
+    await writeFile(configPath, '{ broken', 'utf8');
+    let html = '';
+    for (let i = 0; i < 60; i += 1) {
+      await new Promise((r) => setTimeout(r, 50));
+      html = await (await fetch(`${handle.url}website-tour/`)).text();
+      if (html.includes('class="demo-error"')) break;
+    }
+    expect(html).toContain('class="demo-error"');
+    await writeFile(configPath, good, 'utf8');
+    let status = 422;
+    for (let i = 0; i < 60; i += 1) {
+      await new Promise((r) => setTimeout(r, 50));
+      status = (await fetch(`${handle.url}__demo/demo/website-tour`)).status;
+      if (status === 200) break;
+    }
+    expect(status).toBe(200);
   });
 
   it('live-reloads after editing demo.config.json in the real folder', async () => {

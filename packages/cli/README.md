@@ -110,6 +110,31 @@ Profiles live under `~/.interactive-demo/capture/profiles/` (override the whole
 capture home with `INTERACTIVE_DEMO_CAPTURE_HOME`). `capture profiles` lists them.
 Nothing is uploaded anywhere: sessions, frames and profiles stay on your machine.
 
+## Publish
+
+`build` is the default path: you host the static folder yourself. `publish`
+is the hosted option — it uploads a demo to the hosting service and gives you
+a URL you can embed straight away.
+
+```sh
+npx interactive-demo login                 # opens the browser once; token saved to ~/.interactive-demo/credentials.json
+npx interactive-demo publish               # the project's only demo, or …
+npx interactive-demo publish demos/intro   # … one by path or --demo <slug>
+npx interactive-demo publish --list        # hosted URL of every demo
+npx interactive-demo logout
+```
+
+- A demo is keyed by the `id` in its `demo.config.json`. Publishing again
+  updates the same hosted URL in place, so embeds keep working; `--new`
+  mints a fresh URL instead.
+- Assets are uploaded first (each unique file once, through presigned
+  uploads), then the config is frozen as a deployment at `/p/<id>`.
+- `login --token <token>` or `INTERACTIVE_DEMO_API_TOKEN` skips the browser.
+  `INTERACTIVE_DEMO_API_BASE` points the CLI at another origin (for example a
+  local build of the hosting service; `login --local` is shorthand for
+  `http://localhost:3000`).
+- The credentials file belongs to this CLI only and is written owner-only.
+
 ## Dev server routes
 
 - `/` — a list of the project's demos

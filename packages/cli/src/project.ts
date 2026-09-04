@@ -3,7 +3,6 @@ import { dirname, join, resolve, sep } from 'node:path';
 import { z } from 'zod';
 import {
   AssetsManifestSchema,
-  DEMO_CONFIG_SCHEMA_URL,
   ThemeTokensSchema,
   healDemoConfig,
   RESERVED_DEMO_SLUGS,
@@ -14,12 +13,6 @@ import {
 
 /** File name of the project config at the project root. */
 export const PROJECT_FILE = 'interactive-demo.json';
-
-/** Canonical `$schema` value for `interactive-demo.json`. */
-export const PROJECT_SCHEMA_URL = DEMO_CONFIG_SCHEMA_URL.replace(
-  /demo\.config\.json$/,
-  PROJECT_FILE,
-);
 
 /**
  * Top-level `interactive-demo.json`. One per project; lives at the project

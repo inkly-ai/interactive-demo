@@ -203,6 +203,8 @@
 
 .demo-player-shell:has(.demo-controls:hover)::after,
 .demo-player-shell:has(.demo-controls:focus-within)::after,
+.demo-player-shell:has(.demo-builtwith-badge:hover)::after,
+.demo-player-shell:has(.demo-builtwith-badge:focus-visible)::after,
 .demo-player-shell[data-controls="always"]::after {
   opacity: 1;
 }
@@ -1285,7 +1287,9 @@
 }
 
 .demo-player-shell:has(.demo-controls:hover) .demo-caption,
-.demo-player-shell:has(.demo-controls:focus-within) .demo-caption {
+.demo-player-shell:has(.demo-controls:focus-within) .demo-caption,
+.demo-player-shell:has(.demo-builtwith-badge:hover) .demo-caption,
+.demo-player-shell:has(.demo-builtwith-badge:focus-visible) .demo-caption {
   bottom: calc(
     var(--ctrl-pad-bot) + var(--ctrl-btn) + var(--ctrl-stack-gap) +
       var(--ctrl-segment-h) + 12px
@@ -1294,6 +1298,113 @@
 
 @media (prefers-reduced-motion: reduce) {
   .demo-caption {
+    transition: none;
+  }
+}
+
+/* "Made with" badge - sits inside the player shell at bottom-right.
+   The shell already controls the rounded clip + container query, so the
+   badge moves with the player and never escapes the frame. The badge is
+   surface-free and shadow-free so it does not create a glow or card-like
+   backplate over the demo content. Hidden by `chrome.branding: false`. */
+.demo-builtwith-badge {
+  --demo-watermark-fg: rgb(78 78 78 / 58%);
+  --demo-watermark-fg-hover: rgb(54 54 54 / 76%);
+  --demo-watermark-controls-gap: 10px;
+  /* Distance the badge lifts to clear the controls bar when revealed. Full
+     controls stack a progress bar above the button row, so the lift spans
+     both. Minimal controls drop the progress bar and override this below. */
+  --demo-watermark-lift: calc(
+    var(--ctrl-pad-bot) + var(--ctrl-btn) + var(--ctrl-stack-gap) +
+      var(--ctrl-segment-h) + var(--demo-watermark-controls-gap)
+  );
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  z-index: 7;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 4px;
+  border: 0;
+  background: transparent;
+  color: var(--demo-watermark-fg);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+  text-decoration: none;
+  pointer-events: auto;
+  transition:
+    transform 200ms ease,
+    opacity 120ms ease,
+    color 120ms ease;
+}
+
+.demo-builtwith-badge:hover,
+.demo-builtwith-badge:focus-visible {
+  outline: none;
+  color: var(--demo-watermark-fg-hover);
+}
+
+.demo-builtwith-badge::before {
+  content: "";
+  position: absolute;
+  inset-block: -5%;
+  inset-inline: 0;
+}
+
+@container demo-player (min-width: 641px) {
+  .demo-builtwith-badge {
+    gap: 4.4px;
+    font-size: 12.1px;
+  }
+}
+
+@container demo-player (min-width: 960px) {
+  .demo-builtwith-badge {
+    gap: 4.8px;
+    font-size: 13.2px;
+  }
+}
+
+/* Mirror the controls hover-reveal so the badge slides up above the
+   strip in lock-step with the fade-in. Offset uses the same controls
+   metrics as `.demo-caption` above. Hovering the badge itself also
+   keeps it lifted — otherwise the badge slides out from under the
+   cursor (it's a sibling of the controls, not a child), which would
+   flip-flop the hover state and flicker. The badge-hover lift is
+   gated on `.demo-controls` existing so cover screens (which omit the
+   controls bar) don't lift the badge into empty space — that would
+   reintroduce the same flicker. */
+.demo-player-shell:has(.demo-controls:hover) .demo-builtwith-badge,
+.demo-player-shell:has(.demo-controls:focus-within) .demo-builtwith-badge,
+.demo-player-shell:has(.demo-progress-segment:hover) .demo-builtwith-badge,
+.demo-player-shell:has(.demo-progress-segment:focus-visible) .demo-builtwith-badge,
+.demo-player-shell:has(.demo-controls):has(.demo-builtwith-badge:hover) .demo-builtwith-badge,
+.demo-player-shell:has(.demo-controls):has(.demo-builtwith-badge:focus-visible) .demo-builtwith-badge,
+.demo-player-shell[data-controls="always"] .demo-builtwith-badge {
+  color: rgb(255 255 255 / 78%);
+  transform: translateY(calc(-1 * var(--demo-watermark-lift)));
+}
+
+/* Minimal controls omit the progress segments, so the badge only needs to
+   clear the button row — drop the stack gap + segment height from the lift,
+   otherwise it floats far above the bar with an oversized gap. */
+.demo-player-shell:has(.demo-controls-minimal) .demo-builtwith-badge {
+  --demo-watermark-lift: calc(
+    var(--ctrl-pad-bot) + var(--ctrl-btn) + var(--demo-watermark-controls-gap)
+  );
+}
+
+.demo-player-shell:has(.demo-controls):has(.demo-builtwith-badge:hover) .demo-builtwith-badge,
+.demo-player-shell:has(.demo-controls):has(.demo-builtwith-badge:focus-visible) .demo-builtwith-badge,
+.demo-player-shell[data-controls="always"]:has(.demo-builtwith-badge:hover) .demo-builtwith-badge,
+.demo-player-shell[data-controls="always"]:has(.demo-builtwith-badge:focus-visible) .demo-builtwith-badge {
+  color: rgb(255 255 255 / 86%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .demo-builtwith-badge {
     transition: none;
   }
 }

@@ -37,6 +37,7 @@ const fallbackDemo: Demo = {
     hideControls: false,
     mobileFooterMessage: true,
     autoplay: false,
+    branding: true,
   },
   chapters: [],
   steps: [

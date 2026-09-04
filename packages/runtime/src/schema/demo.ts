@@ -81,6 +81,11 @@ export const ChromeSchema = z.object({
    * once their effective duration elapses.
    */
   autoplay: z.boolean().default(false),
+  /**
+   * Shows the small "Made with interactive-demo" link in the player's
+   * bottom-right corner. Default ON; set to `false` to hide it.
+   */
+  branding: z.boolean().default(true),
 });
 
 /**
@@ -219,6 +224,7 @@ export const DemoSchema = z
       hideControls: false,
       mobileFooterMessage: true,
       autoplay: false,
+      branding: true,
     }),
     aspectRatio: AspectRatioSchema.optional(),
     chapters: z.array(ChapterSchema).default([]),

@@ -1,4 +1,5 @@
 export * from './Button';
+export * from './MadeWithBadge';
 export * from './Captions';
 export * from './Chapters';
 export * from './Controls';

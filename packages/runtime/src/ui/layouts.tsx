@@ -9,6 +9,7 @@ import { resolveControlsMode } from '../schema';
 import { useDemoPlayerContext } from '../context';
 import { canNavigateNext, canNavigatePrev } from '../engine';
 import { Captions } from '../primitives/Captions';
+import { MadeWithBadge } from '../primitives/MadeWithBadge';
 import { Controls } from '../primitives/Controls';
 import { Header } from '../primitives/Header';
 import { MobileFooter } from '../primitives/MobileFooter';
@@ -182,6 +183,7 @@ function DefaultLayout({ size, controls, components }: DemoLayoutProps) {
   const hideHeader = chrome?.hideHeader ?? false;
   const controlsMode = resolveControlsMode(chrome);
   const mobileFooterMessage = chrome?.mobileFooterMessage ?? true;
+  const branding = chrome?.branding ?? true;
   // The transport bar rides along on every step — cover steps included —
   // so viewers always have a forward/back + share/fullscreen affordance.
   // (Covers used to hide the `full` bar; a full-bleed embed or a cover
@@ -197,6 +199,7 @@ function DefaultLayout({ size, controls, components }: DemoLayoutProps) {
         {renderControls ? (
           <Controls variant={controlsMode === 'minimal' ? 'minimal' : 'full'} />
         ) : null}
+        {branding ? <MadeWithBadge /> : null}
       </PlayerShell>
       {mobileFooterMessage ? <MobileFooter /> : null}
     </>

@@ -5,11 +5,11 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/inkly-ai-org/interactive-demo.git",
+    "url": "git+https://github.com/inkly-ai/interactive-demo.git",
     "directory": "packages/runtime"
   },
-  "homepage": "https://github.com/inkly-ai-org/interactive-demo#readme",
-  "bugs": "https://github.com/inkly-ai-org/interactive-demo/issues",
+  "homepage": "https://github.com/inkly-ai/interactive-demo#readme",
+  "bugs": "https://github.com/inkly-ai/interactive-demo/issues",
   "type": "module",
   "sideEffects": [
     "./src/theme/styles.css",

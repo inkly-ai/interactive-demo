@@ -1,9 +1,10 @@
 import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
-import { dirname, join, resolve } from 'node:path';
+import { basename, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { AssetEntry, Demo, ThemeTokens } from '@inkly-org/interactive-demo/schema';
+import { isAbsoluteBrandRef, type ProjectBrand } from './project.js';
 
 /**
  * The player page. `dev` and `build` both render demo pages through this
@@ -38,9 +39,8 @@ export const PLAYER_FILES = {
  * They live in the runtime package's `dist/fonts/` next to `fonts.css`.
  */
 export const PLAYER_FONT_FILES = [
-  'newsreader-latin-600-normal.woff2',
-  'fraunces-latin-600-normal.woff2',
-  'geist-latin-wght-normal.woff2',
+  'inter-latin-wght-normal.woff2',
+  'geist-mono-latin-wght-normal.woff2',
 ] as const;
 
 /** Directory holding the font files, derived from where `fonts.css` resolved. */
@@ -139,6 +139,79 @@ export interface DemoPageInput {
   themeId?: string;
   /** Project-level token overrides. */
   themeTokens?: ThemeTokens | null;
+  /** Project name + brand for the page header above the player. */
+  project?: DemoPageProject | null;
+}
+
+export interface DemoPageProject {
+  name: string;
+  brand?: ProjectBrand | null;
+}
+
+/** Folder next to the page that holds a project-relative brand logo. */
+export const BRAND_DIR = 'brand';
+
+/** Page-relative URL for the brand logo: absolute refs pass through, project paths land under `./brand/`. */
+export function brandLogoPageUrl(brand: ProjectBrand | null | undefined): string | null {
+  const logo = brand?.logo?.trim();
+  if (!logo) return null;
+  if (isAbsoluteBrandRef(logo)) return logo;
+  return `./${BRAND_DIR}/${encodeURIComponent(basename(logo))}`;
+}
+
+function attr(value: string): string {
+  return escapeHtml(value);
+}
+
+function externalLink(className: string, link: { href: string; label: string }): string {
+  return `<a href="${attr(link.href)}" class="${className}" target="_blank" rel="noopener noreferrer">${escapeHtml(link.label)}</a>`;
+}
+
+/**
+ * The bar above the player, revived from the original viewer shell: brand
+ * mark + wordmark, a divider, the project name linking to the demo list, a
+ * slash, the demo title, and the project's call-to-action buttons on the
+ * right (only when configured — there is no default button).
+ */
+export function renderPageHeader(input: {
+  project?: DemoPageProject | null;
+  demoTitle: string;
+  themeId: string;
+  accent?: string | null;
+}): string {
+  const brand = input.project?.brand ?? null;
+  const logoUrl = brandLogoPageUrl(brand);
+  const brandWord = brand?.name?.trim() ?? '';
+  const parts: string[] = [];
+  if (logoUrl || brandWord) {
+    const href = brand?.logoHref ?? '/';
+    const external = brand?.logoHref ? ' target="_blank" rel="noopener noreferrer"' : '';
+    const label = brandWord || 'Brand';
+    let inner = '';
+    if (logoUrl) {
+      inner += `<img class="demo-page-brand-mark" src="${attr(logoUrl)}" alt="${brandWord ? '' : 'Brand logo'}" />`;
+    }
+    if (brandWord) inner += `<span class="demo-page-brand-word">${escapeHtml(brandWord)}</span>`;
+    parts.push(
+      `<a href="${attr(href)}" class="demo-page-btn demo-page-brand" aria-label="${attr(label)}"${external}>${inner}</a>`,
+      '<span class="demo-page-divider" aria-hidden="true"></span>',
+    );
+  }
+  if (input.project?.name) {
+    parts.push(
+      `<a href="/" class="demo-page-hub-name">${escapeHtml(input.project.name)}</a>`,
+      '<span class="demo-page-slash" aria-hidden="true">/</span>',
+    );
+  }
+  parts.push(`<span class="demo-page-demo-name">${escapeHtml(input.demoTitle)}</span>`);
+  const ctas: string[] = [];
+  if (brand?.secondaryCta) ctas.push(externalLink('demo-page-cta is-secondary', brand.secondaryCta));
+  if (brand?.cta) ctas.push(externalLink('demo-page-cta is-primary', brand.cta));
+  const accentStyle = input.accent ? ` style="--demo-page-accent: ${attr(input.accent)}"` : '';
+  parts.push(
+    `<span class="demo-page-cta-scope" data-theme="${attr(input.themeId)}"${accentStyle}>${ctas.join('')}</span>`,
+  );
+  return `<header class="demo-page-bar">${parts.join('')}</header>`;
 }
 
 /**
@@ -176,8 +249,20 @@ export function renderDemoPage(input: DemoPageInput): string {
   );
   html = injectJsonScript(html, 'demo-config', config);
   html = injectJsonScript(html, 'demo-assets', input.assets);
+  const header = renderPageHeader({
+    project: input.project,
+    demoTitle: title,
+    themeId: config.theme?.preset ?? 'default',
+    accent: config.theme?.tokens?.primary ?? null,
+  });
+  html = html.includes(HEADER_PLACEHOLDER)
+    ? html.replace(HEADER_PLACEHOLDER, header)
+    : html.replace('<div id="root">', `${header}\n    <div id="root">`);
   return html;
 }
+
+/** Where the template wants the page header; falls back to just before `#root`. */
+export const HEADER_PLACEHOLDER = '<!-- demo-page-header -->';
 
 export async function readTemplate(): Promise<string> {
   return readFile(resolveTemplate('demo.html'), 'utf8');

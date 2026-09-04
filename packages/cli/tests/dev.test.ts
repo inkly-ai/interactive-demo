@@ -214,7 +214,7 @@ describe('runDev project endpoints', () => {
     const fonts = await fetch(`${handle.url}getting-started/player-fonts.css`);
     expect(fonts.status).toBe(200);
     expect(fonts.headers.get('content-type')).toContain('text/css');
-    const woff = await fetch(`${handle.url}getting-started/fonts/geist-latin-wght-normal.woff2`);
+    const woff = await fetch(`${handle.url}getting-started/fonts/inter-latin-wght-normal.woff2`);
     expect(woff.status).toBe(200);
     expect(woff.headers.get('content-type')).toBe('font/woff2');
     expect((await fetch(`${handle.url}getting-started/fonts/evil.woff2`)).status).toBe(404);

@@ -1,11 +1,12 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { mkdtemp, readFile, readdir, rm, stat } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, readdir, rm, stat, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { runInit } from '../src/commands/init';
 import { runBuild } from '../src/commands/build';
 import { resolveRuntimeFile } from '../src/page';
+import { PROJECT_FILE } from '../src/project';
 
 const runtimeBuilt = resolveRuntimeFile('player.js', process.cwd()) !== null;
 
@@ -30,9 +31,8 @@ describe('runBuild', () => {
     const dir = join(result.outDir, 'getting-started');
     expect((await readdir(dir)).sort()).toEqual(['assets', 'fonts', 'index.html', 'player-fonts.css', 'player.css', 'player.js']);
     expect((await readdir(join(dir, 'fonts'))).sort()).toEqual([
-      'fraunces-latin-600-normal.woff2',
-      'geist-latin-wght-normal.woff2',
-      'newsreader-latin-600-normal.woff2',
+      'geist-mono-latin-wght-normal.woff2',
+      'inter-latin-wght-normal.woff2',
     ]);
     expect((await stat(join(dir, 'assets', 'placeholder.svg'))).isFile()).toBe(true);
 
@@ -61,5 +61,27 @@ describe('runBuild', () => {
 
   it.skipIf(runtimeBuilt)('fails with a readable message when the player bundle is missing', async () => {
     await expect(runBuild({ cwd: projectDir, silent: true })).rejects.toThrow(/Player bundle not found/);
+  });
+
+  it.skipIf(!runtimeBuilt)('renders the page header and copies a project-relative brand logo', async () => {
+    const projectFile = join(projectDir, PROJECT_FILE);
+    const project = JSON.parse(await readFile(projectFile, 'utf8'));
+    project.brand = {
+      name: 'Site Co',
+      logo: 'branding/mark.svg',
+      cta: { label: 'Try it', href: 'https://site.example' },
+    };
+    await writeFile(projectFile, JSON.stringify(project, null, 2));
+    await mkdir(join(projectDir, 'branding'), { recursive: true });
+    await writeFile(join(projectDir, 'branding', 'mark.svg'), '<svg xmlns="http://www.w3.org/2000/svg"/>');
+
+    const result = await runBuild({ cwd: projectDir, silent: true });
+    const dir = join(result.outDir, 'getting-started');
+    const html = await readFile(join(dir, 'index.html'), 'utf8');
+    expect(html).toContain('<header class="demo-page-bar">');
+    expect(html).toContain('<span class="demo-page-brand-word">Site Co</span>');
+    expect(html).toContain('src="./brand/mark.svg"');
+    expect(html).toContain('class="demo-page-cta is-primary"');
+    expect((await stat(join(dir, 'brand', 'mark.svg'))).isFile()).toBe(true);
   });
 });

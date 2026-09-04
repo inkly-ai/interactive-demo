@@ -35,7 +35,7 @@ const DEFAULT_DEMO_THEME = {
   tokens: {
     primary: '#5b6cff',
     secondary: '#ebebeb',
-    font: 'Geist, ui-sans-serif, system-ui, sans-serif',
+    font: 'Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif',
     radius: '10px',
   },
 } as const;
@@ -181,6 +181,7 @@ function projectConfig(name: string, options: { theme?: string } = {}): unknown 
   return {
     name,
     theme: options.theme ?? DEFAULT_THEME_ID,
+    brand: { name },
     demos: [STARTER_SLUG],
   };
 }

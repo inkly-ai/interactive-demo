@@ -13,9 +13,11 @@
        * page around it.
        */
       :root {
-        --canvas: #f5f5f5;
+        --surface-2: #fcfcfc;
         --line-soft: #dddddd;
         --ink-strong: #1f1f1f;
+        --ink-muted: #6b6b6b;
+        --canvas: #f5f5f5;
       }
       * { box-sizing: border-box; }
       html, body { margin: 0; height: 100%; }
@@ -25,7 +27,7 @@
         min-height: 100vh;
         background: var(--canvas);
         color: var(--ink-strong);
-        font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+        font-family: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
         font-size: 14px;
       }
       /* Flex + a definite width give the player something concrete to size
@@ -45,6 +47,258 @@
       }
       .demo-wrap {
         width: 100%;
+      }
+
+      /* ── Page header: brand pill + demo name + CTAs (from the original
+         viewer shell). ─────────────────────────────────────────────── */
+      header.demo-page-bar {
+        flex: 0 0 auto;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        height: 56px;
+        padding: 0 20px;
+        background: var(--surface-2);
+        border-bottom: 1px solid var(--line-soft);
+      }
+      .demo-page-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        height: 32px;
+        border-radius: 8px;
+        border: 1px solid transparent;
+        background: transparent;
+        color: var(--ink-strong);
+        font-size: 13px;
+        text-decoration: none;
+      }
+
+      .demo-page-brand {
+        min-width: 32px;
+        padding: 0 8px;
+        gap: 8px;
+        font-weight: 700;
+      }
+      .demo-page-brand img { display: block; max-height: 28px; max-width: 96px; }
+      .demo-page-brand-mark {
+        line-height: 1;
+        height: 28px;
+        width: 28px;
+        border-radius: 0;
+        object-fit: contain;
+      }
+      .demo-page-brand-word {
+        font-family: "Waldenburg", "Inter", ui-sans-serif, system-ui, sans-serif;
+        font-size: 19px;
+        font-weight: 650;
+        line-height: 1;
+        letter-spacing: 0;
+      }
+
+      .demo-page-divider {
+        width: 1px;
+        height: 20px;
+        background: var(--line-soft);
+        flex: 0 0 auto;
+        /* The brand link carries 8px of inner right padding, which would
+         * otherwise make the gap before the divider (8px + 12px header gap)
+         * wider than the gap after it (12px). Pull the divider left by that
+         * 8px so it sits symmetrically between the wordmark and demo name. */
+        margin-left: -8px;
+      }
+      .demo-page-demo-name {
+        flex: 1 1 auto;
+        min-width: 0;
+        font-weight: 600;
+        color: var(--ink-strong);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .demo-page-hub-name {
+        min-width: 0;
+        max-width: 34vw;
+        font-weight: 600;
+        color: var(--ink-strong);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        text-decoration: none;
+      }
+      .demo-page-hub-name:hover { text-decoration: underline; }
+      .demo-page-slash {
+        color: var(--ink-muted);
+        flex: 0 0 auto;
+      }
+      .demo-page-cta-scope {
+        margin-left: auto;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        background: transparent !important;
+        background-image: none !important;
+        color: inherit;
+        font-family: inherit;
+      }
+      .demo-page-cta-scope .demo-page-cta {
+        margin: 0;
+        white-space: nowrap;
+      }
+      .demo-page-cta-scope [hidden] {
+        display: none !important;
+      }
+
+      /* Default theme's CTA buttons (the original preset's shared CTA rules). */
+      .demo-page-cta-scope[data-theme="default"] {
+        --demo-page-surface: #f8f8f8;
+        --demo-page-line: #cccccc;
+        --demo-page-ink-strong: #1f1f1f;
+        --demo-page-accent: #5b6cff;
+        /* Darker companion to --demo-page-accent, used for the primary
+           button's border + the glow/aura under it. Derived from the
+           accent so changing the primary token repaints the border and
+           shadow automatically. */
+        --demo-page-accent-ink: color-mix(in oklab, var(--demo-page-accent) 55%, #000000);
+        --demo-page-shadow-lift:
+            inset 0 1px 0 rgba(255, 255, 255, 0.85),
+            inset 0 -1px 0 rgba(0, 0, 0, 0.06),
+            0 1px 0 rgba(0, 0, 0, 0.03),
+            0 1px 2px rgba(0, 0, 0, 0.06),
+            0 4px 10px -4px rgba(0, 0, 0, 0.10);
+        --demo-page-shadow-lift-hover:
+            inset 0 1px 0 rgba(255, 255, 255, 0.9),
+            inset 0 -1px 0 rgba(0, 0, 0, 0.06),
+            0 2px 4px rgba(0, 0, 0, 0.07),
+            0 8px 16px -6px rgba(0, 0, 0, 0.14);
+        --demo-page-shadow-press:
+            inset 0 1px 0 rgba(255, 255, 255, 0.55),
+            inset 0 -1px 0 rgba(0, 0, 0, 0.06);
+        --demo-page-shadow-primary-lift:
+            inset 0 1px 0 rgba(255, 255, 255, 0.45),
+            inset 0 -1px 0 rgba(0, 0, 0, 0.18),
+            0 1px 1px color-mix(in oklab, var(--demo-page-accent-ink) 28%, transparent),
+            0 3px 8px -5px color-mix(in oklab, var(--demo-page-accent-ink) 45%, transparent);
+        --demo-page-shadow-primary-lift-hover:
+            inset 0 1px 0 rgba(255, 255, 255, 0.5),
+            inset 0 -1px 0 rgba(0, 0, 0, 0.18),
+            0 1px 2px color-mix(in oklab, var(--demo-page-accent-ink) 35%, transparent),
+            0 6px 14px -8px color-mix(in oklab, var(--demo-page-accent-ink) 55%, transparent);
+        --demo-page-shadow-primary-press:
+            inset 0 2px 3px rgba(0, 0, 0, 0.18),
+            inset 0 -1px 0 rgba(255, 255, 255, 0.15);
+      }
+      .demo-page-cta-scope[data-theme="default"] .demo-page-cta {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        flex: 0 0 auto;
+        height: 36px;
+        padding: 0 16px;
+        border-radius: 10px;
+        font-size: 13.5px;
+        font-weight: 500;
+        white-space: nowrap;
+        text-decoration: none;
+        cursor: pointer;
+        box-sizing: border-box;
+        transition: box-shadow 120ms ease, transform 80ms ease, filter 120ms ease;
+      }
+      .demo-page-cta-scope[data-theme="default"] .demo-page-cta span {
+        white-space: nowrap;
+      }
+      .demo-page-cta-scope[data-theme="default"] .demo-page-cta:focus-visible {
+        outline: 2px solid var(--demo-page-accent);
+        outline-offset: 2px;
+      }
+      .demo-page-cta-scope[data-theme="default"] .demo-page-cta.is-primary {
+        background-image: linear-gradient(
+            180deg,
+            color-mix(in oklab, var(--demo-page-accent) 100%, white 6%),
+            var(--demo-page-accent)
+        );
+        background-color: var(--demo-page-accent);
+        color: #ffffff;
+        border: 1px solid var(--demo-page-accent-ink);
+        box-shadow: var(--demo-page-shadow-primary-lift);
+      }
+      .demo-page-cta-scope[data-theme="default"] .demo-page-cta.is-primary:hover {
+        filter: brightness(1.03);
+        box-shadow: var(--demo-page-shadow-primary-lift-hover);
+      }
+      .demo-page-cta-scope[data-theme="default"] .demo-page-cta.is-primary:active {
+        transform: translateY(1px);
+        box-shadow: var(--demo-page-shadow-primary-press);
+      }
+      .demo-page-cta-scope[data-theme="default"] .demo-page-cta.is-secondary {
+        background: linear-gradient(180deg, #ffffff, var(--demo-page-surface));
+        color: var(--demo-page-ink-strong);
+        border: 1px solid var(--demo-page-line);
+        box-shadow: var(--demo-page-shadow-lift);
+        padding: 0 14px;
+      }
+      .demo-page-cta-scope[data-theme="default"] .demo-page-cta.is-secondary:hover {
+        box-shadow: var(--demo-page-shadow-lift-hover);
+      }
+      .demo-page-cta-scope[data-theme="default"] .demo-page-cta.is-secondary:active {
+        transform: translateY(1px);
+        box-shadow: var(--demo-page-shadow-press);
+      }
+
+      /* Mono theme's CTA buttons (the original preset's CTA rules). */
+      .demo-page-cta-scope[data-theme="mono"] {
+        --demo-page-accent: #5b6cff;
+        --demo-page-accent-soft: color-mix(in oklab, var(--demo-page-accent) 10%, white);
+        --demo-page-accent-soft-hover: color-mix(in oklab, var(--demo-page-accent) 15%, white);
+        --demo-page-accent-ink: color-mix(in oklab, var(--demo-page-accent) 72%, #0d0d0d);
+      }
+      .demo-page-cta-scope[data-theme="mono"] .demo-page-cta {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 9px 20px;
+        border-radius: 999px;
+        font-size: 13.5px;
+        font-weight: 500;
+        text-decoration: none;
+        border: 1px solid transparent;
+        cursor: pointer;
+        box-shadow: 0 1px 0 rgba(0,0,0,0.04);
+        transition:
+            background-color 120ms ease,
+            border-color 120ms ease,
+            box-shadow 120ms ease,
+            color 120ms ease,
+            transform 80ms ease;
+      }
+      .demo-page-cta-scope[data-theme="mono"] .demo-page-cta.is-primary {
+        background: var(--demo-page-accent);
+        color: #ffffff;
+        border-color: var(--demo-page-accent);
+        box-shadow: 0 8px 18px -14px color-mix(in oklab, var(--demo-page-accent) 62%, transparent);
+      }
+      .demo-page-cta-scope[data-theme="mono"] .demo-page-cta.is-primary:hover {
+        background: color-mix(in oklab, var(--demo-page-accent) 88%, black);
+        border-color: color-mix(in oklab, var(--demo-page-accent) 88%, black);
+        box-shadow: 0 12px 24px -16px color-mix(in oklab, var(--demo-page-accent) 72%, transparent);
+      }
+      .demo-page-cta-scope[data-theme="mono"] .demo-page-cta.is-secondary {
+        background: #ffffff;
+        color: var(--demo-page-accent-ink);
+        border-color: color-mix(in oklab, var(--demo-page-accent) 20%, #ececec);
+      }
+      .demo-page-cta-scope[data-theme="mono"] .demo-page-cta.is-secondary:hover {
+        background: var(--demo-page-accent-soft);
+        border-color: color-mix(in oklab, var(--demo-page-accent) 34%, #d4d4d4);
+        box-shadow: 0 6px 14px -12px color-mix(in oklab, var(--demo-page-accent) 38%, transparent);
+      }
+      .demo-page-cta-scope[data-theme="mono"] .demo-page-cta:active {
+        transform: translateY(1px);
+        box-shadow: inset 0 1px 2px color-mix(in oklab, var(--demo-page-accent) 34%, rgba(0,0,0,0.18));
+      }
+      .demo-page-cta-scope[data-theme="mono"] .demo-page-cta:focus-visible {
+        outline: 2px solid color-mix(in oklab, var(--demo-page-accent) 72%, white);
+        outline-offset: 2px;
       }
       .demo-loading, .demo-error {
         padding: 24px;
@@ -76,6 +330,7 @@
     <script id="demo-assets" type="application/json">[]</script>
   </head>
   <body>
+    <!-- demo-page-header -->
     <div id="root">
       <div class="demo-loading">Loading demo…</div>
     </div>

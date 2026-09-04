@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import basicDemo from '../examples/basic-demo.json';
 import fullDemo from '../examples/full-demo.json';
 import {
   DEFAULT_EMBED_ALLOW,
@@ -54,6 +55,17 @@ function buildCoverDemo(widgets: Json[]) {
     ],
   };
 }
+
+
+describe('bundled examples', () => {
+  it('basic-demo.json parses', () => {
+    expect(DemoSchema.safeParse(basicDemo).success).toBe(true);
+  });
+
+  it('full-demo.json parses', () => {
+    expect(DemoSchema.safeParse(fullDemo).success).toBe(true);
+  });
+});
 
 describe('DemoSchema', () => {
   it('parses a minimal valid demo and applies schema defaults', () => {

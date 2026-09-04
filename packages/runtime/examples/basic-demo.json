@@ -4,6 +4,7 @@
   "title": "Basic Product Tour",
   "steps": [
     {
+      "kind": "content",
       "id": "s1",
       "duration": 3000,
       "background": {

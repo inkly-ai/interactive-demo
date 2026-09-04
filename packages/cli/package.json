@@ -3,6 +3,13 @@
   "version": "0.1.0",
   "description": "Author, capture, preview and build interactive product demos.",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/inkly-ai-org/interactive-demo.git",
+    "directory": "packages/cli"
+  },
+  "homepage": "https://github.com/inkly-ai-org/interactive-demo#readme",
+  "bugs": "https://github.com/inkly-ai-org/interactive-demo/issues",
   "type": "module",
   "bin": {
     "interactive-demo": "./dist/cli.js"

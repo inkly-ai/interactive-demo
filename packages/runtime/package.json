@@ -3,6 +3,13 @@
   "version": "0.1.0",
   "description": "React player and schema for interactive product demos.",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/inkly-ai-org/interactive-demo.git",
+    "directory": "packages/runtime"
+  },
+  "homepage": "https://github.com/inkly-ai-org/interactive-demo#readme",
+  "bugs": "https://github.com/inkly-ai-org/interactive-demo/issues",
   "type": "module",
   "sideEffects": [
     "./src/theme/styles.css",

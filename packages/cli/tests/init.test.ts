@@ -148,6 +148,12 @@ describe('runAddDemo', () => {
     ).rejects.toThrow(/reserved/);
   });
 
+  it('rejects "assets" as a demo slug', async () => {
+    await expect(
+      runAddDemo({ slug: 'assets', cwd: projectDir, silent: true }),
+    ).rejects.toThrow(/reserved/);
+  });
+
   it('errors when the demo folder already exists', async () => {
     await expect(
       runAddDemo({ slug: 'getting-started', cwd: projectDir, silent: true }),

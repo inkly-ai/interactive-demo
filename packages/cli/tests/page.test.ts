@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { readFile } from 'node:fs/promises';
 import { parseDemo } from '@inkly-org/interactive-demo/schema';
-import { applyProjectTheme, injectJsonScript, renderDemoPage, resolveTemplate } from '../src/page';
+import { applyProjectTheme, brandLogoPageUrl, injectJsonScript, renderDemoPage, renderPageHeader, resolveTemplate } from '../src/page';
 import { assetDeliveryUrl, assetsForPage } from '../src/assets';
 import { starterDemoConfig } from '../src/starter';
 
@@ -78,5 +78,88 @@ describe('assetDeliveryUrl', () => {
     );
     expect(assetDeliveryUrl({ ...base, file: 'a.png' })).toBe('./assets/a.png');
     expect(assetDeliveryUrl(base)).toBeNull();
+  });
+});
+
+describe('page header', () => {
+  const template = `<!doctype html><html><head><title>demo</title>
+<script id="demo-config" type="application/json">null</script>
+<script id="demo-assets" type="application/json">[]</script>
+</head><body><!-- demo-page-header --><div id="root"></div></body></html>`;
+  // The starter pins its own theme; drop it so the project-level theme is what the header sees.
+  const config = parseDemo({ ...(starterDemoConfig('tour', 'My Tour') as object), theme: undefined });
+
+  it('renders the project name, a slash and the demo title, with no buttons by default', () => {
+    const html = renderDemoPage({ template, config, assets: [], project: { name: 'Acme Demos' } });
+    expect(html).toContain('<header class="demo-page-bar">');
+    expect(html).toContain('<a href="/" class="demo-page-hub-name">Acme Demos</a>');
+    expect(html).toContain('<span class="demo-page-slash" aria-hidden="true">/</span>');
+    expect(html).toContain('<span class="demo-page-demo-name">My Tour</span>');
+    expect(html).toContain('<span class="demo-page-cta-scope" data-theme="default"></span>');
+    expect(html).not.toContain('demo-page-cta is-primary');
+    expect(html).not.toContain('demo-page-brand');
+    // The header sits before the player root.
+    expect(html.indexOf('demo-page-bar')).toBeLessThan(html.indexOf('<div id="root">'));
+  });
+
+  it('renders the brand mark, wordmark and both call-to-action buttons when configured', () => {
+    const html = renderDemoPage({
+      template,
+      config,
+      assets: [],
+      project: {
+        name: 'Acme Demos',
+        brand: {
+          name: 'Acme',
+          logo: 'branding/logo.svg',
+          logoHref: 'https://acme.example',
+          cta: { label: 'Get started', href: 'https://acme.example/start' },
+          secondaryCta: { label: 'Docs', href: 'https://acme.example/docs' },
+        },
+      },
+    });
+    expect(html).toContain('class="demo-page-btn demo-page-brand" aria-label="Acme" target="_blank" rel="noopener noreferrer"');
+    expect(html).toContain('<img class="demo-page-brand-mark" src="./brand/logo.svg" alt="" />');
+    expect(html).toContain('<span class="demo-page-brand-word">Acme</span>');
+    expect(html).toContain('<span class="demo-page-divider" aria-hidden="true"></span>');
+    // Secondary first, primary last, both external.
+    const secondary = html.indexOf('class="demo-page-cta is-secondary"');
+    const primary = html.indexOf('class="demo-page-cta is-primary"');
+    expect(secondary).toBeGreaterThan(0);
+    expect(primary).toBeGreaterThan(secondary);
+    expect(html).toContain('<a href="https://acme.example/start" class="demo-page-cta is-primary" target="_blank" rel="noopener noreferrer">Get started</a>');
+  });
+
+  it('keys the buttons on the effective theme and carries the primary token as the accent', () => {
+    const html = renderDemoPage({
+      template,
+      config,
+      assets: [],
+      themeId: 'mono',
+      themeTokens: { primary: '#ff0000' },
+      project: { name: 'Acme Demos', brand: { cta: { label: 'Go', href: 'https://acme.example' } } },
+    });
+    expect(html).toContain('<span class="demo-page-cta-scope" data-theme="mono" style="--demo-page-accent: #ff0000">');
+  });
+
+  it('escapes brand text and passes absolute logo URLs through', () => {
+    const header = renderPageHeader({
+      project: { name: 'A <b>', brand: { name: 'X & Y', logo: 'https://cdn.example/logo.png' } },
+      demoTitle: '"Quoted"',
+      themeId: 'default',
+    });
+    expect(header).toContain('A &lt;b&gt;');
+    expect(header).toContain('X &amp; Y');
+    expect(header).toContain('&quot;Quoted&quot;');
+    expect(header).toContain('src="https://cdn.example/logo.png"');
+    expect(brandLogoPageUrl({ logo: './assets/my logo.png' })).toBe('./brand/my%20logo.png');
+    expect(brandLogoPageUrl({ logo: '/logo.png' })).toBe('/logo.png');
+    expect(brandLogoPageUrl({})).toBeNull();
+  });
+
+  it('falls back to inserting the header before #root when the template has no placeholder', () => {
+    const bare = template.replace('<!-- demo-page-header -->', '');
+    const html = renderDemoPage({ template: bare, config, assets: [], project: { name: 'P' } });
+    expect(html).toMatch(/<header class="demo-page-bar">[\s\S]*<\/header>\n\s*<div id="root">/);
   });
 });

@@ -14,7 +14,7 @@
  */
 import { createHash } from 'node:crypto';
 import { createServer, type IncomingMessage, type Server } from 'node:http';
-import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
@@ -196,6 +196,12 @@ describe('publish against a fake hosting server', () => {
 
   it('publish uploads assets through presigned PUTs and posts the frozen demo', async () => {
     const init = await runInit({ name: 'srv-site', cwd: workdir, silent: true });
+    // The project's brand travels with the frozen demo so the hosted page
+    // can render the same header as `build`.
+    const projectFile = join(init.dir, 'interactive-demo.json');
+    const project = JSON.parse(await readFile(projectFile, 'utf8'));
+    project.brand = { name: 'Srv', cta: { label: 'Try', href: 'https://srv.example' } };
+    await writeFile(projectFile, JSON.stringify(project));
     const demoDir = join(init.dir, 'demos', 'getting-started');
     const bytes = Buffer.from('png bytes here');
     const sha256 = createHash('sha256').update(bytes).digest('hex');
@@ -243,7 +249,7 @@ describe('publish against a fake hosting server', () => {
       demoSlug: 'getting-started',
       title: 'Getting Started',
       replace: true,
-      hub: { name: 'srv-site' },
+      hub: { name: 'srv-site', brand: { name: 'Srv', cta: { label: 'Try', href: 'https://srv.example' } } },
     });
     expect(typeof body.hub.runtime).toBe('string');
     expect(body.assets.assets[0]).toMatchObject({

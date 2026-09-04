@@ -1,8 +1,8 @@
 import { copyFile, cp, mkdir, rm, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { basename, join, resolve } from 'node:path';
 import { ASSETS_DIR, assetsForPage } from '../assets.js';
-import { loadProject, orderDemos } from '../project.js';
+import { brandLogoSourcePath, loadProject, orderDemos } from '../project.js';
 import {
   PLAYER_FONT_FILES,
   readTemplate,
@@ -10,6 +10,7 @@ import {
   resolvePlayerFiles,
   resolveRuntimeFontsDir,
   type PlayerFileName,
+  BRAND_DIR,
 } from '../page.js';
 
 export interface BuildOptions {
@@ -60,8 +61,16 @@ export async function runBuild(options: BuildOptions): Promise<BuildResult> {
       assets: assetsForPage(demo.assets?.assets ?? []),
       themeId: loaded.project.theme,
       themeTokens: loaded.project.tokens ?? null,
+      project: loaded.project,
     });
     await writeFile(join(dir, 'index.html'), html, 'utf8');
+
+    // A project-relative brand logo travels with the page under ./brand/.
+    const logoSrc = brandLogoSourcePath(loaded.root, loaded.project.brand);
+    if (logoSrc && existsSync(logoSrc)) {
+      await mkdir(join(dir, BRAND_DIR), { recursive: true });
+      await copyFile(logoSrc, join(dir, BRAND_DIR, basename(logoSrc)));
+    }
 
     for (const name of Object.keys(playerFiles) as PlayerFileName[]) {
       await copyFile(playerFiles[name], join(dir, name));

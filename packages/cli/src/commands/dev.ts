@@ -17,7 +17,7 @@ import {
 } from '@inkly-org/interactive-demo/schema';
 import { runDemoIdMaintenance, relForLog } from '../demo-id-maintenance.js';
 import { ASSETS_DIR, assetsForPage } from '../assets.js';
-import { orderDemos, PROJECT_FILE, ProjectSchema, type ProjectConfig } from '../project.js';
+import { orderDemos, PROJECT_FILE, ProjectSchema, type ProjectConfig, brandLogoSourcePath } from '../project.js';
 import {
   PLAYER_FILES,
   PLAYER_FONT_FILES,
@@ -27,6 +27,7 @@ import {
   resolveRuntimeFile,
   resolveRuntimeFontsDir,
   type PlayerFileName,
+  BRAND_DIR,
 } from '../page.js';
 import { standaloneDemoName } from '../standalone-demo.js';
 import { EDITOR_API_DEMOS_PREFIX, handleEditorApi } from '../dev/editor-api.js';
@@ -721,6 +722,20 @@ export async function runDev(options: DevOptions): Promise<DevHandle> {
                 serveFontFile(res, fontsDir, rel.slice('fonts/'.length));
                 return;
               }
+              if (rel.startsWith(`${BRAND_DIR}/`)) {
+                // The project-relative brand logo, served where `build` copies it.
+                const logoSrc = brandLogoSourcePath(dirname(state.projectPath), state.project.brand);
+                const wanted = decodeURIComponent(rel.slice(BRAND_DIR.length + 1));
+                if (!logoSrc || wanted !== basename(logoSrc)) {
+                  send(res, 404, 'text/plain; charset=utf-8', 'Not found');
+                  return;
+                }
+                stat(logoSrc).then(
+                  (s) => (s.isFile() ? streamFile(res, logoSrc, contentTypeFor(logoSrc)) : next()),
+                  () => send(res, 404, 'text/plain; charset=utf-8', 'Not found'),
+                );
+                return;
+              }
               if (!rel.startsWith(`${ASSETS_DIR}/`)) {
                 next();
                 return;
@@ -762,6 +777,7 @@ export async function runDev(options: DevOptions): Promise<DevHandle> {
                   assets: assetsForPage(demo.assets),
                   themeId: state.project.theme,
                   themeTokens: state.project.tokens ?? null,
+                  project: state.project,
                 });
                 // Vite adds its client script so `full-reload` reaches the page.
                 vite.transformIndexHtml(pathname, html).then(

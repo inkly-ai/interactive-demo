@@ -23,11 +23,14 @@
     "@inkly-org/interactive-demo": "^0.1.0",
     "chokidar": "^4.0.1",
     "mri": "^1.2.0",
+    "sharp": "^0.34.5",
     "vite": "^5.4.10",
+    "ws": "^8.20.0",
     "zod": "^3.24.1"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",
+    "@types/ws": "^8.5.13",
     "tsup": "^8.3.5",
     "typescript": "^5.7.2",
     "vitest": "^2.1.8"

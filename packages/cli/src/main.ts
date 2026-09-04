@@ -4,6 +4,7 @@ import { runDev } from './commands/dev.js';
 import { runValidate } from './commands/validate.js';
 import { runBuild } from './commands/build.js';
 import { runVersion } from './commands/version.js';
+import { CAPTURE_USAGE, runCapture } from './commands/capture.js';
 import { PROJECT_FILE } from './project.js';
 
 const BIN = 'interactive-demo';
@@ -17,6 +18,7 @@ Usage:
   ${BIN} validate [--json] [--strict]
                                      Validate the project and demo files.
   ${BIN} build [--out <dir>]         Write a static folder per demo.
+  ${BIN} capture <start|stop|…>      Record a click-through of a live web app.
   ${BIN} version                     Print the CLI version.
   ${BIN} help [command]              Show CLI help.
 
@@ -100,11 +102,13 @@ Commands:
   dev        Start the local preview + editor server.
   validate   Validate the project and demo files.
   build      Write a static folder per demo.
+  capture    Record a click-through of a live web app as a demo.
   version    Print the CLI version.
 `;
 
 const HELP_BY_COMMAND: Record<string, string> = {
   build: BUILD_USAGE,
+  capture: CAPTURE_USAGE,
   dev: DEV_USAGE,
   help: HELP_USAGE,
   init: INIT_USAGE,
@@ -147,7 +151,20 @@ export async function main(argv: string[], io: MainIo = defaultIo): Promise<numb
   const args = mri(argv, {
     alias: { h: 'help', p: 'port', v: 'version' },
     boolean: ['help', 'json', 'strict', 'version'],
-    string: ['demo', 'from', 'out', 'port', 'theme'],
+    string: [
+      'browser',
+      'connect-to-browser',
+      'demo',
+      'from',
+      'name',
+      'out',
+      'port',
+      'profile',
+      'session',
+      'theme',
+      'url',
+      'window-size',
+    ],
   });
 
   const [command, ...rest] = args._ as string[];
@@ -276,6 +293,20 @@ export async function main(argv: string[], io: MainIo = defaultIo): Promise<numb
         return 0;
       } catch (err) {
         io.stderr(`${BIN} dev failed: ${(err as Error).message}\n`);
+        return 1;
+      }
+    }
+    case 'capture': {
+      if (args.help) {
+        io.stdout(CAPTURE_USAGE);
+        return 0;
+      }
+      try {
+        // Re-base positionals on the subcommand so `capture start <url>` reads
+        // the URL at `_[1]` regardless of how the binary was invoked.
+        return await runCapture({ cwd: io.cwd, subcommand: rest[0], args: { ...args, _: rest } });
+      } catch (err) {
+        io.stderr(`${BIN} capture failed: ${(err as Error).message}\n`);
         return 1;
       }
     }

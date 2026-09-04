@@ -16,7 +16,9 @@ function copyTemplateDir() {
 }
 
 export default defineConfig({
-  entry: { cli: 'src/cli.ts' },
+  // `cli` is the public binary; `capture-listener` is the internal detached
+  // auto-capture worker that `capture start` spawns directly.
+  entry: { cli: 'src/cli.ts', 'capture-listener': 'src/commands/capture-listener.ts' },
   format: ['esm'],
   platform: 'node',
   target: 'node20',
@@ -29,7 +31,7 @@ export default defineConfig({
   banner: { js: '#!/usr/bin/env node' },
   // The runtime resolves from node_modules at run time (it is a dependency);
   // vite and chokidar stay external too.
-  external: ['vite', 'chokidar', '@inkly-org/interactive-demo'],
+  external: ['vite', 'chokidar', 'sharp', 'ws', '@inkly-org/interactive-demo'],
   noExternal: ['mri', 'zod'],
   onSuccess: async () => {
     copyTemplateDir();

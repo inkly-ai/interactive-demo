@@ -388,6 +388,11 @@ async function ephemeralPort(): Promise<number> {
   });
 }
 
+function isPortInUseError(err: unknown): boolean {
+  const e = err as { code?: string; message?: string } | null;
+  return e?.code === 'EADDRINUSE' || /already in use/i.test(e?.message ?? '');
+}
+
 async function chooseDevPort(startPort: number): Promise<number> {
   // Port 0 means "any free port". Resolve it here rather than handing 0 to
   // Vite, which would fall back to its own default and collide with other
@@ -773,9 +778,22 @@ export async function runDev(options: DevOptions): Promise<DevHandle> {
     ],
   });
 
-  await server.listen();
+  // The port was probed free above, but another process can take it between
+  // the probe and this listen (common in the ephemeral range, e.g. under
+  // parallel tests). Vite rejects with EADDRINUSE under strictPort; cascade to
+  // the next free port a bounded number of times instead of failing.
+  let listenPort = selectedPort;
+  for (let attempt = 0; ; attempt += 1) {
+    try {
+      await server.listen(listenPort);
+      break;
+    } catch (err) {
+      if (port === 0 || attempt >= 10 || !isPortInUseError(err)) throw err;
+      listenPort = await chooseDevPort(listenPort + 1);
+    }
+  }
 
-  actualPort = boundPort(server, selectedPort);
+  actualPort = boundPort(server, listenPort);
   const url = `http://127.0.0.1:${actualPort}/`;
   const displayUrl = `http://localhost:${actualPort}/`;
 

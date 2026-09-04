@@ -34,28 +34,26 @@ export const PLAYER_FILES = {
 export type PlayerFileName = keyof typeof PLAYER_FILES;
 
 /**
- * Locate the HTML template shipped inside this package. In built form
- * (dist/cli.js → dist/template/<name>); when running from `src/`, the
- * sibling `template/` folder.
+ * Locate the HTML template shipped next to this module: `dist/template/`
+ * in the built CLI, `src/template/` when running from source.
  */
 export function resolveTemplate(name: string): string {
-  const builtPath = resolve(__dirname, 'template', name);
-  if (existsSync(builtPath)) return builtPath;
   return resolve(__dirname, 'template', name);
 }
 
 /**
  * Locate a runtime file (`player.js`, `styles.css`) from the runtime
- * package. Tries package resolution from `cwd` (a project that installed the
- * CLI), then from this module (a global install / the workspace), then walks
- * up looking for the workspace's `packages/runtime/dist`.
+ * package. Resolves from this module first, so the player always matches the
+ * schema and themes the CLI itself was built against; then from `cwd` (a
+ * project that installed only the runtime); then walks up looking for the
+ * workspace's `packages/runtime/dist`.
  */
 export function resolveRuntimeFile(
   file: (typeof PLAYER_FILES)[PlayerFileName],
   cwd: string,
 ): string | null {
   const specifier = `${RUNTIME_PACKAGE}/${file}`;
-  for (const base of [join(cwd, 'package.json'), __filename]) {
+  for (const base of [__filename, join(cwd, 'package.json')]) {
     try {
       const req = createRequire(base);
       return req.resolve(specifier);

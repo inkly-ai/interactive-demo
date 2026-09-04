@@ -82,3 +82,18 @@ import { resolveDemoTheme, demoThemePresets } from '@inkly-org/interactive-demo/
 
 Two presets ship: `default` (indigo accent, dotted canvas, serif display headings) and `mono` (flat, white paper, black ink). A preset is four tokens (primary, secondary,
 font, radius) plus optional scoped CSS.
+
+## Fonts (optional)
+
+The stylesheet never loads fonts. The default theme's display serif (Fraunces,
+Newsreader) and the Geist UI sans fall back to Georgia and the system sans
+unless you opt in:
+
+```ts
+import "@inkly-org/interactive-demo/styles.css";
+import "@inkly-org/interactive-demo/fonts.css"; // self-hosted, no network
+```
+
+`fonts.css` ships three `@font-face` rules pointing at `dist/fonts/*.woff2`
+(from the fontsource packages, SIL Open Font License). The CLI's `dev` and
+`build` include it automatically as `player-fonts.css` next to `player.css`.

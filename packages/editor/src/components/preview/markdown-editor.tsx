@@ -57,6 +57,9 @@ export function MarkdownEditor({
                 blockquote: false,
                 horizontalRule: false,
                 codeBlock: false,
+                // StarterKit 3 bundles Link; the explicit extension below
+                // carries our options, so keep the bundled one off.
+                link: false,
             }),
             Link.configure({
                 openOnClick: false,

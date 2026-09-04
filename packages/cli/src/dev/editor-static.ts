@@ -6,8 +6,8 @@ import { fileURLToPath } from 'node:url';
 /**
  * The local editor is a prebuilt single-page app (packages/editor) that the
  * CLI ships under `dist/editor/`. `dev` serves it at `/__demo/editor/`; any
- * path under that prefix that is not a built asset gets `index.html` so the
- * app's own hash routing takes over.
+ * extension-less path under that prefix gets `index.html` so the app's own
+ * hash routing takes over, while a missing file with an extension is a 404.
  */
 
 export const EDITOR_STATIC_PREFIX = '/__demo/editor';
@@ -84,7 +84,15 @@ export function serveEditorStatic(
     res.end('Invalid path');
     return true;
   }
-  if (!extname(file) || !existsSync(file) || !statSync(file).isFile()) {
+  if (!existsSync(file) || !statSync(file).isFile()) {
+    // Only extension-less paths are app routes; a missing built asset is a
+    // real 404, not the SPA shell.
+    if (extname(file)) {
+      res.statusCode = 404;
+      res.setHeader('content-type', 'text/plain; charset=utf-8');
+      res.end('Not found');
+      return true;
+    }
     file = join(root, 'index.html');
   }
   res.statusCode = 200;

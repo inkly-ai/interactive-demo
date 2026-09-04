@@ -2,7 +2,7 @@
  * Editor sidebar inspectors. Each inspector is the right-pane UI for a
  * specific kind of selection in the strip / stage.
  */
-import React, {
+import {
     useEffect,
     useMemo,
     useRef,
@@ -781,7 +781,7 @@ function CoverBackgroundPicker({
 }) {
     const background = step.background;
     const hasOverride = Boolean(background);
-    const mode: CoverBackgroundMode =
+    const storedMode: CoverBackgroundMode =
         !background
             ? "default"
             : background.type === "glassmorphism"
@@ -789,6 +789,12 @@ function CoverBackgroundPicker({
             : background.type === "image"
               ? "image"
               : "color";
+    // "Image" is selected before an image exists: the tab switches at once
+    // and the picker opens; cancelling the picker falls back to the stored
+    // mode. (The schema requires an image background to have a src.)
+    const [pendingImage, setPendingImage] = useState(false);
+    const mode: CoverBackgroundMode =
+        pendingImage && storedMode !== "image" ? "image" : storedMode;
     const solidColor =
         background?.type === "color" && background.color
             ? background.color
@@ -851,6 +857,7 @@ function CoverBackgroundPicker({
     };
 
     const setMode = (next: CoverBackgroundMode) => {
+        if (next !== "image") setPendingImage(false);
         if (next === "default") {
             clearBackgroundOverride();
         } else if (next === "color") {
@@ -869,8 +876,9 @@ function CoverBackgroundPicker({
                     alt: existingImage.alt,
                 });
             } else {
-                // An image background needs an image: open the picker and
-                // let `setImageBackground` commit once one is chosen.
+                // An image background needs an image: show the tab, open the
+                // picker and let `setImageBackground` commit once one is chosen.
+                setPendingImage(true);
                 setImagePickerOpen(true);
             }
         }
@@ -1100,16 +1108,22 @@ function CoverBackgroundPicker({
                     </Button>
                     <MediaAssetPickerDialog
                         open={imagePickerOpen}
-                        onOpenChange={setImagePickerOpen}
+                        onOpenChange={(open) => {
+                            setImagePickerOpen(open);
+                            if (!open && storedMode !== "image") {
+                                setPendingImage(false);
+                            }
+                        }}
                         title="Upload background image"
                         mediaKind="image"
                         currentSrc={imageSrc}
                         assets={imageAssets}
                         demoId={demoId}
                         uploadMedia={uploadImage}
-                        onPick={(result) =>
-                            setImageBackground(result.src, result.alt)
-                        }
+                        onPick={(result) => {
+                            setImageBackground(result.src, result.alt);
+                            setPendingImage(false);
+                        }}
                     />
                 </div>
             ) : null}

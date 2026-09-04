@@ -1,0 +1,716 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+@import "@inkly-org/interactive-demo/styles.css";
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+    color-scheme: light dark;
+    --background: oklch(1 0 0);
+    --foreground: oklch(0.145 0 0);
+    --card: oklch(1 0 0);
+    --card-foreground: oklch(0.145 0 0);
+    --popover: oklch(1 0 0);
+    --popover-foreground: oklch(0.145 0 0);
+    --primary: oklch(0.205 0 0);
+    --primary-foreground: oklch(0.985 0 0);
+    --secondary: oklch(0.97 0 0);
+    --secondary-foreground: oklch(0.205 0 0);
+    --muted: oklch(0.97 0 0);
+    --muted-foreground: oklch(0.556 0 0);
+    --accent: #5b6cff;
+    --accent-foreground: oklch(0.205 0 0);
+    --destructive: oklch(0.577 0.245 27.325);
+    --border: oklch(0.922 0 0);
+    --input: oklch(0.922 0 0);
+    --ring: oklch(0.708 0 0);
+    --chart-1: oklch(0.87 0 0);
+    --chart-2: oklch(0.556 0 0);
+    --chart-3: oklch(0.439 0 0);
+    --chart-4: oklch(0.371 0 0);
+    --chart-5: oklch(0.269 0 0);
+    --radius: 0.625rem;
+    /* ---------- Neutral design language (docs/design-candidates/03-neutral.md) ---------- */
+    /* Sidebar */
+    --sidebar: #ebebeb;
+    --sidebar-foreground: #1f1f1f;
+    --sidebar-primary: #5b6cff;
+    --sidebar-primary-foreground: #ffffff;
+    --sidebar-accent: #f8f8f8;
+    --sidebar-accent-foreground: #1f1f1f;
+    --sidebar-border: #cccccc;
+    --sidebar-ring: #5b6cff;
+
+    /* Surfaces & lines */
+    --surface: #f8f8f8;
+    --surface-2: #fcfcfc;
+    --line: #cccccc;
+    --line-soft: #dddddd;
+    --line-strong: #aaaaaa;
+
+    /* Ink */
+    --ink-strong: #1f1f1f;
+    --ink-2: #3a3a3a;
+
+    /* Accent (indigo) */
+    --accent: #5b6cff;
+    --accent-ink: #2a3aaa;
+
+    /* Canvas (page background under dots) + dot color (Neutral) */
+    --canvas: #f5f5f5;
+    --dot: rgba(0, 0, 0, 0.08);
+
+    /* 3D lift shadows */
+    --shadow-lift:
+        inset 0 1px 0 rgba(255, 255, 255, 0.85),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.06),
+        0 1px 0 rgba(0, 0, 0, 0.03),
+        0 1px 2px rgba(0, 0, 0, 0.06),
+        0 4px 10px -4px rgba(0, 0, 0, 0.10);
+    --shadow-lift-hover:
+        inset 0 1px 0 rgba(255, 255, 255, 0.9),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.06),
+        0 2px 4px rgba(0, 0, 0, 0.07),
+        0 8px 16px -6px rgba(0, 0, 0, 0.14);
+    --shadow-press:
+        inset 0 1px 0 rgba(255, 255, 255, 0.55),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.06);
+
+    /* Floating menu / dropdown shadow — heavier drop than --shadow-lift
+       (mirrors the original design `.menu` box-shadow). */
+    --shadow-menu:
+        inset 0 1px 0 rgba(255, 255, 255, 0.7),
+        0 18px 36px -16px rgba(40, 28, 10, 0.32),
+        0 6px 12px -6px rgba(40, 28, 10, 0.18);
+
+    /* Primary (accent) 3D shadows */
+    --shadow-primary-lift:
+        inset 0 1px 0 rgba(255, 255, 255, 0.45),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.18),
+        0 1px 1px color-mix(in oklab, var(--accent-ink) 28%, transparent),
+        0 3px 8px -5px color-mix(in oklab, var(--accent-ink) 45%, transparent);
+    --shadow-primary-lift-hover:
+        inset 0 1px 0 rgba(255, 255, 255, 0.5),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.18),
+        0 1px 2px color-mix(in oklab, var(--accent-ink) 35%, transparent),
+        0 6px 14px -8px color-mix(in oklab, var(--accent-ink) 55%, transparent);
+    --shadow-primary-press:
+        inset 0 2px 3px rgba(0, 0, 0, 0.18),
+        inset 0 -1px 0 rgba(255, 255, 255, 0.15);
+}
+
+
+@layer components {
+/* Lifted card surface — official design (Neutral) */
+    .surface-lifted {
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        box-shadow: var(--shadow-lift);
+    }
+
+/* Editor-mode annotation wrapper. Uses `display: contents` so the
+       wrapper itself doesn't paint, but its first child (the rendered
+       annotation root) picks up grab cursor + selection outline via the
+       direct-child selector. */
+    .editor-annotation > * {
+        cursor: grab;
+    }
+
+.editor-annotation > *:active {
+        cursor: grabbing;
+    }
+
+/* Cursor messages render two sibling subtrees: the (0×0) point wrapper
+       and a full-stage `.demo-sim-cursor-track`. Outlining every direct
+       child leaked the accent ring onto the track — a full-stage box shifted
+       off-screen by translate(x%, y%), so only its near edge showed as a
+       stray vertical line — plus a meaningless square around the 0×0 point.
+       Skip both: the pulsing reticle already marks the cursor's spot. */
+    .editor-annotation-selected
+        > *:not(.demo-sim-cursor-track):not(.demo-hotspot-pointer) {
+        outline: 3px solid
+            color-mix(in oklab, var(--accent) 50%, transparent);
+        outline-offset: 2px;
+    }
+
+/* During drag we want the annotation to track the cursor exactly,
+       not glide to its new spot with a 600ms easing curve. Scoped to
+       `[data-dragging]` only so other transitions — most importantly
+       the position-tracking transition that fires when the active step
+       toggles zoom between editing (forced 1) and preview (real zoom) —
+       still play. Without this, image-side zoom panned smoothly while
+       annotations snapped, so the message and dot looked detached from
+       their click target until the easing finished. */
+    .editor-annotation[data-dragging] .demo-annotation-point,
+    .editor-annotation[data-dragging] .demo-annotation-region,
+    .editor-annotation[data-dragging]
+        .demo-hotspot-pointer.demo-annotation-point {
+        transition: none !important;
+    }
+
+/* The package hides a pointer's label while the dot animates between
+       step positions. Preserve that playback behavior in the editor too,
+       but keep the label visible during direct drag edits where the
+       pointer should track the cursor continuously. Only kill the opacity
+       transition; the package's `transform 280ms` carries the hover lift. */
+    .editor-annotation[data-dragging] .demo-hotspot-label,
+    .editor-annotation[data-dragging]
+        .demo-hotspot-pointer[data-moving]
+        .demo-hotspot-label {
+        opacity: 1 !important;
+        transition: transform 280ms cubic-bezier(0.16, 1, 0.3, 1) !important;
+    }
+
+/* Blur annotations ship with `pointer-events: none` so they don't
+       intercept clicks at runtime (decorative element). In the editor we
+       need them clickable to select + drag, so override and give them a
+       visible accent outline so the user can see exactly where the blur
+       region sits. */
+    .editor-annotation .demo-blur-annotation {
+        pointer-events: auto !important;
+        outline: 1px dashed
+            color-mix(in oklab, var(--accent) 60%, transparent);
+        outline-offset: -1px;
+    }
+
+.editor-annotation-selected .demo-blur-annotation {
+        outline: 2px solid var(--accent);
+    }
+
+/* Corner handles painted on top of rect-shaped annotations (blur,
+       area-message) when selected. Each handle is centered on its corner
+       via translate(-50%, -50%). z-index keeps them above the annotation
+       outline so they're always grabbable. */
+    .resize-handle {
+        position: absolute;
+        width: 9px;
+        height: 9px;
+        margin: 0;
+        background: var(--surface);
+        border: 1.5px solid var(--accent);
+        border-radius: 2.5px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.18);
+        transform: translate(-50%, -50%);
+        z-index: 5;
+        touch-action: none;
+    }
+
+.resize-handle:hover {
+        background: var(--accent);
+    }
+
+/* Zoom selection overlay rendered inside .demo-player-shell while the
+       user is editing a step's zoom transform. The rect spans the area
+       that will fill the viewport once preview is toggled; corner handles
+       resize the rect (aspect locked to the stage); dragging the body
+       moves the focal point. Hidden in preview mode and when the step has
+       no transform. */
+    .zoom-selection {
+        position: absolute;
+        box-sizing: border-box;
+        border: 2px solid var(--accent);
+        background: color-mix(in oklab, var(--accent) 6%, transparent);
+        cursor: move;
+        z-index: 6;
+        touch-action: none;
+        /* Dim the area outside the zoom region. The shell clips this
+           shadow to its bounds via overflow:hidden. */
+        box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.28);
+    }
+
+/* While the zoom-selection overlay is present in the editor, lift the
+       annotation layer (and the zoom handles) above the selection rect so
+       messages stay clickable through the rect's hit area. The rect itself
+       keeps its z-index for stacking above demo chrome — only annotations
+       and the handles get the boost. */
+    .demo-player-shell:has(.zoom-selection) .demo-annotation-layer {
+        z-index: 7;
+    }
+
+.zoom-selection__handle {
+        z-index: 8;
+    }
+
+.zoom-selection__handle {
+        position: absolute;
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background: var(--accent);
+        border: 2px solid #fff;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+        transform: translate(-50%, -50%);
+        touch-action: none;
+    }
+
+.zoom-selection__handle[data-corner="nw"] {
+        left: 0;
+        top: 0;
+        cursor: nwse-resize;
+    }
+
+.zoom-selection__handle[data-corner="ne"] {
+        left: 100%;
+        top: 0;
+        cursor: nesw-resize;
+    }
+
+.zoom-selection__handle[data-corner="sw"] {
+        left: 0;
+        top: 100%;
+        cursor: nesw-resize;
+    }
+
+.zoom-selection__handle[data-corner="se"] {
+        left: 100%;
+        top: 100%;
+        cursor: nwse-resize;
+    }
+
+/* TipTap WYSIWYG markdown editor used in the annotation inspector.
+       ProseMirror renders into a contentEditable div with class
+       `md-editor`; reset list/paragraph spacing so the rich text
+       reads at the same density as the textarea it replaced. */
+    .md-editor {
+        outline: none;
+    }
+
+.md-editor p {
+        margin: 0;
+    }
+
+.md-editor p + p {
+        margin-top: 6px;
+    }
+
+.md-editor ul {
+        list-style: disc outside;
+        margin: 4px 0;
+        padding-inline-start: 1.25em;
+    }
+
+.md-editor ol {
+        list-style: decimal outside;
+        margin: 4px 0;
+        padding-inline-start: 1.25em;
+    }
+
+.md-editor li > p {
+        margin: 0;
+    }
+
+.md-editor li {
+        margin: 2px 0;
+    }
+
+.md-editor a {
+        color: var(--accent);
+        text-decoration: underline;
+        text-underline-offset: 2px;
+        cursor: text;
+    }
+
+/* Empty-state placeholder. ProseMirror exposes the editor as empty
+       via `.is-editor-empty` on the first child block; show the
+       `data-placeholder` text from the wrapper so it disappears as soon
+       as the user types. */
+    .md-editor p.is-editor-empty:first-child::before {
+        content: attr(data-placeholder);
+        float: left;
+        color: color-mix(in oklab, var(--ink-2) 70%, transparent);
+        pointer-events: none;
+        height: 0;
+    }
+
+/* Floating control pill anchored bottom-center of the player shell.
+       Houses the Zoom Preview toggle and trash. Sits above the demo's
+       own controls and below any selection rect. */
+    .zoom-pill {
+        position: absolute;
+        bottom: 16px;
+        left: 50%;
+        transform: translateX(-50%);
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 4px;
+        background: var(--surface, #fff);
+        border: 1px solid var(--line, rgba(0, 0, 0, 0.08));
+        border-radius: 10px;
+        box-shadow: var(--shadow-lift, 0 6px 16px rgba(0, 0, 0, 0.12));
+        z-index: 7;
+        font: inherit;
+    }
+
+.zoom-pill__primary {
+        appearance: none;
+        border: 0;
+        padding: 6px 14px;
+        border-radius: 7px;
+        background: var(--accent);
+        color: #fff;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35),
+            inset 0 -1px 0 rgba(0, 0, 0, 0.12);
+    }
+
+.zoom-pill__primary:hover {
+        filter: brightness(1.05);
+    }
+
+.zoom-pill__icon {
+        appearance: none;
+        border: 0;
+        padding: 0;
+        width: 28px;
+        height: 28px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 6px;
+        background: transparent;
+        color: var(--ink-2, #555);
+        cursor: pointer;
+    }
+
+.zoom-pill__icon:hover {
+        background: var(--line-soft, rgba(0, 0, 0, 0.05));
+        color: var(--ink-strong, #111);
+    }
+
+.zoom-pill__icon--static {
+        cursor: default;
+    }
+
+.zoom-pill__icon--static:hover {
+        background: transparent;
+        color: var(--ink-2, #555);
+    }
+
+.zoom-pill__sep {
+        width: 1px;
+        height: 18px;
+        background: var(--line, rgba(0, 0, 0, 0.12));
+        margin: 0 2px;
+    }
+
+/* Dotted backdrop — radial dot pattern only. Combine with a Tailwind
+       `bg-*` utility to control the underlying surface color. */
+    .canvas-dotted {
+        background-image: radial-gradient(
+            circle at 1px 1px,
+            var(--dot) 0.5px,
+            transparent 1px
+        );
+        background-size: 10px 10px;
+    }
+
+.editor-media-scrubber {
+        --media-scrub-progress: 0%;
+        --media-scrub-thumb-size: 18px;
+        --media-scrub-track: color-mix(
+            in oklab,
+            var(--ink-strong, #111) 14%,
+            transparent
+        );
+        appearance: none;
+        height: 18px;
+        cursor: pointer;
+        background: transparent;
+    }
+
+.editor-media-scrubber:focus-visible {
+        outline: 2px solid color-mix(in oklab, var(--accent) 55%, white);
+        outline-offset: 2px;
+        border-radius: 999px;
+    }
+
+.editor-media-scrubber:disabled {
+        cursor: default;
+        opacity: 0.45;
+    }
+
+.editor-media-scrubber::-webkit-slider-runnable-track {
+        height: 6px;
+        margin-inline: calc(var(--media-scrub-thumb-size) / 2);
+        border-radius: 999px;
+        background: linear-gradient(
+            to right,
+            var(--accent) 0%,
+            var(--accent) var(--media-scrub-progress),
+            var(--media-scrub-track) var(--media-scrub-progress),
+            var(--media-scrub-track) 100%
+        );
+        box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.08);
+    }
+
+.editor-media-scrubber::-webkit-slider-thumb {
+        appearance: none;
+        width: var(--media-scrub-thumb-size);
+        height: var(--media-scrub-thumb-size);
+        margin-top: -6px;
+        border: 2px solid var(--surface, #fff);
+        border-radius: 999px;
+        background: var(--accent);
+        box-shadow:
+            0 1px 2px rgba(0, 0, 0, 0.18),
+            0 0 0 1px color-mix(in oklab, var(--accent) 34%, transparent);
+    }
+
+.editor-media-scrubber::-moz-range-track {
+        height: 6px;
+        border-radius: 999px;
+        background: var(--media-scrub-track);
+        box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.08);
+    }
+
+.editor-media-scrubber::-moz-range-progress {
+        height: 6px;
+        border-radius: 999px;
+        background: var(--accent);
+    }
+
+.editor-media-scrubber::-moz-range-thumb {
+        width: 18px;
+        height: 18px;
+        border: 2px solid var(--surface, #fff);
+        border-radius: 999px;
+        background: var(--accent);
+        box-shadow:
+            0 1px 2px rgba(0, 0, 0, 0.18),
+            0 0 0 1px color-mix(in oklab, var(--accent) 34%, transparent);
+    }
+
+.demo-canvas-background-blur {
+        position: relative;
+        isolation: isolate;
+        overflow: hidden;
+    }
+
+.demo-canvas-background-blur::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        z-index: 0;
+        pointer-events: none;
+        background-color: var(
+            --demo-canvas-background-color,
+            var(--canvas, #f5f5f5)
+        );
+        background-image: var(--demo-canvas-background-image);
+        background-position: center;
+        background-repeat: no-repeat;
+        background-size: cover;
+        filter: blur(var(--demo-canvas-background-blur, 0px));
+        transform: scale(var(--demo-canvas-background-scale, 1));
+        transform-origin: center;
+    }
+
+.demo-canvas-background-blur > * {
+        position: relative;
+        z-index: 1;
+    }
+
+/* 3D button paint — gradient + lift shadow + press feedback.
+       Border-color & text-color are set on the Button variant via Tailwind
+       (so twMerge can resolve against the base `border-transparent`). */
+    .btn-3d-secondary {
+        background-color: var(--surface);
+        box-shadow: var(--shadow-lift);
+        transition: box-shadow 0.12s ease, border-color 0.12s ease,
+            background-color 0.12s ease, filter 0.12s ease;
+    }
+
+.btn-3d-secondary:hover {
+        box-shadow: var(--shadow-lift-hover);
+    }
+
+.btn-3d-secondary:active {
+        box-shadow: var(--shadow-press);
+    }
+
+.btn-3d-primary {
+        background-image: linear-gradient(
+            180deg,
+            color-mix(in oklab, var(--accent) 86%, white),
+            var(--accent)
+        );
+        box-shadow: var(--shadow-primary-lift);
+        transition: box-shadow 0.12s ease, border-color 0.12s ease,
+            background-color 0.12s ease, filter 0.12s ease;
+    }
+
+.btn-3d-primary:hover {
+        filter: brightness(1.03);
+        box-shadow: var(--shadow-primary-lift-hover);
+    }
+
+.btn-3d-primary:active {
+        box-shadow: var(--shadow-primary-press);
+    }
+
+/* Secondary header controls (secondary CTA + owner edit button) for the
+       other themes; the default theme reuses the design-system `.btn-3d-secondary`
+       utility directly; these mirror that lifted-chrome role in each theme's
+       own palette so the controls don't read as flat bordered boxes next to
+       the themed primary CTA. Radius matches each theme's primary button. */
+    .demo-page-header-secondary {
+        transition:
+            background-color 0.12s ease,
+            border-color 0.12s ease,
+            box-shadow 0.12s ease,
+            color 0.12s ease,
+            transform 0.08s ease;
+    }
+
+/* Floating menu surface — Select, DropdownMenu, ContextMenu (mirrors `.menu`) */
+    .menu-surface {
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        box-shadow: var(--shadow-menu);
+        padding: 5px;
+    }
+
+.menu-surface [data-slot$="-item"],
+    .menu-surface [data-slot$="-checkbox-item"],
+    .menu-surface [data-slot$="-radio-item"],
+    .menu-surface [data-slot$="-sub-trigger"] {
+        border-radius: 8px;
+        padding: 8px 10px;
+        color: var(--ink-2);
+        font-size: 13px;
+    }
+
+.menu-surface [data-slot$="-item"][data-highlighted],
+    .menu-surface [data-slot$="-item"]:hover,
+    .menu-surface [data-slot$="-item"]:focus,
+    .menu-surface [data-slot$="-checkbox-item"][data-highlighted],
+    .menu-surface [data-slot$="-checkbox-item"]:hover,
+    .menu-surface [data-slot$="-checkbox-item"]:focus,
+    .menu-surface [data-slot$="-radio-item"][data-highlighted],
+    .menu-surface [data-slot$="-radio-item"]:hover,
+    .menu-surface [data-slot$="-radio-item"]:focus,
+    .menu-surface [data-slot$="-sub-trigger"][data-highlighted],
+    .menu-surface [data-slot$="-sub-trigger"]:hover,
+    .menu-surface [data-slot$="-sub-trigger"][data-popup-open] {
+        background: var(--sidebar);
+        color: var(--ink-strong);
+    }
+
+.menu-surface [data-slot$="-label"] {
+        padding: 8px 10px 4px;
+        color: var(--muted-foreground);
+        font-size: 10.5px;
+        letter-spacing: 0.4px;
+        text-transform: uppercase;
+        font-weight: 500;
+    }
+
+.menu-surface [data-slot$="-separator"] {
+        height: 1px;
+        background: var(--line-soft);
+        margin: 5px 4px;
+    }
+}
+
+body {
+    font-family:
+        ui-sans-serif, system-ui, -apple-system,
+        "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+@theme inline {
+    /* Sans (body, UI, small headings like CardTitle) */
+    --font-sans: ui-sans-serif, system-ui, sans-serif;
+    --font-heading: ui-sans-serif, system-ui, sans-serif;
+    --color-sidebar-ring: var(--sidebar-ring);
+    --color-sidebar-border: var(--sidebar-border);
+    --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+    --color-sidebar-accent: var(--sidebar-accent);
+    --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+    --color-sidebar-primary: var(--sidebar-primary);
+    --color-sidebar-foreground: var(--sidebar-foreground);
+    --color-sidebar: var(--sidebar);
+    --color-chart-5: var(--chart-5);
+    --color-chart-4: var(--chart-4);
+    --color-chart-3: var(--chart-3);
+    --color-chart-2: var(--chart-2);
+    --color-chart-1: var(--chart-1);
+    --color-ring: var(--ring);
+    --color-input: var(--input);
+    --color-border: var(--border);
+    --color-destructive: var(--destructive);
+    --color-accent-foreground: var(--accent-foreground);
+    --color-accent: var(--accent);
+    --color-muted-foreground: var(--muted-foreground);
+    --color-muted: var(--muted);
+    --color-secondary-foreground: var(--secondary-foreground);
+    --color-secondary: var(--secondary);
+    --color-primary-foreground: var(--primary-foreground);
+    --color-primary: var(--primary);
+    --color-popover-foreground: var(--popover-foreground);
+    --color-popover: var(--popover);
+    --color-card-foreground: var(--card-foreground);
+    --color-card: var(--card);
+    --color-foreground: var(--foreground);
+    --color-background: var(--background);
+    --radius-sm: calc(var(--radius) * 0.6);
+    --radius-md: calc(var(--radius) * 0.8);
+    --radius-lg: var(--radius);
+    --radius-xl: calc(var(--radius) * 1.4);
+    --radius-2xl: calc(var(--radius) * 1.8);
+    --radius-3xl: calc(var(--radius) * 2.2);
+    --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+.dark {
+    --background: oklch(0.145 0 0);
+    --foreground: oklch(0.985 0 0);
+    --card: oklch(0.205 0 0);
+    --card-foreground: oklch(0.985 0 0);
+    --popover: oklch(0.205 0 0);
+    --popover-foreground: oklch(0.985 0 0);
+    --primary: oklch(0.922 0 0);
+    --primary-foreground: oklch(0.205 0 0);
+    --secondary: oklch(0.269 0 0);
+    --secondary-foreground: oklch(0.985 0 0);
+    --muted: oklch(0.269 0 0);
+    --muted-foreground: oklch(0.708 0 0);
+    --accent: oklch(0.269 0 0);
+    --accent-foreground: oklch(0.985 0 0);
+    --destructive: oklch(0.704 0.191 22.216);
+    --border: oklch(1 0 0 / 10%);
+    --input: oklch(1 0 0 / 15%);
+    --ring: oklch(0.556 0 0);
+    --chart-1: oklch(0.87 0 0);
+    --chart-2: oklch(0.556 0 0);
+    --chart-3: oklch(0.439 0 0);
+    --chart-4: oklch(0.371 0 0);
+    --chart-5: oklch(0.269 0 0);
+    --sidebar: oklch(0.205 0 0);
+    --sidebar-foreground: oklch(0.985 0 0);
+    --sidebar-primary: oklch(0.488 0.243 264.376);
+    --sidebar-primary-foreground: oklch(0.985 0 0);
+    --sidebar-accent: oklch(0.269 0 0);
+    --sidebar-accent-foreground: oklch(0.985 0 0);
+    --sidebar-border: oklch(1 0 0 / 10%);
+    --sidebar-ring: oklch(0.556 0 0);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+    }
+  body {
+    @apply bg-background text-foreground;
+    }
+  html {
+    @apply font-sans;
+    }
+}
+

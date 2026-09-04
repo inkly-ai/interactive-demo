@@ -159,22 +159,24 @@ const CTA_THEME_DEFAULTS: Record<
     string,
     { background: string; textColor: string }
 > = {
+    default: { background: "#5B6CFF", textColor: "#FFFFFF" },
     mono: { background: "#0A66FF", textColor: "#FFFFFF" },
 };
 
 function ctaThemeDefaults(themeId?: string) {
-    return CTA_THEME_DEFAULTS[themeId ?? ""] ?? CTA_THEME_DEFAULTS["mono"];
+    return CTA_THEME_DEFAULTS[themeId ?? ""] ?? CTA_THEME_DEFAULTS["default"];
 }
 
 const HOTSPOT_THEME_DEFAULTS: Record<
     string,
     { background: string; textColor: string }
 > = {
+    default: { background: "#5B6CFF", textColor: "#FFFFFF" },
     mono: { background: "#2563EB", textColor: "#FFFFFF" },
 };
 
 function hotspotThemeDefaults(themeId?: string) {
-    return HOTSPOT_THEME_DEFAULTS[themeId ?? ""] ?? HOTSPOT_THEME_DEFAULTS["mono"];
+    return HOTSPOT_THEME_DEFAULTS[themeId ?? ""] ?? HOTSPOT_THEME_DEFAULTS["default"];
 }
 
 function ColorOverrideControl({

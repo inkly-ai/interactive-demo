@@ -14,41 +14,11 @@ export function isExternalDemoResource(value: string): boolean {
     return /^(https?:|data:|blob:|mailto:|tel:)/i.test(value);
 }
 
-export function isSafeDemoResourcePath(value: string): boolean {
+function isSafeDemoResourcePath(value: string): boolean {
     const rel = normalizeDemoResourcePath(value);
     if (!rel || rel.length > 1000) return false;
     if (rel.includes("\0") || rel.includes("..")) return false;
     return rel.split("/").every((part) => Boolean(part) && part !== ".");
-}
-
-export function contentTypeForDemoResource(path: string): string {
-    const rel = normalizeDemoResourcePath(path).toLowerCase();
-    if (rel.endsWith(".html") || rel.endsWith(".htm")) return "text/html; charset=utf-8";
-    if (rel.endsWith(".css")) return "text/css; charset=utf-8";
-    if (rel.endsWith(".js") || rel.endsWith(".mjs")) return "text/javascript; charset=utf-8";
-    if (rel.endsWith(".json")) return "application/json; charset=utf-8";
-    if (rel.endsWith(".svg")) return "image/svg+xml; charset=utf-8";
-    if (rel.endsWith(".png")) return "image/png";
-    if (rel.endsWith(".jpg") || rel.endsWith(".jpeg")) return "image/jpeg";
-    if (rel.endsWith(".gif")) return "image/gif";
-    if (rel.endsWith(".webp")) return "image/webp";
-    if (rel.endsWith(".avif")) return "image/avif";
-    if (rel.endsWith(".ico")) return "image/x-icon";
-    if (rel.endsWith(".mp4")) return "video/mp4";
-    if (rel.endsWith(".webm")) return "video/webm";
-    if (rel.endsWith(".mov")) return "video/quicktime";
-    if (rel.endsWith(".mp3")) return "audio/mpeg";
-    if (rel.endsWith(".wav")) return "audio/wav";
-    if (rel.endsWith(".ogg")) return "audio/ogg";
-    if (rel.endsWith(".woff")) return "font/woff";
-    if (rel.endsWith(".woff2")) return "font/woff2";
-    return "application/octet-stream";
-}
-
-export function isTextLikeDemoResource(path: string): boolean {
-    return /^(text\/|application\/(json|javascript)|image\/svg\+xml)/i.test(
-        contentTypeForDemoResource(path),
-    );
 }
 
 function encodeResourcePath(resourcePath: string): string {

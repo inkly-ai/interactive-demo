@@ -26,14 +26,6 @@ import {
     type MediaUploader,
 } from "./inspectors";
 
-export function splitSentencesClient(text: string): string[] {
-    const matches = text.match(/[^.!?…\n]+[.!?…]?[\s]*/g);
-    const chunks = (matches ?? [text])
-        .map((s) => s.trim())
-        .filter((s) => s.length > 0);
-    return chunks.length > 0 ? chunks : [text.trim()];
-}
-
 /**
  * Read the duration of an audio file in seconds via a hidden `<audio>`
  * element. Resolves to `null` if the metadata fails to load.
@@ -189,28 +181,6 @@ function AudioPreview({
             </Button>
         </div>
     );
-}
-
-/**
- * Distribute `durationMs` across `sentences`, proportional to char
- * length. Returns `Caption[]`-shaped objects with millisecond timing —
- * matches the schema the player resolves against the audio clock when
- * the step has a voiceover.
- */
-export function buildCaptionCues(
-    stepId: string,
-    sentences: ReadonlyArray<string>,
-    durationMs: number,
-): Array<{ id: string; start: number; end: number; text: string }> {
-    const total = sentences.reduce((n, s) => n + Math.max(1, s.length), 0);
-    let cursor = 0;
-    return sentences.map((text, i) => {
-        const share = (Math.max(1, text.length) / total) * durationMs;
-        const start = cursor;
-        const end = cursor + share;
-        cursor = end;
-        return { id: `${stepId}_c${i + 1}`, start, end, text };
-    });
 }
 
 /**
@@ -694,8 +664,6 @@ export function VoiceoverInspector({
             return seed ? { ...m, [step.id]: seed } : m;
         });
     };
-    // Per-step errors, keyed by step id.
-    const [errors] = useState<Record<string, string | null>>({});
     // Served urls for audio attached this session, so the inline player
     // works before the refreshed asset manifest lands. Keyed by stored src.
     const [localUrls, setLocalUrls] = useState<Record<string, string>>({});
@@ -821,8 +789,6 @@ export function VoiceoverInspector({
                 {steps.map((step, i) => {
                     const expanded = expandedId === step.id;
                     const hasVoiceover = !!step.voiceover;
-                    const busy = false;
-                    const err = errors[step.id] ?? null;
                     const draft = scriptValue(step);
                     const title = step.label
                         ? `Step ${i + 1} - ${step.label}`
@@ -937,7 +903,6 @@ export function VoiceoverInspector({
                                                 placeholder="Type what the narrator should say…"
                                                 rows={3}
                                                 maxLength={500}
-                                                disabled={busy}
                                                 className="flex w-full min-h-[84px] rounded-md border border-[color:var(--line)] bg-[color:var(--surface-2)] px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                                             />
 
@@ -952,7 +917,6 @@ export function VoiceoverInspector({
                                                     onClick={() =>
                                                         setView(step.id, "record")
                                                     }
-                                                    disabled={busy}
                                                     className="flex-1 rounded-none border-0 shadow-none"
                                                 >
                                                     <MicIcon />
@@ -967,19 +931,12 @@ export function VoiceoverInspector({
                                                             step.id,
                                                         )
                                                     }
-                                                    disabled={busy}
                                                     className="flex-1 rounded-none border-0 shadow-none"
                                                 >
                                                     <FolderOpenIcon />
                                                     Asset
                                                 </Button>
                                             </div>
-
-                                            {err ? (
-                                                <p className="text-[11px] text-destructive">
-                                                    {err}
-                                                </p>
-                                            ) : null}
 
                                             {hasVoiceover && step.voiceover ? (
                                                 <div className="flex items-center gap-2 rounded-md border border-[color:var(--line-soft)] bg-[color:var(--surface-2)] px-2 py-1.5">

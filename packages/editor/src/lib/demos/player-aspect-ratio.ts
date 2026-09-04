@@ -51,39 +51,3 @@ export function playerAspectRatioForConfig(config: unknown): PlayerAspectRatio {
 
     return { ...DEFAULT_ASPECT_RATIO };
 }
-
-export function playerAspectRatioFromConfigJson(
-    raw: string | undefined | null,
-): PlayerAspectRatio {
-    if (!raw) return { ...DEFAULT_ASPECT_RATIO };
-    try {
-        return playerAspectRatioForConfig(JSON.parse(raw));
-    } catch {
-        return { ...DEFAULT_ASPECT_RATIO };
-    }
-}
-
-export function playerHeaderHeight(themeId: string | null | undefined): number {
-    if (themeId === "mono") return 48;
-    return 51;
-}
-
-export function playerVerticalChromeHeightForConfig(config: unknown): number {
-    const cfg = asRecord(config);
-    const chrome = asRecord(cfg?.chrome);
-    if (chrome?.hideHeader === true) return 0;
-    const theme = asRecord(cfg?.theme);
-    const preset = typeof theme?.preset === "string" ? theme.preset : "mono";
-    return playerHeaderHeight(preset);
-}
-
-export function playerVerticalChromeHeightFromConfigJson(
-    raw: string | undefined | null,
-): number {
-    if (!raw) return playerHeaderHeight("mono");
-    try {
-        return playerVerticalChromeHeightForConfig(JSON.parse(raw));
-    } catch {
-        return playerHeaderHeight("mono");
-    }
-}

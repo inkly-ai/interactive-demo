@@ -109,17 +109,6 @@ export function demoBackgroundBlur(
     return Math.min(MAX_DEMO_BACKGROUND_BLUR, Math.max(0, background.blur));
 }
 
-export function playerCanvasStyleForTheme(
-    themeId: string | null | undefined,
-): DemoBackgroundStyle {
-    switch (themeId) {
-        case "mono":
-            return { background: "#f7f7f7" };
-        default:
-            return { background: "#f5f5f7" };
-    }
-}
-
 function escapeCssUrl(value: string): string {
     return value.replace(/["\\\n\r\f]/g, (char) => `\\${char}`);
 }

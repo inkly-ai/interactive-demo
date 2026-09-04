@@ -1,5 +1,5 @@
 import { defineConfig } from 'tsup';
-import { copyFileSync, mkdirSync, readdirSync, statSync } from 'node:fs';
+import { copyFileSync, cpSync, existsSync, mkdirSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 
 // The player page template ships next to the built module (dist/template/).
@@ -13,6 +13,15 @@ function copyTemplateDir() {
       copyFileSync(srcPath, join(dest, name));
     }
   }
+}
+
+// The prebuilt local editor (packages/editor) ships inside this package as
+// dist/editor/ so `interactive-demo dev` can serve it. Skipped when the
+// editor has not been built.
+function copyEditorDist() {
+  const src = join('..', 'editor', 'dist');
+  if (!existsSync(join(src, 'index.html'))) return;
+  cpSync(src, join('dist', 'editor'), { recursive: true });
 }
 
 export default defineConfig({
@@ -35,5 +44,6 @@ export default defineConfig({
   noExternal: ['mri', 'zod'],
   onSuccess: async () => {
     copyTemplateDir();
+    copyEditorDist();
   },
 });

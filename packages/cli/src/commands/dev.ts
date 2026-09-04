@@ -27,7 +27,8 @@ import {
   type PlayerFileName,
 } from '../page.js';
 import { standaloneDemoName } from '../standalone-demo.js';
-import { EDITOR_API_PREFIX, handleEditorApi } from '../dev/editor-api.js';
+import { EDITOR_API_DEMOS_PREFIX, handleEditorApi } from '../dev/editor-api.js';
+import { EDITOR_STATIC_PREFIX, resolveEditorDir, serveEditorStatic } from '../dev/editor-static.js';
 
 export interface DevOptions {
   cwd: string;
@@ -413,12 +414,16 @@ function escapeHtml(text: string): string {
 }
 
 /** The `/` page: a plain list of links to every demo. */
-function renderIndexPage(state: ProjectState): string {
+function renderIndexPage(state: ProjectState, editorAvailable: boolean): string {
   const items = state.demos
     .map((d) => {
-      const href = `/${d.slug.split('/').map(encodeURIComponent).join('/')}/`;
+      const slugPath = d.slug.split('/').map(encodeURIComponent).join('/');
+      const href = `/${slugPath}/`;
       const title = d.config.title ?? d.slug;
-      return `      <li><a href="${href}">${escapeHtml(title)}</a> <code>${escapeHtml(d.slug)}</code></li>`;
+      const edit = editorAvailable
+        ? ` <a class="edit" href="${EDITOR_STATIC_PREFIX}/#/${slugPath}">Edit</a>`
+        : '';
+      return `      <li><a href="${href}">${escapeHtml(title)}</a> <code>${escapeHtml(d.slug)}</code>${edit}</li>`;
     })
     .join('\n');
   return `<!doctype html>
@@ -432,6 +437,7 @@ function renderIndexPage(state: ProjectState): string {
       h1 { font-size: 20px; margin: 0 0 16px; }
       ul { padding-left: 20px; line-height: 1.8; }
       code { color: #6b6b6b; font-size: 12px; }
+      a.edit { margin-left: 8px; font-size: 12px; color: #5b6cff; }
     </style>
   </head>
   <body>
@@ -492,6 +498,9 @@ export async function runDev(options: DevOptions): Promise<DevHandle> {
     'player.css': resolveRuntimeFile(PLAYER_FILES['player.css'], projectRoot),
   };
   const demoTemplate = await readTemplate();
+  // ── local editor (packages/editor build) ──────────────────────────────
+  const editorDir = resolveEditorDir();
+  // ──────────────────────────────────────────────────────────────────────
 
   const selectedPort = await chooseDevPort(port);
   let actualPort = selectedPort;
@@ -526,11 +535,11 @@ export async function runDev(options: DevOptions): Promise<DevHandle> {
             const pathname = rawUrl.split('?')[0] ?? '';
 
             if (pathname === '/' || pathname === '/index.html') {
-              send(res, 200, 'text/html; charset=utf-8', renderIndexPage(state));
+              send(res, 200, 'text/html; charset=utf-8', renderIndexPage(state, editorDir != null));
               return;
             }
 
-            if (pathname.startsWith(EDITOR_API_PREFIX)) {
+            if (pathname.startsWith(EDITOR_API_DEMOS_PREFIX)) {
               void handleEditorApi(req as IncomingMessage, res, {
                 findDemo: (slug) => state.bySlug.get(slug) ?? null,
                 onChanged: () => void refresh(),
@@ -539,6 +548,11 @@ export async function runDev(options: DevOptions): Promise<DevHandle> {
               });
               return;
             }
+            // ── local editor (static SPA) ──────────────────────────────
+            if (serveEditorStatic(res, pathname, editorDir)) {
+              return;
+            }
+            // ──────────────────────────────────────────────────────────
 
             // The player files are also reachable at a fixed path for the
             // editor shell, which is not served under a demo slug.
@@ -729,8 +743,9 @@ export async function runDev(options: DevOptions): Promise<DevHandle> {
           (slugs.length > MAX_DEMO_LINES ? `\n    …and ${slugs.length - MAX_DEMO_LINES} more` : '')
         : '';
     const runtimeNote = playerFiles['player.js'] ? '' : `\n  ${RUNTIME_MISSING_MSG}`;
+    const editorLine = editorDir ? `\n  editor: ${displayUrl}${EDITOR_STATIC_PREFIX.slice(1)}/` : '';
     process.stdout.write(
-      `\n  interactive-demo dev running at ${displayUrl}\n  project: ${state.project.name}\n  demos: ${state.demos.length}${demoLines}${runtimeNote}\n`,
+      `\n  interactive-demo dev running at ${displayUrl}\n  project: ${state.project.name}\n  demos: ${state.demos.length}${demoLines}${editorLine}${runtimeNote}\n`,
     );
   }
 

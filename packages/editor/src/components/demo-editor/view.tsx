@@ -953,7 +953,7 @@ function CoverFooter({
 
 // ─── main editor view ──────────────────────────────────────────────────────
 
-const DEFAULT_THEME_ID = "mono";
+const DEFAULT_THEME_ID = "default";
 
 // ─── sidebar screen history ──────────────────────────────────────────────────
 

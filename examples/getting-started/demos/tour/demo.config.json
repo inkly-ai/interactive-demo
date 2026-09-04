@@ -4,9 +4,6 @@
   "version": 1,
   "title": "A tour of interactive-demo",
   "subtitle": "Three screens, three hotspots, one static build.",
-  "theme": {
-    "preset": "mono"
-  },
   "chrome": {
     "hideHeader": false,
     "hideControls": false,

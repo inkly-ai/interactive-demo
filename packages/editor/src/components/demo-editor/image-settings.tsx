@@ -410,7 +410,7 @@ export function ImageSettingsDialog({
       if (!blob) throw new Error("Failed to encode cropped image.");
 
       const filename = `crop-${step.id}-${Date.now().toString(36)}.png`;
-      const path = `public/${filename}`;
+      const path = `assets/${filename}`;
       const commit = await putDemoAssetBlob({
         slug,
         blob,

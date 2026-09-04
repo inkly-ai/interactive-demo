@@ -22,8 +22,11 @@ import { LocalFsWorkspace, type WorkspaceProvider } from '../workspace.js';
  *            `publicUrl` the editor can load from this server.
  *   POST   /__demo/editor/demos/:slug/assets?name=<file>[&kind=image|video|audio]
  *          raw request body = the asset bytes; written to `assets/<file>`
- *          and registered in assets.json (content hash, size, kind).
- *          → { ok: true, asset: AssetMeta }
+ *          and registered in assets.json (content hash, size, kind). When
+ *          `<file>` already exists with different bytes the upload lands
+ *          under a de-duplicated name (`hero-2.png`) with a new id, so
+ *          steps referencing the old asset are unaffected. Max 100 MB.
+ *          → { ok: true, file, renamedFrom?, asset: AssetMeta }
  *   DELETE /__demo/editor/demos/:slug/assets?name=<file>
  *          removes the file and its manifest entry. → { ok: true }
  *
@@ -37,7 +40,21 @@ export const EDITOR_API_DEMOS_PREFIX = `${EDITOR_API_PREFIX}demos/`;
 const MANIFEST_PATH = 'assets.json';
 const TEXT_EXTENSIONS = new Set(['.json', '.md', '.txt', '.svg', '.css', '.html', '.js']);
 const MAX_JSON_BODY = 20_000_000;
-const MAX_ASSET_BODY = 500_000_000;
+/** Largest asset upload accepted, in bytes. The editor enforces the same cap. */
+export const MAX_ASSET_BYTES = 100 * 1024 * 1024;
+
+/** Allowed asset file names: a leading letter or digit, then letters, digits, `.`, `_`, `-`. */
+export const ASSET_NAME_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
+export const ASSET_NAME_RULE =
+  'an asset name must start with a letter or digit and contain only letters, digits, ".", "_" and "-"';
+
+class HttpError extends Error {
+  status: number;
+  constructor(status: number, message: string) {
+    super(message);
+    this.status = status;
+  }
+}
 
 const CONTENT_TYPES: Record<string, string> = {
   '.png': 'image/png',
@@ -94,12 +111,16 @@ function sendJson(res: ServerResponse, status: number, body: unknown): void {
 }
 
 async function readBody(req: IncomingMessage, limit: number): Promise<Buffer> {
+  const declared = Number(req.headers['content-length'] ?? 0);
+  if (Number.isFinite(declared) && declared > limit) {
+    throw new HttpError(413, `Request body is too large (limit ${limit} bytes).`);
+  }
   const chunks: Buffer[] = [];
   let size = 0;
   for await (const chunk of req) {
     const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
     size += buffer.byteLength;
-    if (size > limit) throw new Error('Request body is too large.');
+    if (size > limit) throw new HttpError(413, `Request body is too large (limit ${limit} bytes).`);
     chunks.push(buffer);
   }
   return Buffer.concat(chunks);
@@ -110,8 +131,26 @@ function isTextPath(path: string): boolean {
   return dot >= 0 && TEXT_EXTENSIONS.has(path.slice(dot).toLowerCase());
 }
 
-function safeAssetName(name: string): boolean {
-  return /^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(name);
+export function isSafeAssetName(name: string): boolean {
+  return ASSET_NAME_PATTERN.test(name);
+}
+
+/**
+ * Pick a file name that is not yet used by another asset: `hero.png`,
+ * `hero-2.png`, `hero-3.png`, … Existing names are compared case-insensitively
+ * so the result is safe on case-insensitive file systems.
+ */
+export function dedupeAssetName(name: string, taken: Iterable<string>): string {
+  const used = new Set(Array.from(taken, (value) => value.toLowerCase()));
+  if (!used.has(name.toLowerCase())) return name;
+  const dot = name.lastIndexOf('.');
+  const stem = dot > 0 ? name.slice(0, dot) : name;
+  const ext = dot > 0 ? name.slice(dot) : '';
+  for (let n = 2; n < 10_000; n += 1) {
+    const candidate = `${stem}-${n}${ext}`;
+    if (!used.has(candidate.toLowerCase())) return candidate;
+  }
+  throw new HttpError(409, `Too many assets named like ${name}.`);
 }
 
 export function defaultAssetUrl(slug: string, file: string): string {
@@ -290,12 +329,33 @@ export async function handleEditorApi(
       return true;
     }
     if (resource === 'assets' && req.method === 'POST') {
-      const name = params.get('name') ?? '';
-      if (!safeAssetName(name)) {
-        sendJson(res, 400, { error: 'Missing or invalid ?name=<file>' });
+      const requested = params.get('name') ?? '';
+      if (!isSafeAssetName(requested)) {
+        sendJson(res, 400, { error: `Missing or invalid ?name=<file>: ${ASSET_NAME_RULE}.` });
         return true;
       }
-      const bytes = await readBody(req, MAX_ASSET_BODY);
+      const bytes = await readBody(req, MAX_ASSET_BYTES);
+      const sha256 = createHash('sha256').update(bytes).digest('hex');
+      const manifest = await readManifest(workspace, demoDir);
+      const sameName = manifest.assets.find(
+        (entry) => entry.file === requested || entry.path === `${ASSETS_DIR}/${requested}`,
+      );
+      // Re-uploading identical bytes under the same name is a no-op for the
+      // manifest. Different bytes under an existing name get a fresh file name
+      // and a fresh id, so steps that reference the old asset keep showing it.
+      const name =
+        sameName && sameName.sha256 !== sha256
+          ? dedupeAssetName(
+              requested,
+              [
+                ...manifest.assets.map((entry) => entry.file ?? entry.path?.split('/').pop() ?? ''),
+                ...(await workspace.listFiles(demoDir))
+                  .filter((path) => path.startsWith(`${ASSETS_DIR}/`))
+                  .map((path) => path.slice(ASSETS_DIR.length + 1)),
+              ].filter(Boolean),
+            )
+          : requested;
+      const previous = name === requested ? sameName : undefined;
       const relPath = `${ASSETS_DIR}/${name}`;
       await workspace.writeFile(demoDir, relPath, bytes);
       const headerType = String(req.headers['content-type'] ?? '').split(';')[0]?.trim();
@@ -306,10 +366,7 @@ export async function handleEditorApi(
         requestedKind === 'image' || requestedKind === 'video' || requestedKind === 'audio' || requestedKind === 'font'
           ? requestedKind
           : kindForContentType(contentType);
-      const sha256 = createHash('sha256').update(bytes).digest('hex');
       const now = new Date().toISOString();
-      const manifest = await readManifest(workspace, demoDir);
-      const previous = manifest.assets.find((entry) => entry.file === name || entry.path === relPath);
       const entry: AssetEntry = {
         id: previous?.id ?? generatedAssetId(relPath, sha256),
         path: relPath,
@@ -329,13 +386,18 @@ export async function handleEditorApi(
       ];
       await writeManifest(workspace, demoDir, manifest);
       deps.onChanged?.();
-      sendJson(res, 200, { ok: true, file: name, asset: toEditorAsset(entry, slug, assetUrl) });
+      sendJson(res, 200, {
+        ok: true,
+        file: name,
+        renamedFrom: name === requested ? undefined : requested,
+        asset: toEditorAsset(entry, slug, assetUrl),
+      });
       return true;
     }
     if (resource === 'assets' && req.method === 'DELETE') {
       const name = params.get('name') ?? '';
-      if (!safeAssetName(name)) {
-        sendJson(res, 400, { error: 'Missing or invalid ?name=<file>' });
+      if (!isSafeAssetName(name)) {
+        sendJson(res, 400, { error: `Missing or invalid ?name=<file>: ${ASSET_NAME_RULE}.` });
         return true;
       }
       const relPath = `${ASSETS_DIR}/${name}`;
@@ -353,7 +415,8 @@ export async function handleEditorApi(
     sendJson(res, 405, { error: 'method not allowed' });
     return true;
   } catch (err) {
-    sendJson(res, 400, { error: (err as Error).message });
+    const status = err instanceof HttpError ? err.status : 400;
+    sendJson(res, status, { error: (err as Error).message });
     return true;
   }
 }

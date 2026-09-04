@@ -66,7 +66,7 @@ import {
     WandSparklesIcon,
     ZoomInIcon,
 } from "lucide-react";
-import { type AssetMeta } from "@/lib/assets";
+import { sanitizeAssetName, type AssetMeta } from "@/lib/assets";
 import { findAssetReferenceEntry } from "@/lib/assets/resolve";
 import { cn } from "@/lib/utils";
 import { putDemoAssetBlob } from "@/lib/assets/client-demo-upload";
@@ -396,7 +396,6 @@ function AiMenuButton({
 }
 
 type MediaPlaybackElement = HTMLVideoElement;
-type MediaPlaybackKind = "video";
 
 function isActivePlaybackElement(el: MediaPlaybackElement): boolean {
     if (el.getAttribute("aria-hidden") === "true") return false;
@@ -424,7 +423,7 @@ function MediaPlaybackControl({
     kind,
 }: {
     stepId: string;
-    kind: MediaPlaybackKind;
+    kind: "video";
 }) {
     const [duration, setDuration] = useState(0);
     const [currentTime, setCurrentTime] = useState(0);
@@ -691,9 +690,7 @@ function StepFooter({
     // they keep their full labels.
     const isVideo = step.background.type === "video";
     const hasPlaybackControl = isVideo;
-    const overlaysUnavailable = false;
     const compact = hasPlaybackControl;
-    const annotationUnavailableTitle = undefined;
 
     return (
         <>
@@ -704,64 +701,62 @@ function StepFooter({
                 </>
             ) : null}
 
-            {(
-                <DropdownMenu>
-                    <CompactTooltip label="Message" enabled={compact}>
-                        <DropdownMenuTrigger
-                            render={
-                                <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="default"
-                                    className="hover:bg-[color:var(--sidebar)]"
-                                    title={
-                                        isVideo
-                                            ? undefined
-                                            : "Add a message annotation"
-                                    }
-                                >
-                                    <span className="relative inline-grid size-4 place-items-center">
-                                        <MessageCircleIcon
-                                            className={cn(
-                                                "size-4",
-                                                hasMessage &&
-                                                    "text-[color:var(--accent)]",
-                                            )}
-                                        />
-                                        <ToolbarCountPill count={messageCount} />
-                                    </span>
-                                    {!compact ? (
-                                        <>
-                                            <span className="hidden lg:inline">
-                                                Message
-                                            </span>
-                                            <ChevronDownIcon className="hidden size-3.5 opacity-70 lg:inline-block" />
-                                        </>
-                                    ) : null}
-                                </Button>
-                            }
-                        />
-                    </CompactTooltip>
-                    <DropdownMenuContent
-                        align="center"
-                        sideOffset={6}
-                        className="w-72"
-                    >
-                        {MESSAGE_VARIANTS.map(({ value, label, Icon }) => (
-                            <DropdownMenuItem
-                                key={value}
-                                onClick={() => onAddMessage(value)}
+            <DropdownMenu>
+                <CompactTooltip label="Message" enabled={compact}>
+                    <DropdownMenuTrigger
+                        render={
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                size="default"
+                                className="hover:bg-[color:var(--sidebar)]"
+                                title={
+                                    isVideo
+                                        ? undefined
+                                        : "Add a message annotation"
+                                }
                             >
-                                <Icon className="size-4" />
-                                <MenuItemBody
-                                    title={label}
-                                    description={MESSAGE_VARIANT_DESCRIPTIONS[value]}
-                                />
-                            </DropdownMenuItem>
-                        ))}
-                    </DropdownMenuContent>
-                </DropdownMenu>
-            )}
+                                <span className="relative inline-grid size-4 place-items-center">
+                                    <MessageCircleIcon
+                                        className={cn(
+                                            "size-4",
+                                            hasMessage &&
+                                                "text-[color:var(--accent)]",
+                                        )}
+                                    />
+                                    <ToolbarCountPill count={messageCount} />
+                                </span>
+                                {!compact ? (
+                                    <>
+                                        <span className="hidden lg:inline">
+                                            Message
+                                        </span>
+                                        <ChevronDownIcon className="hidden size-3.5 opacity-70 lg:inline-block" />
+                                    </>
+                                ) : null}
+                            </Button>
+                        }
+                    />
+                </CompactTooltip>
+                <DropdownMenuContent
+                    align="center"
+                    sideOffset={6}
+                    className="w-72"
+                >
+                    {MESSAGE_VARIANTS.map(({ value, label, Icon }) => (
+                        <DropdownMenuItem
+                            key={value}
+                            onClick={() => onAddMessage(value)}
+                        >
+                            <Icon className="size-4" />
+                            <MenuItemBody
+                                title={label}
+                                description={MESSAGE_VARIANT_DESCRIPTIONS[value]}
+                            />
+                        </DropdownMenuItem>
+                    ))}
+                </DropdownMenuContent>
+            </DropdownMenu>
 
             <DropdownMenu>
                 <CompactTooltip label="Annotate" enabled={compact}>
@@ -773,11 +768,9 @@ function StepFooter({
                                 size="default"
                                 className="hover:bg-[color:var(--sidebar)]"
                                 title={
-                                    overlaysUnavailable
-                                        ? annotationUnavailableTitle
-                                        : isVideo
-                                          ? undefined
-                                          : "Add an annotation overlay"
+                                    isVideo
+                                        ? undefined
+                                        : "Add an annotation overlay"
                                 }
                             >
                                 <span className="relative inline-grid size-4 place-items-center">
@@ -808,27 +801,24 @@ function StepFooter({
                         return (
                             <DropdownMenuItem
                                 key={kind}
-                                disabled={overlaysUnavailable}
                                 onClick={() => onAddAnnotation(kind)}
                             >
                                 <Icon className="size-4" />
                                 <MenuItemBody
                                     title={label}
                                     description={
-                                        overlaysUnavailable
-                                            ? UNAVAILABLE_ANNOTATION_DESCRIPTION
-                                            : ANNOTATE_DESCRIPTIONS[
-                                                  kind as "blur" | "text"
-                                              ]
+                                        ANNOTATE_DESCRIPTIONS[
+                                            kind as "blur" | "text"
+                                        ]
                                     }
                                 />
                             </DropdownMenuItem>
                         );
                     })}
                     <DropdownMenuItem
-                        disabled={overlaysUnavailable || hasZoom}
+                        disabled={hasZoom}
                         onClick={() => {
-                            if (overlaysUnavailable || hasZoom) return;
+                            if (hasZoom) return;
                             onChange({
                                 transform: { ...DEFAULT_ZOOM_TRANSFORM },
                             });
@@ -838,11 +828,7 @@ function StepFooter({
                         <ZoomInIcon className="size-4" />
                         <MenuItemBody
                             title={hasZoom ? "Zoom (already added)" : "Zoom"}
-                            description={
-                                overlaysUnavailable
-                                    ? UNAVAILABLE_ANNOTATION_DESCRIPTION
-                                    : ANNOTATE_DESCRIPTIONS.zoom
-                            }
+                            description={ANNOTATE_DESCRIPTIONS.zoom}
                         />
                     </DropdownMenuItem>
                 </DropdownMenuContent>
@@ -1043,7 +1029,6 @@ function sidebarScreenSignature(
 
 export function DemoEditorView({
     files,
-    savedFiles,
     onChange,
     slug,
     assets,
@@ -1051,14 +1036,12 @@ export function DemoEditorView({
     onAssetUploaded,
 }: {
     files: Record<string, string>;
-    savedFiles?: Record<string, string>;
     onChange: (path: string, content: string) => void;
     slug: string;
     assets: ReadonlyArray<AssetMeta>;
     onAssetsChanged: () => void;
     onAssetUploaded?: (asset: AssetMeta) => void;
 }) {
-    void savedFiles;
     // Inspectors take a `demoId` for display-URL helpers; locally the slug
     // is the only identity a demo has.
     const demoId = slug;
@@ -1391,8 +1374,7 @@ export function DemoEditorView({
                 );
                 return null;
             }
-            const safeName = file.name.replace(/[^A-Za-z0-9._-]+/g, "_");
-            const path = `assets/${safeName}`;
+            const path = `assets/${sanitizeAssetName(file.name)}`;
             const contentType = file.type || "application/octet-stream";
             let commit: Awaited<ReturnType<typeof putDemoAssetBlob>>;
             try {
@@ -1403,11 +1385,13 @@ export function DemoEditorView({
                     contentType,
                     kind: mediaKind,
                 });
-            } catch {
-                window.alert(
-                    mediaKind === "image"
-                        ? "Could not start image upload."
-                        : "Could not start video upload.",
+            } catch (err) {
+                toast.error(
+                    err instanceof Error && err.message
+                        ? err.message
+                        : mediaKind === "image"
+                          ? "Could not upload the image."
+                          : "Could not upload the video.",
                 );
                 return null;
             }

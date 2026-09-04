@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { generateDemoId } from '@inkly-org/interactive-demo/schema';
 import { runDev, type DevHandle } from '../src/commands/dev';
+import { MAX_ASSET_BYTES, dedupeAssetName } from '../src/dev/editor-api';
 import { PROJECT_FILE } from '../src/project';
 
 function minimalDemoConfig(title: string): unknown {
@@ -158,18 +159,76 @@ describe('dev server editor API', () => {
     expect(served.status).toBe(200);
     expect(await served.text()).toBe('fake-png-bytes');
 
-    // Re-uploading the same name replaces the bytes and keeps one entry.
-    const again = await fetch(`${handle!.url}__demo/editor/demos/tour/assets?name=hero.png`, {
+    // Re-uploading identical bytes under the same name is idempotent.
+    const same = await fetch(`${handle!.url}__demo/editor/demos/tour/assets?name=hero.png`, {
       method: 'POST',
       headers: { 'content-type': 'image/png' },
-      body: Buffer.from('v2'),
+      body: bytes,
     });
-    expect(again.status).toBe(200);
+    expect(same.status).toBe(200);
+    const sameBody = (await same.json()) as { file: string; renamedFrom?: string; asset: { id: string } };
+    expect(sameBody.file).toBe('hero.png');
+    expect(sameBody.renamedFrom).toBeUndefined();
+    expect(sameBody.asset.id).toBe(body.asset.id);
     const manifest2 = JSON.parse(await readFile(join(root, 'demos', 'tour', 'assets.json'), 'utf8')) as {
       assets: Array<{ id: string; file: string }>;
     };
     expect(manifest2.assets).toHaveLength(1);
-    expect(manifest2.assets[0]!.id).toBe(body.asset.id);
+  });
+
+  it('gives different bytes under an existing name a new file name and id', async () => {
+    const first = await fetch(`${handle!.url}__demo/editor/demos/tour/assets?name=hero.png`, {
+      method: 'POST',
+      headers: { 'content-type': 'image/png' },
+      body: Buffer.from('v1'),
+    });
+    const firstBody = (await first.json()) as { asset: { id: string } };
+    const second = await fetch(`${handle!.url}__demo/editor/demos/tour/assets?name=hero.png`, {
+      method: 'POST',
+      headers: { 'content-type': 'image/png' },
+      body: Buffer.from('v2'),
+    });
+    expect(second.status).toBe(200);
+    const secondBody = (await second.json()) as {
+      file: string;
+      renamedFrom?: string;
+      asset: { id: string; file: string; path: string; publicUrl: string };
+    };
+    expect(secondBody.file).toBe('hero-2.png');
+    expect(secondBody.renamedFrom).toBe('hero.png');
+    expect(secondBody.asset.id).not.toBe(firstBody.asset.id);
+    expect(secondBody.asset).toMatchObject({ file: 'hero-2.png', path: 'assets/hero-2.png', publicUrl: '/tour/assets/hero-2.png' });
+    // The original file and its manifest entry are untouched.
+    expect(await (await fetch(`${handle!.url}tour/assets/hero.png`)).text()).toBe('v1');
+    expect(await (await fetch(`${handle!.url}tour/assets/hero-2.png`)).text()).toBe('v2');
+    const manifest = JSON.parse(await readFile(join(root, 'demos', 'tour', 'assets.json'), 'utf8')) as {
+      assets: Array<{ id: string; file: string }>;
+    };
+    expect(manifest.assets.map((a) => a.file).sort()).toEqual(['hero-2.png', 'hero.png']);
+    // A third upload with yet other bytes takes the next free name.
+    const third = await fetch(`${handle!.url}__demo/editor/demos/tour/assets?name=hero.png`, {
+      method: 'POST',
+      body: Buffer.from('v3'),
+    });
+    expect(((await third.json()) as { file: string }).file).toBe('hero-3.png');
+  });
+
+  it('explains the asset name rule and caps the upload size', async () => {
+    const hidden = await fetch(`${handle!.url}__demo/editor/demos/tour/assets?name=.hidden.png`, {
+      method: 'POST',
+      body: 'x',
+    });
+    expect(hidden.status).toBe(400);
+    expect(((await hidden.json()) as { error: string }).error).toContain('start with a letter or digit');
+
+    const declaredTooBig = await fetch(`${handle!.url}__demo/editor/demos/tour/assets?name=big.bin`, {
+      method: 'POST',
+      headers: { 'content-length': String(MAX_ASSET_BYTES + 1) },
+      body: 'x',
+    }).catch(() => null);
+    // Node may refuse to send a body shorter than the declared length; when the
+    // request does reach the server it must be a 413.
+    if (declaredTooBig) expect(declaredTooBig.status).toBe(413);
   });
 
   it('rejects unsafe asset names', async () => {
@@ -205,10 +264,24 @@ describe('dev server editor API', () => {
       expect(res.headers.get('content-type')).toContain('text/html');
       const html = await res.text();
       expect(html).toContain('<div id="root">');
-      // Any deep link falls back to the app shell so hash routing can take over.
+      // Any extension-less deep link falls back to the app shell so hash
+      // routing can take over; a missing built asset is a real 404.
       const deep = await fetch(`${handle!.url}__demo/editor/anything/here`);
       expect(deep.status).toBe(200);
       expect(await deep.text()).toBe(html);
+      const missingAsset = await fetch(`${handle!.url}__demo/editor/nope.js`);
+      expect(missingAsset.status).toBe(404);
+      expect(missingAsset.headers.get('content-type')).not.toContain('text/html');
     }
+  });
+});
+
+describe('dedupeAssetName', () => {
+  it('returns the name when free and suffixes -2, -3, … otherwise', () => {
+    expect(dedupeAssetName('hero.png', [])).toBe('hero.png');
+    expect(dedupeAssetName('hero.png', ['hero.png'])).toBe('hero-2.png');
+    expect(dedupeAssetName('hero.png', ['hero.png', 'hero-2.png'])).toBe('hero-3.png');
+    expect(dedupeAssetName('HERO.png', ['hero.png'])).toBe('HERO-2.png');
+    expect(dedupeAssetName('noext', ['noext'])).toBe('noext-2');
   });
 });

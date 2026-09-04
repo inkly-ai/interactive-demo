@@ -570,7 +570,7 @@ export function VideoTrimDialog({
       const videoCommit = await putDemoAssetBlob({
         slug,
         blob: result.videoBlob,
-        path: `public/trim-${step.id}-${stamp}.${ext}`,
+        path: `assets/trim-${step.id}-${stamp}.${ext}`,
         contentType: result.contentType,
         kind: "video",
       });
@@ -581,7 +581,7 @@ export function VideoTrimDialog({
       const posterCommit = await putDemoAssetBlob({
         slug,
         blob: result.posterBlob,
-        path: `public/trim-${step.id}-${stamp}-poster.png`,
+        path: `assets/trim-${step.id}-${stamp}-poster.png`,
         contentType: "image/png",
         kind: "image",
       });

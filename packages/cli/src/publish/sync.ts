@@ -174,7 +174,9 @@ async function requestSyncUploads(
     body: JSON.stringify({
       assets: assets.map((asset) => ({
         sha256: asset.sha256,
-        ext: extname(asset.file) || extForContentType(asset.contentType),
+        // Lowercase: the server keys objects by `<sha256><ext>` and the
+        // manifest may carry `Shot.PNG`.
+        ext: (extname(asset.file) || extForContentType(asset.contentType)).toLowerCase(),
         contentType: asset.contentType,
         size: asset.size,
       })),

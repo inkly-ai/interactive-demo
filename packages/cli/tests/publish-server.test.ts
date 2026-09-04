@@ -253,4 +253,29 @@ describe('publish against a fake hosting server', () => {
     });
     expect(body.config.steps.length).toBeGreaterThan(0);
   });
+
+  it('publish lowercases an uppercase file extension before syncing', async () => {
+    const init = await runInit({ name: 'srv-site', cwd: workdir, silent: true });
+    const demoDir = join(init.dir, 'demos', 'getting-started');
+    const bytes = Buffer.from('png bytes here');
+    const sha256 = createHash('sha256').update(bytes).digest('hex');
+    await mkdir(join(demoDir, 'assets'), { recursive: true });
+    await writeFile(join(demoDir, 'assets', 'Shot.PNG'), bytes);
+    await writeFile(
+      join(demoDir, 'assets.json'),
+      JSON.stringify({
+        version: 1,
+        assets: [{ id: 'shot-1', sha256, kind: 'image', contentType: 'image/png', file: 'Shot.PNG', size: bytes.byteLength }],
+      }),
+    );
+
+    await runPublish({ cwd: init.dir, silent: true });
+
+    const sync = requests.find((r) => r.url === '/api/cli/sync-assets')!;
+    expect(JSON.parse(sync.body.toString('utf8'))).toEqual({
+      assets: [{ sha256, ext: '.png', contentType: 'image/png', size: bytes.byteLength }],
+    });
+    const complete = requests.find((r) => r.url === '/api/cli/sync-assets/complete')!;
+    expect(JSON.parse(complete.body.toString('utf8')).assets[0]).toMatchObject({ ext: '.png' });
+  });
 });

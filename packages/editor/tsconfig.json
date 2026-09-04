@@ -1,0 +1,33 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "types": [
+      "vite/client"
+    ],
+    "baseUrl": ".",
+    "paths": {
+      "@/*": [
+        "src/*"
+      ],
+      "@inkly-org/interactive-demo": [
+        "../runtime/src/index.ts"
+      ],
+      "@inkly-org/interactive-demo/schema": [
+        "../runtime/src/schema/index.ts"
+      ],
+      "@inkly-org/interactive-demo/themes": [
+        "../runtime/src/themes/index.ts"
+      ]
+    },
+    "noUncheckedIndexedAccess": false,
+    "noImplicitOverride": false
+  },
+  "include": [
+    "src"
+  ],
+  "exclude": [
+    "dist",
+    "node_modules"
+  ]
+}

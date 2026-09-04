@@ -47,6 +47,25 @@ JSON script tags and a root element:
 `publicUrl` when set, otherwise to `./assets/<file>` relative to the page.
 The CLI's `build` command writes exactly this layout.
 
+The page's `#root` gets the demo-level canvas background (`background` /
+`backgroundColor` in the config), and two query parameters are honoured:
+`?autoplay=1` starts playback as soon as the player is ready, and
+`?render=1` (for an exporter driving the page) implies it.
+
+Once mounted, the player exposes a small contract on `window.__demo` so a
+host page or exporter can detect readiness, drive the player and wait for
+the end:
+
+```ts
+window.__demo = {
+  ready: true,        // set when the player has parsed the config and mounted
+  complete: false,    // flips to true when the last step finishes
+  stepIds: string[],  // every step id, in order
+  controls,           // play(), pause(), next(), prev(), goToStep(id), …
+  demo,               // the validated config
+};
+```
+
 ## Schema
 
 ```ts

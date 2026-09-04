@@ -1,5 +1,6 @@
-import { mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises';
+import { lstat, readFile, readdir, realpath, rm } from 'node:fs/promises';
 import { dirname, join, relative, resolve, sep } from 'node:path';
+import { atomicWriteFile } from './fs-atomic.js';
 
 export type DemoFiles = Record<string, string>;
 
@@ -25,6 +26,45 @@ export function resolveInsideDemo(demoDir: string, path: string): string {
   const target = resolve(root, path);
   if (target !== root && !target.startsWith(root + sep)) {
     throw new Error(`Path escapes the demo folder: ${path}`);
+  }
+  return target;
+}
+
+function isInside(root: string, target: string): boolean {
+  return target === root || target.startsWith(root + sep);
+}
+
+/**
+ * Like {@link resolveInsideDemo}, but also follows the filesystem: the
+ * nearest existing ancestor of the target must resolve (through any
+ * symlinked folders) to a location inside the real demo folder, and the
+ * target itself may not be a symlink. Without this a link planted inside
+ * the demo folder would let an editor write land anywhere on disk.
+ */
+export async function resolveInsideDemoOnDisk(demoDir: string, path: string): Promise<string> {
+  const target = resolveInsideDemo(demoDir, path);
+  const root = await realpath(resolve(demoDir));
+  let ancestor = dirname(target);
+  let real: string | null = null;
+  while (real == null) {
+    try {
+      real = await realpath(ancestor);
+    } catch {
+      const parent = dirname(ancestor);
+      if (parent === ancestor) throw new Error(`Path escapes the demo folder: ${path}`);
+      ancestor = parent;
+    }
+  }
+  const realTarget = join(real, relative(ancestor, target));
+  if (!isInside(root, realTarget)) {
+    throw new Error(`Path escapes the demo folder: ${path}`);
+  }
+  try {
+    if ((await lstat(target)).isSymbolicLink()) {
+      throw new Error(`Path is a symbolic link: ${path}`);
+    }
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== 'ENOENT') throw err;
   }
   return target;
 }
@@ -56,7 +96,7 @@ export class LocalFsWorkspace implements WorkspaceProvider {
 
   async readFile(demoDir: string, path: string): Promise<string | null> {
     try {
-      return await readFile(resolveInsideDemo(demoDir, path), 'utf8');
+      return await readFile(await resolveInsideDemoOnDisk(demoDir, path), 'utf8');
     } catch (err) {
       if ((err as NodeJS.ErrnoException).code === 'ENOENT') return null;
       throw err;
@@ -64,12 +104,10 @@ export class LocalFsWorkspace implements WorkspaceProvider {
   }
 
   async writeFile(demoDir: string, path: string, content: string | Buffer): Promise<void> {
-    const target = resolveInsideDemo(demoDir, path);
-    await mkdir(dirname(target), { recursive: true });
-    await writeFile(target, content);
+    await atomicWriteFile(await resolveInsideDemoOnDisk(demoDir, path), content);
   }
 
   async deleteFile(demoDir: string, path: string): Promise<void> {
-    await rm(resolveInsideDemo(demoDir, path), { force: true });
+    await rm(await resolveInsideDemoOnDisk(demoDir, path), { force: true });
   }
 }

@@ -660,7 +660,7 @@ describe('Demo integration', () => {
 
     expect(container.querySelector('.demo-header-cta')).toBeNull();
     expect(container.textContent).not.toContain('View docs');
-    expect(container.textContent).not.toContain('Try Inkly');
+    expect(container.textContent).not.toContain('Try Acme');
   });
 
   it('renders the full example demo and advances through hotspot annotations', () => {

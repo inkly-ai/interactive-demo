@@ -122,7 +122,7 @@ export function Button({
         if (!exists) {
           if (typeof console !== 'undefined') {
             console.warn(
-              `[demo-react] Button action targets unknown step "${action.stepId}".`,
+              `[interactive-demo] Button action targets unknown step "${action.stepId}".`,
             );
           }
           return;
@@ -135,7 +135,7 @@ export function Button({
         if (!exists) {
           if (typeof console !== 'undefined') {
             console.warn(
-              `[demo-react] Button action targets unknown chapter "${action.chapterId}".`,
+              `[interactive-demo] Button action targets unknown chapter "${action.chapterId}".`,
             );
           }
           return;

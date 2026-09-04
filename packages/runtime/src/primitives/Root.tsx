@@ -163,7 +163,7 @@ export function Root({
           warnedAssetIdsRef.current.add(id);
           if (typeof console !== 'undefined') {
             console.warn(
-              `[demo-react] Unresolved asset URI "asset:${id}" — ` +
+              `[interactive-demo] Unresolved asset URI "asset:${id}" — ` +
                 (entry
                   ? 'no resolveAssetUrl prop supplied'
                   : 'id not found in assets manifest') +

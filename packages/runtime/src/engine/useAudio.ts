@@ -34,7 +34,7 @@ function playAudio(audio: HTMLAudioElement): void {
       if (err instanceof DOMException && err.name === 'NotAllowedError') {
         return;
       }
-      console.error('[demo-react] audio play() failed:', err);
+      console.error('[interactive-demo] audio play() failed:', err);
     });
   }
 }
@@ -112,7 +112,7 @@ export function useAudio({
     const handleError = () => {
       const err = audio.error;
       console.error(
-        `[demo-react] audio error for ${audio.src || '(no src)'}:`,
+        `[interactive-demo] audio error for ${audio.src || '(no src)'}:`,
         err ? { code: err.code, message: err.message } : 'unknown',
       );
     };

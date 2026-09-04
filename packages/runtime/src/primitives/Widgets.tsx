@@ -222,7 +222,7 @@ function WidgetSlot({
       // dig into "why isn't my widget rendering".
       if (!Renderer && typeof console !== 'undefined') {
         console.warn(
-          `[demo-react] No renderer registered for custom widget "${widget.name}" (id: ${widget.id}). ` +
+          `[interactive-demo] No renderer registered for custom widget "${widget.name}" (id: ${widget.id}). ` +
             `Register one via <Demo components={{ "widget.custom.${widget.name}": MyComponent }} />.`,
         );
       }
@@ -512,7 +512,7 @@ function runButtonAction(
       if (!exists) {
         if (typeof console !== 'undefined') {
           console.warn(
-            `[demo-react] Form submit action targets unknown step "${action.stepId}".`,
+            `[interactive-demo] Form submit action targets unknown step "${action.stepId}".`,
           );
         }
         return;
@@ -525,7 +525,7 @@ function runButtonAction(
       if (!exists) {
         if (typeof console !== 'undefined') {
           console.warn(
-            `[demo-react] Form submit action targets unknown chapter "${action.chapterId}".`,
+            `[interactive-demo] Form submit action targets unknown chapter "${action.chapterId}".`,
           );
         }
         return;

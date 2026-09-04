@@ -15,6 +15,7 @@ import {
   type ProjectConfig,
 } from '../project.js';
 import { getProjectSkeleton, starterDemoFiles, titleFromSlug } from '../starter.js';
+import { readCliVersion } from './version.js';
 
 export interface InitOptions {
   name: string;
@@ -72,7 +73,13 @@ export async function runInit(options: InitOptions): Promise<InitResult> {
     );
   }
 
-  const files = getProjectSkeleton({ name, theme, noStarterDemo: options.noStarterDemo });
+  const { version } = await readCliVersion();
+  const files = getProjectSkeleton({
+    name,
+    theme,
+    noStarterDemo: options.noStarterDemo,
+    cliVersion: `^${version}`,
+  });
 
   await mkdir(dir, { recursive: true });
   await Promise.all(

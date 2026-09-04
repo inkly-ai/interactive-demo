@@ -25,6 +25,7 @@ describe('runInit', () => {
       [
         '.gitignore',
         'README.md',
+        'package.json',
         PROJECT_FILE,
         join('demos', 'getting-started', 'assets.json'),
         join('demos', 'getting-started', 'demo.config.json'),
@@ -77,7 +78,7 @@ describe('runInit', () => {
     const result = await runInit({ name: 'empty', cwd: workdir, silent: true, noStarterDemo: true });
 
     expect(result.files.some((f) => f.includes('getting-started'))).toBe(false);
-    expect(result.files.sort()).toEqual(['.gitignore', 'README.md', PROJECT_FILE].sort());
+    expect(result.files.sort()).toEqual(['.gitignore', 'README.md', 'package.json', PROJECT_FILE].sort());
 
     const project = JSON.parse(await readFile(join(result.dir, PROJECT_FILE), 'utf8'));
     expect(ProjectSchema.safeParse(project).success).toBe(true);

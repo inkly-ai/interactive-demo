@@ -5,7 +5,7 @@ import {
   DemoSchema,
   generateDemoId,
 } from '@inkly-org/interactive-demo/schema';
-import { PROJECT_FILE, PROJECT_SCHEMA_URL, ProjectSchema } from './project.js';
+import { PROJECT_FILE, ProjectSchema } from './project.js';
 
 /**
  * Project skeleton — the starter file set every brand-new project begins
@@ -176,7 +176,6 @@ export function starterDemoConfig(slug: string, title?: string): unknown {
 
 function projectConfig(name: string, options: { theme?: string } = {}): unknown {
   return {
-    $schema: PROJECT_SCHEMA_URL,
     name,
     theme: options.theme ?? DEFAULT_THEME_ID,
     demos: [STARTER_SLUG],
@@ -186,6 +185,29 @@ function projectConfig(name: string, options: { theme?: string } = {}): unknown 
 const GITIGNORE = `node_modules/
 dist/
 `;
+
+const CLI_PACKAGE = '@inkly-org/interactive-demo-cli';
+
+function projectPackageJson(name: string, cliVersion: string): string {
+  return (
+    JSON.stringify(
+      {
+        name,
+        private: true,
+        scripts: {
+          dev: 'interactive-demo dev',
+          validate: 'interactive-demo validate',
+          build: 'interactive-demo build',
+        },
+        devDependencies: {
+          [CLI_PACKAGE]: cliVersion,
+        },
+      },
+      null,
+      2,
+    ) + '\n'
+  );
+}
 
 function projectReadme(name: string): string {
   return `# ${name}
@@ -199,7 +221,8 @@ under \`assets/\`. The project itself is configured by \`${PROJECT_FILE}\`.
 ## Preview and edit
 
 \`\`\`bash
-npx interactive-demo dev
+npm install
+npm run dev
 \`\`\`
 
 Opens a local preview of every demo, with the editor. Edits are written
@@ -208,7 +231,7 @@ straight to the files in this folder.
 ## Build
 
 \`\`\`bash
-npx interactive-demo build
+npm run build
 \`\`\`
 
 Writes a self-contained static folder per demo under \`dist/\`. Deploy it
@@ -219,6 +242,11 @@ anywhere that serves static files and embed the demo with an iframe.
 export interface ProjectSkeletonOptions {
   /** Value for the project's `name` and the README heading. */
   name: string;
+  /**
+   * Version range written for the CLI devDependency in the scaffolded
+   * package.json (e.g. `^0.1.0`). Defaults to `latest`.
+   */
+  cliVersion?: string;
   /** Optional theme preset id written into the project file. */
   theme?: string;
   /** Skip the starter demo. */
@@ -279,6 +307,7 @@ export function getProjectSkeleton(options: ProjectSkeletonOptions): SkeletonFil
   const files: SkeletonFile[] = [
     { path: 'README.md', contents: projectReadme(name) },
     { path: '.gitignore', contents: GITIGNORE },
+    { path: 'package.json', contents: projectPackageJson(name, options.cliVersion ?? 'latest') },
   ];
 
   if (options.noStarterDemo) {

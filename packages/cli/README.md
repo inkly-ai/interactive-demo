@@ -4,9 +4,9 @@ Author, preview and build interactive product demos from the command line.
 
 ```sh
 npx @inkly-org/interactive-demo-cli init my-demos
-cd my-demos
-npx interactive-demo dev        # local preview + editor at http://localhost:3000
-npx interactive-demo build      # static output under dist/
+cd my-demos && npm install
+npm run dev                     # local preview + editor at http://localhost:3000
+npm run build                   # static output under dist/
 ```
 
 ## Commands

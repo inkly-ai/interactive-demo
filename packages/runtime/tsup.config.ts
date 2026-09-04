@@ -30,5 +30,8 @@ export default defineConfig([
     clean: false,
     minify: true,
     noExternal: [/.*/],
+    outExtension() {
+      return { js: '.js' };
+    },
   },
 ]);

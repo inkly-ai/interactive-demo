@@ -22,6 +22,7 @@ import {
   pidAlive,
   reapByProfileDir,
   resolveBrowserWebSocketUrl,
+  terminateProcessTree,
 } from './chrome.js';
 import {
   booleanOption,
@@ -36,13 +37,15 @@ import { assembleCapturedDemo, uniqueDemoSlug, writeDemoFolder } from './output.
 import { profileNameFromUrl, profilesRootDir, resolveProfileDir } from './profiles.js';
 import { installRecorder } from './recorder.js';
 import {
+  CorruptSessionError,
   captureDataDir,
   cleanupHarness,
   closeCapturesOnProfile,
   labelFor,
-  listSessionStates,
+  listSessions,
   liveScreens,
   readDroppedKeys,
+  readListenerMeta,
   readSessionState,
   removeCaptureDir,
   removeSessionState,
@@ -81,8 +84,8 @@ Options:
   --name <name>           Demo title. Defaults to the page host.
   --session <id>          Session id printed by start. Optional when exactly one
                           session is running.
-  --out <dir>             With stop: write the demo folder here instead of the
-                          current project's demos/ folder.
+  --out <dir>             With stop: write the demo folder at <dir>/<slug>
+                          instead of the current project's demos/ folder.
   --browser <path>        Chrome/Chromium binary. Defaults to an installed Chrome
                           (or the CHROME_PATH environment variable).
   --connect-to-browser <url>
@@ -149,7 +152,12 @@ function positional(args: ParsedArgs, index: number): string | undefined {
 async function resolveSessionId(args: ParsedArgs): Promise<string> {
   const explicit = stringOption(args, 'session');
   if (explicit) return explicit;
-  const states = await listSessionStates();
+  const listings = await listSessions();
+  const corrupt = listings.filter((s) => s.error);
+  if (corrupt.length > 0) {
+    throw new Error(corrupt.map((s) => s.error).join('\n'));
+  }
+  const states = listings.flatMap((s) => (s.state ? [s.state] : []));
   if (states.length === 1) return states[0]!.id;
   if (states.length === 0) {
     throw new Error(`No capture session is running. Start one with \`${BIN} capture start <url>\`.`);
@@ -203,6 +211,9 @@ async function runStart(cwd: string, args: ParsedArgs): Promise<number> {
   const url = stringOption(args, 'url') || positional(args, 1);
   if (!url) throw new Error(`missing <url>\n\n${CAPTURE_USAGE}`);
   const parsedUrl = new URL(url);
+  if (parsedUrl.protocol !== 'http:' && parsedUrl.protocol !== 'https:') {
+    throw new Error(`capture start needs an http(s) URL, got ${parsedUrl.protocol}`);
+  }
   const name = stringOption(args, 'name') || parsedUrl.host.replace(/^www\./i, '') || 'Captured demo';
 
   const windowSize = parseWindowSizeOption(stringOption(args, 'window-size'));
@@ -211,7 +222,7 @@ async function runStart(cwd: string, args: ParsedArgs): Promise<number> {
   const timeoutMs = numberOption(args, 'timeout', DEFAULT_TIMEOUT_MS);
   const connectToBrowser = optionalConnectToBrowser(args);
   const autoApplyZoom = booleanOption(args, ['zoom', 'auto-apply-zoom'], true);
-  const recordVideo = booleanOption(args, ['record-video', 'video'], true);
+  const videoRequested = booleanOption(args, ['record-video', 'video'], true);
   const compressImages = booleanOption(args, ['compress-images', 'compress-image'], false);
   // A person clicks through the product, so the window is visible by default.
   // `--headless` wins only when `--headed` was not also passed.
@@ -229,12 +240,18 @@ async function runStart(cwd: string, args: ParsedArgs): Promise<number> {
   if (!Number.isInteger(timeoutMs) || timeoutMs < 1_000) {
     throw new Error('--timeout must be an integer >= 1000');
   }
-  if (recordVideo && !(await ffmpegAvailable())) {
+  // Decide video ONCE, here: the listener only takes the video path when the
+  // session says so, and a session that promises video without ffmpeg would
+  // lose every motion step.
+  let videoDisabledReason: string | null = null;
+  if (videoRequested && !(await ffmpegAvailable())) {
+    videoDisabledReason = 'ffmpeg was not found on PATH';
     process.stderr.write(
-      'ffmpeg was not found on PATH, so scroll/typing motion will be recorded as still images. ' +
+      `${videoDisabledReason}, so scroll/typing motion will be recorded as still images. ` +
         'Install ffmpeg to get video steps, or pass --no-video to silence this.\n',
     );
   }
+  const recordVideo = videoRequested && videoDisabledReason === null;
 
   const launched = connectToBrowser
     ? {
@@ -260,6 +277,11 @@ async function runStart(cwd: string, args: ParsedArgs): Promise<number> {
   // interrupted (^C / SIGTERM) before it returns. A SUCCESSFUL start clears this
   // handler so the listener is left running for a later `stop`/`cancel`.
   let spawnedListenerPid: number | null = null;
+  // Set once the session file exists so a failed/interrupted start removes it
+  // (and its capture dir) instead of leaving a dead session that the next
+  // stop/status would bind to.
+  let createdSessionId: string | null = null;
+  let createdCaptureDir: string | null = null;
   let teardownInstalled = false;
   // Never delete a persistent (or attached) profile on interrupt or error —
   // that would wipe the user's saved login.
@@ -274,8 +296,15 @@ async function runStart(cwd: string, args: ParsedArgs): Promise<number> {
       height,
       listenerPid: spawnedListenerPid,
     });
+  const discardFailedStart = async (): Promise<void> => {
+    await cleanupHarness(harnessOnFailure());
+    if (createdCaptureDir) {
+      await removeCaptureDir({ ...harnessOnFailure(), captureDir: createdCaptureDir });
+    }
+    if (createdSessionId) await removeSessionState(createdSessionId);
+  };
   const interruptTeardown = (): void => {
-    void cleanupHarness(harnessOnFailure()).finally(() => {
+    void discardFailedStart().finally(() => {
       process.exit(130);
     });
   };
@@ -325,6 +354,8 @@ async function runStart(cwd: string, args: ParsedArgs): Promise<number> {
     };
     await mkdir(captureDir, { recursive: true });
     await writeSession(state);
+    createdSessionId = state.id;
+    createdCaptureDir = captureDir;
     const listener = await spawnListener(state.id, captureDir);
     spawnedListenerPid = listener.pid;
     // Hand the listener pid off via the sidecar instead of re-writing the
@@ -383,6 +414,7 @@ async function runStart(cwd: string, args: ParsedArgs): Promise<number> {
       capture: {
         name,
         video: readyState.recordVideo === true,
+        videoDisabledReason,
         autoApplyZoom: readyState.autoApplyZoom !== false,
         window: { width: readyState.width, height: readyState.height },
         stepCount: 0,
@@ -393,7 +425,7 @@ async function runStart(cwd: string, args: ParsedArgs): Promise<number> {
     });
     return 0;
   } catch (err) {
-    await cleanupHarness(harnessOnFailure());
+    await discardFailedStart();
     throw err;
   } finally {
     removeInterruptTeardown();
@@ -498,7 +530,22 @@ async function runStop(cwd: string, args: ParsedArgs): Promise<number> {
 
 async function runCancel(args: ParsedArgs): Promise<number> {
   const sessionId = await resolveSessionId(args);
-  const state = await readSessionState(sessionId);
+  let state: CaptureSession;
+  try {
+    state = await readSessionState(sessionId);
+  } catch (err) {
+    if (!(err instanceof CorruptSessionError)) throw err;
+    // Best effort: the session JSON is unreadable, but the listener sidecar
+    // (written by start) may still name the listener, and the capture dir is
+    // derived from the id. Chrome itself is reaped when the listener dies and
+    // by the profile-dir backstop on the next start.
+    const listenerPid = (await readListenerMeta(sessionId))?.listenerPid ?? null;
+    if (listenerPid) await terminateProcessTree(listenerPid);
+    await removeCaptureDir({ captureDir: captureDataDir(sessionId) } as CaptureSession);
+    await removeSessionState(sessionId);
+    jsonOut({ ok: true, session: { id: sessionId }, recovered: true, warning: err.message });
+    return 0;
+  }
   await cleanupHarness(state);
   await removeCaptureDir(state);
   await removeSessionState(state.id);

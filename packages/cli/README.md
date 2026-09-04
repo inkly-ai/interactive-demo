@@ -93,8 +93,9 @@ Requirements:
 
 - **Google Chrome** (or Chromium). An installed Chrome is found automatically;
   otherwise pass `--browser /path/to/chrome` or set `CHROME_PATH`.
-- **ffmpeg** on `PATH`, only for video steps. Without it, motion is recorded as
-  still images (pass `--no-video` to silence the notice).
+- **ffmpeg** on `PATH`, only for video steps. Without it, `start` says so
+  (`videoDisabledReason` in its output) and every step is recorded as a still
+  image (pass `--no-video` to silence the notice).
 
 Signing in first: OAuth providers reject sign-ins from an automated browser, so
 sign in once in a plain Chrome window on a persistent profile, then capture with

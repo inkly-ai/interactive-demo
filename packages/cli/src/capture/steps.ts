@@ -93,17 +93,21 @@ export function ffmpegAvailable(): Promise<boolean> {
   });
 }
 
+/** Thrown when `ffmpeg` cannot be spawned at all (not on PATH). */
+export class FfmpegMissingError extends Error {
+  constructor() {
+    super('ffmpeg is not installed or not on PATH; it is required to write video steps.');
+    this.name = 'FfmpegMissingError';
+  }
+}
+
 async function runFfmpeg(args: string[]): Promise<void> {
   await new Promise<void>((resolveRun, rejectRun) => {
     const child = spawn('ffmpeg', args, { stdio: ['ignore', 'ignore', 'pipe'] });
     const stderr: Buffer[] = [];
     child.stderr.on('data', (chunk: Buffer) => stderr.push(chunk));
     child.on('error', (err: NodeJS.ErrnoException) => {
-      rejectRun(
-        err.code === 'ENOENT'
-          ? new Error('ffmpeg is not installed or not on PATH; it is required to write video steps.')
-          : err,
-      );
+      rejectRun(err.code === 'ENOENT' ? new FfmpegMissingError() : err);
     });
     child.on('close', (code) => {
       if (code === 0) {
@@ -295,7 +299,14 @@ export async function captureVideoStep(
     }
     const index = (state.screens?.length ?? 0) + 1;
     const fps = state.headless ? VIDEO_HEADLESS_FPS : VIDEO_FPS;
-    const video = await writeVideoFromFrames({ frames, captureDir: state.captureDir, index, fps });
+    let video: Awaited<ReturnType<typeof writeVideoFromFrames>> = null;
+    try {
+      video = await writeVideoFromFrames({ frames, captureDir: state.captureDir, index, fps });
+    } catch (err) {
+      // No ffmpeg: never lose the click. Record the step as a still instead.
+      if (!(err instanceof FfmpegMissingError)) throw err;
+      process.stderr.write(`${err.message} Recording this step as a still image.\n`);
+    }
     if (!video) {
       // Motion was too brief for a readable clip — fall back to a still image
       // of the source page rather than a sub-second flicker.

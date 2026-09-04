@@ -104,9 +104,26 @@ export async function writeSession(state: CaptureSession): Promise<void> {
   await atomicWriteFile(sessionPath(state.id), `${JSON.stringify(state, null, 2)}\n`);
 }
 
+/** A session file exists but is not readable JSON (a crashed writer, a full disk). */
+export class CorruptSessionError extends Error {
+  constructor(
+    readonly sessionId: string,
+    readonly path: string,
+    cause: string,
+  ) {
+    super(`Capture session file ${path} is not valid JSON (${cause}). Run \`capture cancel --session ${sessionId}\` to clean it up.`);
+    this.name = 'CorruptSessionError';
+  }
+}
+
 export async function readSessionState(sessionId: string): Promise<CaptureSession> {
-  const raw = await readFile(sessionPath(sessionId), 'utf8');
-  return JSON.parse(raw) as CaptureSession;
+  const path = sessionPath(sessionId);
+  const raw = await readFile(path, 'utf8');
+  try {
+    return JSON.parse(raw) as CaptureSession;
+  } catch (err) {
+    throw new CorruptSessionError(sessionId, path, (err as Error).message);
+  }
 }
 
 export async function removeSessionState(sessionId: string): Promise<void> {
@@ -115,19 +132,39 @@ export async function removeSessionState(sessionId: string): Promise<void> {
   await rm(undoSidecarPath(sessionId), { force: true }).catch(() => undefined);
 }
 
-/** Read every persisted capture session (ignoring the sidecar JSON files). */
-export async function listSessionStates(): Promise<CaptureSession[]> {
+export interface SessionListing {
+  id: string;
+  state: CaptureSession | null;
+  /** Set when the session file exists but could not be parsed. */
+  error: string | null;
+}
+
+/**
+ * Every persisted capture session (ignoring the sidecar JSON files), including
+ * ones whose file is corrupt so callers can surface them instead of hiding a
+ * session whose Chrome may still be running.
+ */
+export async function listSessions(): Promise<SessionListing[]> {
   const dir = sessionsDir();
   const entries = await readdir(dir).catch(() => []);
-  const states: CaptureSession[] = [];
+  const listings: SessionListing[] = [];
   for (const name of entries) {
     if (!name.endsWith('.json')) continue;
     if (name.endsWith('.listener.json') || name.endsWith('.undo.json')) continue;
     const id = name.slice(0, -'.json'.length);
-    const state = await readSessionState(id).catch(() => null);
-    if (state) states.push(state);
+    try {
+      listings.push({ id, state: await readSessionState(id), error: null });
+    } catch (err) {
+      if (err instanceof CorruptSessionError) listings.push({ id, state: null, error: err.message });
+      // A file removed between readdir and read is simply gone.
+    }
   }
-  return states;
+  return listings;
+}
+
+/** Read every readable capture session. */
+export async function listSessionStates(): Promise<CaptureSession[]> {
+  return (await listSessions()).flatMap((s) => (s.state ? [s.state] : []));
 }
 
 export async function spawnListener(

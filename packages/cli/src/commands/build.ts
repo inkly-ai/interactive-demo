@@ -3,7 +3,14 @@ import { existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { ASSETS_DIR, assetsForPage } from '../assets.js';
 import { loadProject, orderDemos } from '../project.js';
-import { readTemplate, renderDemoPage, resolvePlayerFiles, type PlayerFileName } from '../page.js';
+import {
+  PLAYER_FONT_FILES,
+  readTemplate,
+  renderDemoPage,
+  resolvePlayerFiles,
+  resolveRuntimeFontsDir,
+  type PlayerFileName,
+} from '../page.js';
 
 export interface BuildOptions {
   cwd: string;
@@ -26,6 +33,7 @@ export interface BuildResult {
  *     index.html         the player page with the config + manifest embedded
  *     player.js          the self-contained runtime
  *     player.css
+ *     player-fonts.css   optional self-hosted fonts, with fonts/*.woff2
  *     assets/…           the demo's asset bytes
  *
  * Deploy the folder anywhere that serves static files and embed the demo
@@ -35,6 +43,7 @@ export async function runBuild(options: BuildOptions): Promise<BuildResult> {
   const loaded = await loadProject(options.cwd);
   const outDir = resolve(loaded.root, options.out ?? 'dist');
   const playerFiles = resolvePlayerFiles(loaded.root);
+  const fontsDir = resolveRuntimeFontsDir(loaded.root);
   const template = await readTemplate();
 
   await rm(outDir, { recursive: true, force: true });
@@ -56,6 +65,12 @@ export async function runBuild(options: BuildOptions): Promise<BuildResult> {
 
     for (const name of Object.keys(playerFiles) as PlayerFileName[]) {
       await copyFile(playerFiles[name], join(dir, name));
+    }
+    if (fontsDir) {
+      await mkdir(join(dir, 'fonts'), { recursive: true });
+      for (const file of PLAYER_FONT_FILES) {
+        await copyFile(join(fontsDir, file), join(dir, 'fonts', file));
+      }
     }
 
     const assetsSrc = join(demo.dir, ASSETS_DIR);

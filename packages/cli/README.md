@@ -45,6 +45,7 @@ Every demo page, in `dev` and in `build` output, is:
 
 ```html
 <link rel="stylesheet" href="./player.css">
+<link rel="stylesheet" href="./player-fonts.css">   <!-- optional: self-hosted fonts, with fonts/*.woff2 next to it -->
 <script id="demo-config" type="application/json">…demo config…</script>
 <script id="demo-assets" type="application/json">…assets manifest array…</script>
 <div id="root"></div>

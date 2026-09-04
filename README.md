@@ -34,7 +34,7 @@ npm run dev                           # open it, then click Edit to add captions
 Build and embed:
 
 ```sh
-npm run build                         # dist/<slug>/index.html, player.js, player.css, assets/
+npm run build                         # dist/<slug>/index.html, player.js, player.css, player-fonts.css + fonts/, assets/
 ```
 
 Deploy `dist/` (or one `dist/<slug>/` folder) to any static host and embed:

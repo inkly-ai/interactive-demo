@@ -28,12 +28,18 @@ describe('runBuild', () => {
     expect(result.demos.map((d) => d.slug)).toEqual(['getting-started']);
 
     const dir = join(result.outDir, 'getting-started');
-    expect((await readdir(dir)).sort()).toEqual(['assets', 'index.html', 'player.css', 'player.js']);
+    expect((await readdir(dir)).sort()).toEqual(['assets', 'fonts', 'index.html', 'player-fonts.css', 'player.css', 'player.js']);
+    expect((await readdir(join(dir, 'fonts'))).sort()).toEqual([
+      'fraunces-latin-600-normal.woff2',
+      'geist-latin-wght-normal.woff2',
+      'newsreader-latin-600-normal.woff2',
+    ]);
     expect((await stat(join(dir, 'assets', 'placeholder.svg'))).isFile()).toBe(true);
 
     const html = await readFile(join(dir, 'index.html'), 'utf8');
     expect(html).toContain('<title>Getting Started</title>');
     expect(html).toContain('href="./player.css"');
+    expect(html).toContain('href="./player-fonts.css"');
     expect(html).toContain('src="./player.js"');
     expect(html).toContain('<script id="demo-config" type="application/json">{');
     expect(html).toContain('"publicUrl":"./assets/placeholder.svg"');

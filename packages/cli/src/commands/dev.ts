@@ -20,10 +20,12 @@ import { ASSETS_DIR, assetsForPage } from '../assets.js';
 import { orderDemos, PROJECT_FILE, ProjectSchema, type ProjectConfig } from '../project.js';
 import {
   PLAYER_FILES,
+  PLAYER_FONT_FILES,
+  RUNTIME_MISSING_MSG,
   readTemplate,
   renderDemoPage,
   resolveRuntimeFile,
-  RUNTIME_MISSING_MSG,
+  resolveRuntimeFontsDir,
   type PlayerFileName,
 } from '../page.js';
 import { standaloneDemoName } from '../standalone-demo.js';
@@ -569,7 +571,9 @@ export async function runDev(options: DevOptions): Promise<DevHandle> {
   const playerFiles: Record<PlayerFileName, string | null> = {
     'player.js': resolveRuntimeFile(PLAYER_FILES['player.js'], projectRoot),
     'player.css': resolveRuntimeFile(PLAYER_FILES['player.css'], projectRoot),
+    'player-fonts.css': resolveRuntimeFile(PLAYER_FILES['player-fonts.css'], projectRoot),
   };
+  const fontsDir = resolveRuntimeFontsDir(projectRoot);
   const demoTemplate = await readTemplate();
   // ── local editor (packages/editor build) ──────────────────────────────
   const editorDir = resolveEditorDir();
@@ -629,9 +633,17 @@ export async function runDev(options: DevOptions): Promise<DevHandle> {
 
             // The player files are also reachable at a fixed path for the
             // editor shell, which is not served under a demo slug.
-            if (pathname === '/__demo/player.js' || pathname === '/__demo/player.css') {
+            if (
+              pathname === '/__demo/player.js' ||
+              pathname === '/__demo/player.css' ||
+              pathname === '/__demo/player-fonts.css'
+            ) {
               const name = pathname.slice('/__demo/'.length) as PlayerFileName;
               servePlayerFile(res, playerFiles[name], name);
+              return;
+            }
+            if (pathname.startsWith('/__demo/fonts/')) {
+              serveFontFile(res, fontsDir, pathname.slice('/__demo/fonts/'.length));
               return;
             }
             if (pathname === '/__demo/demos') {
@@ -703,6 +715,10 @@ export async function runDev(options: DevOptions): Promise<DevHandle> {
               // Player files sit next to the page, exactly as `build` lays them out.
               if (rel in playerFiles) {
                 servePlayerFile(res, playerFiles[rel as PlayerFileName], rel);
+                return;
+              }
+              if (rel.startsWith('fonts/')) {
+                serveFontFile(res, fontsDir, rel.slice('fonts/'.length));
                 return;
               }
               if (!rel.startsWith(`${ASSETS_DIR}/`)) {
@@ -888,6 +904,15 @@ export async function runDev(options: DevOptions): Promise<DevHandle> {
   };
 
   return { url, port: actualPort, server, projectRoot, close };
+}
+
+/** Font files sit under `fonts/` next to the page, as `build` lays them out. */
+function serveFontFile(res: ServerResponse, fontsDir: string | null, name: string): void {
+  if (!(PLAYER_FONT_FILES as readonly string[]).includes(name)) {
+    send(res, 404, 'text/plain; charset=utf-8', 'Not found');
+    return;
+  }
+  servePlayerFile(res, fontsDir ? join(fontsDir, name) : null, `fonts/${name}`);
 }
 
 function servePlayerFile(res: ServerResponse, path: string | null, name: string): void {

@@ -211,6 +211,13 @@ describe('runDev project endpoints', () => {
     handle = await runDev({ cwd: root, port: 0, silent: true });
     const js = await fetch(`${handle.url}getting-started/player.js`);
     const css = await fetch(`${handle.url}getting-started/player.css`);
+    const fonts = await fetch(`${handle.url}getting-started/player-fonts.css`);
+    expect(fonts.status).toBe(200);
+    expect(fonts.headers.get('content-type')).toContain('text/css');
+    const woff = await fetch(`${handle.url}getting-started/fonts/geist-latin-wght-normal.woff2`);
+    expect(woff.status).toBe(200);
+    expect(woff.headers.get('content-type')).toBe('font/woff2');
+    expect((await fetch(`${handle.url}getting-started/fonts/evil.woff2`)).status).toBe(404);
     // 200 when packages/runtime/dist exists, 503 with a readable message otherwise.
     expect([200, 503]).toContain(js.status);
     expect([200, 503]).toContain(css.status);

@@ -9,6 +9,7 @@ describe('player page template', () => {
   it('carries the page contract and nothing internal', async () => {
     const html = await readFile(resolveTemplate('demo.html'), 'utf8');
     expect(html).toContain('<link rel="stylesheet" href="./player.css" />');
+    expect(html).toContain('<link rel="stylesheet" href="./player-fonts.css" />');
     expect(html).toContain('<script id="demo-config" type="application/json">null</script>');
     expect(html).toContain('<script id="demo-assets" type="application/json">[]</script>');
     expect(html).toContain('<div id="root">');

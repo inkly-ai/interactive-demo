@@ -11,6 +11,7 @@ import type { AssetEntry, Demo, ThemeTokens } from '@inkly-org/interactive-demo/
  *
  * Page contract (what `player.js` expects):
  *   <link rel="stylesheet" href="./player.css">
+ *   <link rel="stylesheet" href="./player-fonts.css">   (optional; ./fonts/*.woff2 next to it)
  *   <script id="demo-config" type="application/json">…demo config…</script>
  *   <script id="demo-assets" type="application/json">…assets manifest array…</script>
  *   <div id="root"></div>
@@ -29,7 +30,24 @@ export const RUNTIME_PACKAGE = '@inkly-org/interactive-demo';
 export const PLAYER_FILES = {
   'player.js': 'player.js',
   'player.css': 'styles.css',
+  'player-fonts.css': 'fonts.css',
 } as const;
+
+/**
+ * Self-hosted font files `player-fonts.css` refers to (`url(./fonts/…)`).
+ * They live in the runtime package's `dist/fonts/` next to `fonts.css`.
+ */
+export const PLAYER_FONT_FILES = [
+  'newsreader-latin-600-normal.woff2',
+  'fraunces-latin-600-normal.woff2',
+  'geist-latin-wght-normal.woff2',
+] as const;
+
+/** Directory holding the font files, derived from where `fonts.css` resolved. */
+export function resolveRuntimeFontsDir(cwd: string): string | null {
+  const css = resolveRuntimeFile(PLAYER_FILES['player-fonts.css'], cwd);
+  return css ? join(dirname(css), 'fonts') : null;
+}
 
 export type PlayerFileName = keyof typeof PLAYER_FILES;
 

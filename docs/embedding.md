@@ -7,6 +7,7 @@ dist/<slug>/
   index.html      the page (five lines: stylesheet, two JSON script tags, root, player.js)
   player.js       the player with React bundled in
   player.css      the stylesheet
+player-fonts.css   optional self-hosted fonts (with fonts/*.woff2); drop both to fall back to system fonts
   assets/…        screenshots, recordings, audio
 ```
 

@@ -1,0 +1,169 @@
+{
+  "$schema": "https://cdn.jsdelivr.net/npm/@inkly-org/interactive-demo/dist/schema/demo.config.json",
+  "id": "tourExample01",
+  "version": 1,
+  "title": "A tour of interactive-demo",
+  "subtitle": "Three screens, three hotspots, one static build.",
+  "theme": {
+    "preset": "mono"
+  },
+  "chrome": {
+    "hideHeader": false,
+    "hideControls": false,
+    "controls": "full",
+    "mobileFooterMessage": true,
+    "autoplay": false,
+    "branding": true
+  },
+  "chapters": [
+    {
+      "id": "intro",
+      "title": "Intro",
+      "stepIds": [
+        "cover-intro"
+      ]
+    },
+    {
+      "id": "tour",
+      "title": "Tour",
+      "stepIds": [
+        "demos",
+        "player",
+        "editor"
+      ]
+    },
+    {
+      "id": "outro",
+      "title": "Wrap up",
+      "stepIds": [
+        "cover-outro"
+      ]
+    }
+  ],
+  "steps": [
+    {
+      "kind": "cover",
+      "id": "cover-intro",
+      "widgets": [
+        {
+          "type": "headline",
+          "id": "headline-intro",
+          "title": "A tour of interactive-demo",
+          "description": "See how a project looks in the dev server, in the player, and in the editor.",
+          "textAlign": "middle",
+          "cta": {
+            "label": "Start",
+            "action": {
+              "type": "next"
+            },
+            "animation": "shimmer"
+          }
+        }
+      ],
+      "advance": {
+        "trigger": "click"
+      }
+    },
+    {
+      "kind": "content",
+      "id": "demos",
+      "label": "Your demos",
+      "background": {
+        "type": "image",
+        "src": "asset:shot-demos",
+        "naturalWidth": 1440,
+        "naturalHeight": 900,
+        "alt": "The dev server listing three demos"
+      },
+      "script": "interactive-demo dev lists every demo in the project. Each one has a link to the player and an Edit link.",
+      "advance": {
+        "trigger": "click"
+      },
+      "annotations": [
+        {
+          "id": "demos-edit",
+          "type": "message",
+          "variant": "pointer",
+          "x": 0.207,
+          "y": 0.096,
+          "text": "Click Edit to open a demo in the editor."
+        }
+      ]
+    },
+    {
+      "kind": "content",
+      "id": "player",
+      "label": "The player",
+      "background": {
+        "type": "image",
+        "src": "asset:shot-player",
+        "naturalWidth": 1440,
+        "naturalHeight": 900,
+        "alt": "The player showing a cover step"
+      },
+      "script": "This is what viewers see: a cover, then your screens with hotspots. The made-with badge sits in the corner and can be turned off.",
+      "advance": {
+        "trigger": "click"
+      },
+      "annotations": [
+        {
+          "id": "player-start",
+          "type": "message",
+          "variant": "pointer",
+          "x": 0.5,
+          "y": 0.607,
+          "text": "A cover step with a headline and a button."
+        }
+      ]
+    },
+    {
+      "kind": "content",
+      "id": "editor",
+      "label": "The editor",
+      "background": {
+        "type": "image",
+        "src": "asset:shot-editor",
+        "naturalWidth": 1440,
+        "naturalHeight": 900,
+        "alt": "The editor with the slide strip on the right"
+      },
+      "script": "The editor runs locally and saves straight to demo.config.json. Add hotspots, captions and narration, then build.",
+      "advance": {
+        "trigger": "click"
+      },
+      "annotations": [
+        {
+          "id": "editor-strip",
+          "type": "message",
+          "variant": "pointer",
+          "x": 0.896,
+          "y": 0.325,
+          "text": "Steps live in the slide strip; pick one to edit it."
+        }
+      ]
+    },
+    {
+      "kind": "cover",
+      "id": "cover-outro",
+      "widgets": [
+        {
+          "type": "headline",
+          "id": "headline-outro",
+          "title": "That's the whole loop",
+          "description": "Capture, annotate, build, embed.",
+          "textAlign": "middle",
+          "cta": {
+            "label": "Replay",
+            "action": {
+              "type": "restart"
+            },
+            "animation": "shimmer"
+          }
+        }
+      ],
+      "advance": {
+        "trigger": "click"
+      }
+    }
+  ]
+}

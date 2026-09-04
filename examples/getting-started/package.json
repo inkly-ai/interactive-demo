@@ -1,0 +1,12 @@
+{
+  "name": "getting-started",
+  "private": true,
+  "scripts": {
+    "dev": "interactive-demo dev",
+    "validate": "interactive-demo validate",
+    "build": "interactive-demo build"
+  },
+  "devDependencies": {
+    "@inkly-org/interactive-demo-cli": "^0.1.0"
+  }
+}

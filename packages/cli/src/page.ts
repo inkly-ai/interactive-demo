@@ -197,9 +197,13 @@ export function renderPageHeader(input: {
       '<span class="demo-page-divider" aria-hidden="true"></span>',
     );
   }
-  if (input.project?.name) {
+  // The project name is the crumb before the demo title; skip it when the
+  // brand word already says the same thing (the scaffold defaults brand.name
+  // to the project name).
+  const projectName = input.project?.name?.trim() ?? '';
+  if (projectName && projectName.toLowerCase() !== brandWord.toLowerCase()) {
     parts.push(
-      `<a href="/" class="demo-page-hub-name">${escapeHtml(input.project.name)}</a>`,
+      `<a href="/" class="demo-page-hub-name">${escapeHtml(projectName)}</a>`,
       '<span class="demo-page-slash" aria-hidden="true">/</span>',
     );
   }

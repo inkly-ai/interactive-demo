@@ -37,16 +37,23 @@ export async function getDemoFiles(slug: string): Promise<{ files: Record<string
   return json(await fetch(demoPath(slug, 'files'), { cache: 'no-store' }));
 }
 
+/** Browsers only honour `keepalive` for bodies up to 64 KB. */
+const KEEPALIVE_MAX_BYTES = 60_000;
+
 export async function putDemoFiles(
   slug: string,
   files: Record<string, string>,
   deletions: string[] = [],
+  options: { keepalive?: boolean } = {},
 ): Promise<void> {
+  const body = JSON.stringify({ files, delete: deletions });
   await json<{ ok: true }>(
     await fetch(demoPath(slug, 'files'), {
       method: 'PUT',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ files, delete: deletions }),
+      body,
+      // Lets a save started from pagehide outlive the page.
+      keepalive: Boolean(options.keepalive) && body.length <= KEEPALIVE_MAX_BYTES,
     }),
   );
 }

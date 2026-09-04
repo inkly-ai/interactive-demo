@@ -5,11 +5,12 @@
 import { spawn, execFile } from 'node:child_process';
 import { mkdir, mkdtemp, open, readFile, readdir, rm } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
-import { dirname, join, resolve } from 'node:path';
+import { basename, dirname, join, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import WebSocket from 'ws';
 import { resolveArgPath, sleep } from './options.js';
+import { profilesRootDir } from './profiles.js';
 
 const moduleDir = dirname(fileURLToPath(import.meta.url));
 
@@ -286,14 +287,31 @@ export async function terminateProcessTree(pid: number): Promise<void> {
   signal(pid, 'SIGKILL');
 }
 
-/** Only ever match a profile dir that is unmistakably ours. */
-function isOwnedProfileDir(profileDir: string | null | undefined): profileDir is string {
-  return !!profileDir && profileDir.includes('interactive-demo');
+/**
+ * Only ever match a profile dir that is unmistakably ours: a throwaway dir
+ * carrying our temp prefix, or a named profile directly under the capture
+ * home's `profiles/`. A user's clone that merely has "interactive-demo" in its
+ * path never qualifies.
+ */
+export function isOwnedProfileDir(profileDir: string | null | undefined): profileDir is string {
+  if (!profileDir) return false;
+  const abs = resolve(profileDir);
+  if (basename(abs).startsWith(TEMP_PROFILE_PREFIX)) return true;
+  return dirname(abs) === resolve(profilesRootDir());
+}
+
+/**
+ * `pgrep -f` pattern matching only a Chrome whose `--user-data-dir` is exactly
+ * `profileDir` — anchored so `acme` can never match `acme-2`.
+ */
+export function profileDirPattern(profileDir: string): string {
+  const escaped = profileDir.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return `--user-data-dir=${escaped}([[:space:]]|$)`;
 }
 
 async function pidsReferencing(profileDir: string): Promise<number[]> {
   return new Promise<number[]>((resolvePids) => {
-    execFile('pgrep', ['-f', '--', profileDir], { timeout: 4000 }, (_err, stdout) => {
+    execFile('pgrep', ['-f', '--', profileDirPattern(profileDir)], { timeout: 4000 }, (_err, stdout) => {
       const found = String(stdout || '')
         .split('\n')
         .map((line) => Number(line.trim()))
@@ -640,10 +658,23 @@ export async function openTargetPage(
   const offLoad = cdp.on('Page.loadEventFired', (_params, sid) => {
     if (sid === sessionId) loaded = true;
   });
-  await cdp.send('Page.navigate', { url }, sessionId);
+  const navigated = (await cdp.send('Page.navigate', { url }, sessionId)) as { errorText?: unknown };
+  if (typeof navigated.errorText === 'string' && navigated.errorText) {
+    offLoad();
+    throw new Error(`Could not load ${url}: ${navigated.errorText}`);
+  }
   const started = Date.now();
   while (!loaded && Date.now() - started < timeoutMs) await sleep(100);
   offLoad();
   await sleep(1_000);
+  // A DNS/connection failure still fires the load event — for Chrome's own
+  // error page. Refuse to record a session on it.
+  const info = (await cdp.send('Target.getTargetInfo', { targetId }).catch(() => ({}))) as {
+    targetInfo?: { url?: unknown };
+  };
+  const landedUrl = typeof info.targetInfo?.url === 'string' ? info.targetInfo.url : '';
+  if (landedUrl.startsWith('chrome-error://')) {
+    throw new Error(`Could not load ${url}: the browser showed an error page instead.`);
+  }
   return { targetId, sessionId };
 }

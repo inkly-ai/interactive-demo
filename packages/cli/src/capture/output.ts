@@ -2,6 +2,7 @@
  * Assemble the recorded screens of a session into a demo folder:
  * `demo.config.json`, `assets.json` and the `assets/` bytes.
  */
+import type { CaptureClick } from './build.js';
 import { createHash } from 'node:crypto';
 import { access, mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -63,6 +64,11 @@ export interface AssembledDemo {
  * Pure-ish assembly: reads the recorded screen files, builds steps and the
  * asset manifest. Writes nothing.
  */
+function omitOuterHtml(click: CaptureClick): Omit<CaptureClick, 'outerHTML'> {
+  const { outerHTML: _outerHtml, ...rest } = click;
+  return rest;
+}
+
 export async function assembleCapturedDemo(opts: {
   name: string;
   screens: CapturedScreen[];
@@ -187,7 +193,9 @@ export async function assembleCapturedDemo(opts: {
       capturedAt: screen.capturedAt,
       naturalWidth: screen.naturalSize.width,
       naturalHeight: screen.naturalSize.height,
-      precedingClick: screen.click,
+      // The element's markup is only an authoring aid; keep it out of the
+      // exported manifest.
+      precedingClick: screen.click ? omitOuterHtml(screen.click) : screen.click,
     });
   }
   if (steps.length === 0) throw new Error('No usable screens captured.');

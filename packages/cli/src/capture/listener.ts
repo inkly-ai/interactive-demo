@@ -191,7 +191,10 @@ export async function runListen(args: ParsedArgs): Promise<number> {
     if (sid !== targetSessionId) return;
     const event = params as { name?: unknown; payload?: unknown };
     const recorderEvent = parseRecorderPayload(String(event.name ?? ''), event.payload);
-    if (!recorderEvent) return;
+    if (!recorderEvent) {
+      process.stderr.write(`capture listener: ignored an invalid ${String(event.name ?? '')} payload from the page\n`);
+      return;
+    }
     // Stamp the click's arrival the instant the binding fires — before the async
     // captureChain runs — so the consumer can reject screencast frames that
     // arrived after the click (i.e. ones already showing its effect).

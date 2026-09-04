@@ -292,27 +292,105 @@ export async function readCaptureMetadata(cdp: Cdp, sessionId: string): Promise<
   };
 }
 
+const MAX_LABEL = 200;
+const MAX_TAG = 50;
+const MAX_SELECTOR = 1000;
+const MAX_ELEMENT_ID = 100;
+const MAX_OUTER_HTML = 2000;
+const MAX_URL = 2000;
+const MAX_TITLE = 500;
+const MAX_VIEWPORT = 16_384;
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function cappedString(value: unknown, max: number): string | null {
+  return typeof value === 'string' && value.length > 0 ? value.slice(0, max) : null;
+}
+
+function clamp01(value: unknown): number | null {
+  return typeof value === 'number' && Number.isFinite(value) ? Math.max(0, Math.min(1, value)) : null;
+}
+
+function nonNegative(value: unknown): number {
+  return typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : 0;
+}
+
+function httpUrl(value: unknown): string | null {
+  if (typeof value !== 'string' || value.length === 0 || value.length > MAX_URL) return null;
+  try {
+    const parsed = new URL(value);
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:' ? value : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * The page can call the bindings with anything, so a click is only accepted
+ * with finite normalized coordinates, and every string is capped.
+ */
+function sanitizeClick(raw: unknown): CaptureClick | null {
+  if (!isRecord(raw)) return null;
+  const x = clamp01(raw.x);
+  const y = clamp01(raw.y);
+  if (x === null || y === null) return null;
+  return {
+    x,
+    y,
+    label: cappedString(raw.label, MAX_LABEL),
+    tag: cappedString(raw.tag, MAX_TAG),
+    selector: cappedString(raw.selector, MAX_SELECTOR),
+    elementId: cappedString(raw.elementId, MAX_ELEMENT_ID),
+    outerHTML: cappedString(raw.outerHTML, MAX_OUTER_HTML),
+  };
+}
+
+function sanitizePage(raw: unknown): RecorderEventPage | null {
+  if (!isRecord(raw)) return null;
+  const viewport = isRecord(raw.viewport) ? raw.viewport : {};
+  const scroll = isRecord(raw.scroll) ? raw.scroll : {};
+  const dimension = (value: unknown, fallback: number): number =>
+    typeof value === 'number' && Number.isFinite(value) && value >= 1
+      ? Math.min(MAX_VIEWPORT, Math.round(value))
+      : fallback;
+  return {
+    url: cappedString(raw.url, MAX_URL) ?? '',
+    title: cappedString(raw.title, MAX_TITLE) ?? '',
+    viewport: {
+      width: dimension(viewport.width, DEFAULT_WIDTH),
+      height: dimension(viewport.height, DEFAULT_HEIGHT),
+    },
+    scroll: {
+      x: nonNegative(scroll.x),
+      y: nonNegative(scroll.y),
+      maxX: nonNegative(scroll.maxX),
+      maxY: nonNegative(scroll.maxY),
+    },
+    navigationUrl: httpUrl(raw.navigationUrl),
+  };
+}
+
 /**
  * Parse a payload delivered over one of the recorder bindings into a
- * {@link RecorderEvent}. Returns `null` for anything malformed.
+ * {@link RecorderEvent}. Returns `null` for anything malformed or forged —
+ * the page is untrusted, so nothing here ever throws.
  */
 export function parseRecorderPayload(bindingName: string, payload: unknown): RecorderEvent | null {
   if (bindingName !== RECORDER_EVENT_BINDING && bindingName !== RECORDER_CLICK_BINDING) return null;
   if (typeof payload !== 'string') return null;
   try {
-    const parsed = JSON.parse(payload) as Record<string, unknown>;
+    const parsed: unknown = JSON.parse(payload);
+    if (!isRecord(parsed)) return null;
     if (bindingName === RECORDER_CLICK_BINDING) {
-      return { type: 'click', click: parsed as unknown as CaptureClick, page: null };
+      const click = sanitizeClick(parsed);
+      return click ? { type: 'click', click, page: null } : null;
     }
     const type = parsed.type === 'input' || parsed.type === 'scroll' ? parsed.type : 'click';
-    return {
-      type,
-      click: typeof parsed.click === 'object' && parsed.click ? (parsed.click as CaptureClick) : null,
-      page:
-        typeof parsed.page === 'object' && parsed.page
-          ? (parsed.page as unknown as RecorderEventPage)
-          : null,
-    };
+    const click = sanitizeClick(parsed.click);
+    if (type === 'click' && parsed.click != null && !click) return null;
+    return { type, click, page: sanitizePage(parsed.page) };
   } catch {
     return null;
   }

@@ -14,7 +14,7 @@ import { PROJECT_FILE, ProjectSchema } from './project.js';
  */
 
 export const STARTER_SLUG = 'getting-started';
-export const DEFAULT_THEME_ID = 'mono';
+export const DEFAULT_THEME_ID = 'default';
 
 export interface SkeletonFile {
   /** Forward-slash path relative to the project root. */

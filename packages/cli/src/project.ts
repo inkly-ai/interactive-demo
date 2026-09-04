@@ -30,7 +30,7 @@ export const PROJECT_FILE = 'interactive-demo.json';
  * ```json
  * {
  *   "name": "Acme demos",
- *   "theme": "mono",
+ *   "theme": "default",
  *   "tokens": { "primary": "#5b3df5" },
  *   "demos": ["onboarding", "billing"]
  * }

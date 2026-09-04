@@ -1,0 +1,153 @@
+# Publish @inkly-org/interactive-demo-cli to the public npm registry.
+# Triggered on a tag matching `cli-v*`, or manually for re-runs and the
+# first publish.
+#
+# Release the runtime FIRST (tag `runtime-v*`): this package depends on
+# @inkly-org/interactive-demo by range, and the guard below refuses to ship
+# a CLI whose runtime dependency is not on the registry yet.
+#
+# Required GitHub Actions secret:
+#   NPM_TOKEN — npm token with publish rights on the @inkly-org scope. It
+#               must be an "Automation" token; only those skip OTP in CI.
+
+name: publish-cli
+
+on:
+  push:
+    tags:
+      - 'cli-v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'CLI version to publish (must match packages/cli/package.json#version)'
+        required: true
+        type: string
+
+# Publishing is an explicit, tagged operation — never a push to main.
+permissions:
+  contents: read
+  # Required for npm provenance; see publish-runtime.yml.
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Verify package version matches the tag/input
+        id: meta
+        run: |
+          set -euo pipefail
+          PKG="packages/cli/package.json"
+          PKG_VERSION="$(node -p "require('./$PKG').version")"
+          if [[ "${{ github.event_name }}" == "push" ]]; then
+            # Tag is `refs/tags/cli-v<version>` — strip the prefix.
+            TAG_VERSION="${GITHUB_REF_NAME#cli-v}"
+          else
+            TAG_VERSION="${{ github.event.inputs.version }}"
+          fi
+          if [[ "$PKG_VERSION" != "$TAG_VERSION" ]]; then
+            echo "::error::$PKG version ($PKG_VERSION) does not match tag/input ($TAG_VERSION). Bump the package version, commit, and re-tag."
+            exit 1
+          fi
+          echo "version=$PKG_VERSION" >> "$GITHUB_OUTPUT"
+          echo "Resolved publish version: $PKG_VERSION"
+
+      - name: Verify the runtime dependency is on the registry
+        run: |
+          set -euo pipefail
+          # Inside this workspace the dependency resolves to the local
+          # package, so nothing here would notice that `npm i -g` cannot
+          # resolve it for a real user. Check the registry explicitly.
+          RANGE="$(node -p "require('./packages/cli/package.json').dependencies['@inkly-org/interactive-demo']")"
+          if ! npm view "@inkly-org/interactive-demo@$RANGE" version > /dev/null 2>&1; then
+            echo "::error::No published @inkly-org/interactive-demo satisfies \"$RANGE\". Release the runtime first (tag runtime-v<version>), then re-tag the CLI."
+            exit 1
+          fi
+          echo "runtime dependency \"$RANGE\" is satisfiable from npm."
+
+      # The same bar as CI, and the root build is required rather than the
+      # per-workspace one: it builds the editor before the CLI, and the CLI
+      # build silently omits the editor when packages/editor/dist is absent.
+      - name: Build
+        run: npm run build
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Test
+        run: npm test
+
+      - name: Verify the tarball carries the editor and template
+        run: |
+          set -euo pipefail
+          # tsup copies packages/editor/dist into dist/editor, but *skips*
+          # that copy when the editor has not been built — which would ship a
+          # CLI whose `dev` command serves no editor at /__demo/editor/.
+          for FILE in dist/cli.js dist/capture-listener.js dist/editor/index.html; do
+            if [[ ! -f "packages/cli/$FILE" ]]; then
+              echo "::error::Required build artifact missing: packages/cli/$FILE"
+              exit 1
+            fi
+          done
+          if ! compgen -G "packages/cli/dist/editor/assets/*.js" > /dev/null; then
+            echo "::error::packages/cli/dist/editor/assets/ has no bundle — the editor build did not land."
+            exit 1
+          fi
+          echo "cli dist looks complete."
+
+      - name: Refuse to overwrite an existing published version
+        env:
+          VERSION: ${{ steps.meta.outputs.version }}
+        run: |
+          set -euo pipefail
+          # A successful `npm view` means the version exists — the failure case.
+          if npm view "@inkly-org/interactive-demo-cli@$VERSION" version > /dev/null 2>&1; then
+            echo "::error::@inkly-org/interactive-demo-cli@$VERSION is already published. npm versions are immutable — bump the version and re-tag."
+            exit 1
+          fi
+          echo "@inkly-org/interactive-demo-cli@$VERSION is unpublished — proceeding."
+
+      - name: Publish to npm
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${NODE_AUTH_TOKEN:-}" ]]; then
+            echo "::error::NPM_TOKEN secret is not set"
+            exit 1
+          fi
+          npm publish \
+            --workspace @inkly-org/interactive-demo-cli \
+            --access public \
+            --provenance
+
+      - name: Write summary
+        env:
+          VERSION: ${{ steps.meta.outputs.version }}
+        run: |
+          set -euo pipefail
+          {
+            echo "## @inkly-org/interactive-demo-cli $VERSION published"
+            echo
+            echo "**Registry:** https://www.npmjs.com/package/@inkly-org/interactive-demo-cli/v/$VERSION"
+            echo "**Install:** \`npm install -g @inkly-org/interactive-demo-cli@$VERSION\`"
+            echo "**Run:** \`interactive-demo init\`"
+          } >> "$GITHUB_STEP_SUMMARY"

@@ -1,0 +1,142 @@
+# Publish @inkly-org/interactive-demo (the React player and schema) to the
+# public npm registry. Triggered on a tag matching `runtime-v*`, or manually
+# for re-runs and the first publish.
+#
+# Release ORDER matters: publish the runtime before the CLI. The CLI depends
+# on this package by range, so a CLI release that lands first installs a
+# dependency that does not exist yet.
+#
+# Required GitHub Actions secret:
+#   NPM_TOKEN — npm token with publish rights on the @inkly-org scope. It
+#               must be an "Automation" token; only those skip OTP in CI.
+
+name: publish-runtime
+
+on:
+  push:
+    tags:
+      - 'runtime-v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Runtime version to publish (must match packages/runtime/package.json#version)'
+        required: true
+        type: string
+
+# Publishing is an explicit, tagged operation — never a push to main.
+permissions:
+  contents: read
+  # Required for npm provenance: the publish trades this token for a Sigstore
+  # attestation tying the tarball to this workflow run. Provenance also needs
+  # the package's `repository.url` to point at this repo, which it does.
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          # Writes an .npmrc that reads NODE_AUTH_TOKEN at publish time; that
+          # is what makes `npm publish` non-interactive.
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Verify package version matches the tag/input
+        id: meta
+        run: |
+          set -euo pipefail
+          PKG="packages/runtime/package.json"
+          PKG_VERSION="$(node -p "require('./$PKG').version")"
+          if [[ "${{ github.event_name }}" == "push" ]]; then
+            # Tag is `refs/tags/runtime-v<version>` — strip the prefix.
+            TAG_VERSION="${GITHUB_REF_NAME#runtime-v}"
+          else
+            TAG_VERSION="${{ github.event.inputs.version }}"
+          fi
+          if [[ "$PKG_VERSION" != "$TAG_VERSION" ]]; then
+            echo "::error::$PKG version ($PKG_VERSION) does not match tag/input ($TAG_VERSION). Bump the package version, commit, and re-tag."
+            exit 1
+          fi
+          echo "version=$PKG_VERSION" >> "$GITHUB_OUTPUT"
+          echo "Resolved publish version: $PKG_VERSION"
+
+      # The same bar as CI. A tagged publish is the one build nobody gets to
+      # re-do, so it re-runs everything rather than trusting the main run.
+      - name: Build
+        run: npm run build
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Test
+        run: npm test
+
+      - name: Verify the tarball carries the built runtime
+        run: |
+          set -euo pipefail
+          # `files` is ["dist", "README.md"], so an unbuilt dist would publish
+          # an empty package rather than fail loudly.
+          for FILE in dist/index.js dist/index.d.ts dist/styles.css dist/player.js dist/schema/demo.config.json; do
+            if [[ ! -f "packages/runtime/$FILE" ]]; then
+              echo "::error::Required build artifact missing: packages/runtime/$FILE"
+              exit 1
+            fi
+          done
+          echo "runtime dist looks complete."
+
+      - name: Refuse to overwrite an existing published version
+        env:
+          VERSION: ${{ steps.meta.outputs.version }}
+        run: |
+          set -euo pipefail
+          # `npm view` exits non-zero when the version is absent. Absent is
+          # what we want, so a *successful* view is the failure case.
+          if npm view "@inkly-org/interactive-demo@$VERSION" version > /dev/null 2>&1; then
+            echo "::error::@inkly-org/interactive-demo@$VERSION is already published. npm versions are immutable — bump the version and re-tag."
+            exit 1
+          fi
+          echo "@inkly-org/interactive-demo@$VERSION is unpublished — proceeding."
+
+      - name: Publish to npm
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${NODE_AUTH_TOKEN:-}" ]]; then
+            echo "::error::NPM_TOKEN secret is not set"
+            exit 1
+          fi
+          # `--access public` is required for the first scoped publish and a
+          # no-op afterwards.
+          npm publish \
+            --workspace @inkly-org/interactive-demo \
+            --access public \
+            --provenance
+
+      - name: Write summary
+        env:
+          VERSION: ${{ steps.meta.outputs.version }}
+        run: |
+          set -euo pipefail
+          {
+            echo "## @inkly-org/interactive-demo $VERSION published"
+            echo
+            echo "**Registry:** https://www.npmjs.com/package/@inkly-org/interactive-demo/v/$VERSION"
+            echo "**Install:** \`npm install @inkly-org/interactive-demo@$VERSION\`"
+            echo
+            echo "The CLI can now be released — tag \`cli-v<version>\`."
+          } >> "$GITHUB_STEP_SUMMARY"

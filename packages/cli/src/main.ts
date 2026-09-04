@@ -5,6 +5,8 @@ import { runValidate } from './commands/validate.js';
 import { runBuild } from './commands/build.js';
 import { runVersion } from './commands/version.js';
 import { CAPTURE_USAGE, runCapture } from './commands/capture.js';
+import { runLogin, runLogout, runStatus } from './commands/login.js';
+import { runPublish, runPublishList } from './commands/publish.js';
 import { PROJECT_FILE } from './project.js';
 
 const BIN = 'interactive-demo';
@@ -19,6 +21,9 @@ Usage:
                                      Validate the project and demo files.
   ${BIN} build [--out <dir>]         Write a static folder per demo.
   ${BIN} capture <start|stop|…>      Record a click-through of a live web app.
+  ${BIN} login [--token <token>]     Log in to the hosting service.
+  ${BIN} logout                      Remove the saved credentials.
+  ${BIN} publish [<demo>] [--new]    Publish a demo to the hosting service.
   ${BIN} version                     Print the CLI version.
   ${BIN} help [command]              Show CLI help.
 
@@ -91,6 +96,46 @@ Usage:
   ${BIN} --version
 `;
 
+const LOGIN_USAGE = `${BIN} login — log in to the hosting service
+
+Usage:
+  ${BIN} login [--token <token>] [--no-open] [--status] [--json]
+  ${BIN} logout
+
+Options:
+  --token <token>  Save an API token directly instead of logging in through
+                   the browser. \`INTERACTIVE_DEMO_API_TOKEN\` does the same.
+  --no-open        Print the login URL instead of opening the browser.
+  --status         Show where the credentials are stored and whether the token
+                   still works. \`--json\` prints it as JSON.
+  --local          Use a local dev build of the hosting service
+                   (http://localhost:3000). \`INTERACTIVE_DEMO_API_BASE\`
+                   overrides the origin in every mode.
+
+Credentials are written to ~/.interactive-demo/credentials.json (owner-only).
+`;
+
+const PUBLISH_USAGE = `${BIN} publish — publish a demo to the hosting service
+
+Usage:
+  ${BIN} publish [<path>|--demo <slug>] [--new] [--json]
+  ${BIN} publish --list [--json]
+
+Arguments:
+  <path>         A demo folder (e.g. demos/intro) or a slug. Optional when the
+                 project has exactly one demo.
+
+Options:
+  --demo <slug>  Select the demo by slug.
+  --new          Mint a NEW hosted URL instead of updating the demo's existing
+                 deployment in place (the default keeps embeds working).
+  --list         Show the hosted URL of every demo in the project.
+  --json         Print machine-readable JSON.
+
+Uploads the demo's assets, then freezes the config as a hosted deployment at
+/p/<id>. Run \`${BIN} login\` first.
+`;
+
 const HELP_USAGE = `${BIN} help — show command help
 
 Usage:
@@ -103,6 +148,8 @@ Commands:
   validate   Validate the project and demo files.
   build      Write a static folder per demo.
   capture    Record a click-through of a live web app as a demo.
+  login      Log in to the hosting service (logout removes the credentials).
+  publish    Publish a demo to the hosting service.
   version    Print the CLI version.
 `;
 
@@ -112,6 +159,9 @@ const HELP_BY_COMMAND: Record<string, string> = {
   dev: DEV_USAGE,
   help: HELP_USAGE,
   init: INIT_USAGE,
+  login: LOGIN_USAGE,
+  logout: LOGIN_USAGE,
+  publish: PUBLISH_USAGE,
   validate: VALIDATE_USAGE,
   version: VERSION_USAGE,
 };
@@ -150,7 +200,7 @@ function waitForSignal(): Promise<void> {
 export async function main(argv: string[], io: MainIo = defaultIo): Promise<number> {
   const args = mri(argv, {
     alias: { h: 'help', p: 'port', v: 'version' },
-    boolean: ['help', 'json', 'strict', 'version'],
+    boolean: ['help', 'json', 'strict', 'version', 'list', 'local', 'new', 'status'],
     string: [
       'browser',
       'connect-to-browser',
@@ -162,6 +212,7 @@ export async function main(argv: string[], io: MainIo = defaultIo): Promise<numb
       'profile',
       'session',
       'theme',
+      'token',
       'url',
       'window-size',
     ],
@@ -307,6 +358,60 @@ export async function main(argv: string[], io: MainIo = defaultIo): Promise<numb
         return await runCapture({ cwd: io.cwd, subcommand: rest[0], args: { ...args, _: rest } });
       } catch (err) {
         io.stderr(`${BIN} capture failed: ${(err as Error).message}\n`);
+        return 1;
+      }
+    }
+    case 'login': {
+      if (args.help) {
+        io.stdout(LOGIN_USAGE);
+        return 0;
+      }
+      try {
+        if (args.status) {
+          await runStatus({ cwd: io.cwd, json: Boolean(args.json) });
+          return 0;
+        }
+        // mri negates `--no-open` to `{ open: false }`.
+        await runLogin({
+          cwd: io.cwd,
+          token: readOptionalStringOption(args, 'token') || undefined,
+          local: Boolean(args.local),
+          open: args.open !== false,
+        });
+        return 0;
+      } catch (err) {
+        io.stderr(`${BIN} login failed: ${(err as Error).message}\n`);
+        return 1;
+      }
+    }
+    case 'logout': {
+      if (args.help) {
+        io.stdout(LOGIN_USAGE);
+        return 0;
+      }
+      await runLogout();
+      return 0;
+    }
+    case 'publish': {
+      if (args.help) {
+        io.stdout(PUBLISH_USAGE);
+        return 0;
+      }
+      try {
+        if (args.list) {
+          await runPublishList({ cwd: io.cwd, json: Boolean(args.json) });
+          return 0;
+        }
+        await runPublish({
+          cwd: io.cwd,
+          path: rest[0],
+          demo: readOptionalStringOption(args, 'demo') || undefined,
+          json: Boolean(args.json),
+          new: Boolean(args.new),
+        });
+        return 0;
+      } catch (err) {
+        io.stderr(`${BIN} publish failed: ${(err as Error).message}\n`);
         return 1;
       }
     }

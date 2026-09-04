@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { mkdtemp, rm, mkdir, writeFile, rename } from 'node:fs/promises';
+import { mkdtemp, rm, mkdir, readFile, writeFile, rename } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { runInit } from '../src/commands/init';
@@ -126,6 +126,41 @@ describe('runValidate — project', () => {
     expect(result.ok).toBe(true);
     expect(result.errors).toBe(0);
     expect(result.warnings).toBe(0);
+  });
+
+  it('errors when brand.logo names a project file that does not exist, and accepts URLs and present files', async () => {
+    const init = await runInit({ name: 'branded', cwd: workdir, silent: true });
+    const projectFile = join(init.dir, PROJECT_FILE);
+    const project = JSON.parse(await readFile(projectFile, 'utf8'));
+
+    project.brand = { name: 'Branded', logo: 'branding/missing.png' };
+    await writeFile(projectFile, JSON.stringify(project));
+    let result = await runValidate({ cwd: init.dir, silent: true });
+    expect(result.ok).toBe(false);
+    expect(result.issues.some((i) => i.message.includes('brand.logo') && i.message.includes('not found'))).toBe(true);
+
+    project.brand = { name: 'Branded', logo: '../outside.png' };
+    await writeFile(projectFile, JSON.stringify(project));
+    result = await runValidate({ cwd: init.dir, silent: true });
+    expect(result.issues.some((i) => i.message.includes('escapes the project root'))).toBe(true);
+
+    project.brand = { name: 'Branded', logo: 'https://cdn.example/logo.png', cta: { label: 'Go', href: 'https://x.example' } };
+    await writeFile(projectFile, JSON.stringify(project));
+    result = await runValidate({ cwd: init.dir, silent: true });
+    expect(result.ok).toBe(true);
+
+    project.brand = { logo: 'branding/mark.png' };
+    await mkdir(join(init.dir, 'branding'), { recursive: true });
+    await writeFile(join(init.dir, 'branding', 'mark.png'), 'png');
+    await writeFile(projectFile, JSON.stringify(project));
+    result = await runValidate({ cwd: init.dir, silent: true });
+    expect(result.ok).toBe(true);
+
+    // The schema rejects a CTA that is not an http(s)/mailto link.
+    project.brand = { cta: { label: 'Bad', href: 'javascript:alert(1)' } };
+    await writeFile(projectFile, JSON.stringify(project));
+    result = await runValidate({ cwd: init.dir, silent: true });
+    expect(result.ok).toBe(false);
   });
 
   it('reports missing listed demos as warnings by default and errors in strict mode', async () => {

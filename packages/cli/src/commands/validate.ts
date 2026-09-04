@@ -1,5 +1,6 @@
+import { existsSync } from 'node:fs';
 import { demoThemePresetsById } from '@inkly-org/interactive-demo/themes';
-import { loadProject, PROJECT_FILE, validateSlugForPath } from '../project.js';
+import { brandLogoSourcePath, isAbsoluteBrandRef, loadProject, PROJECT_FILE, validateSlugForPath } from '../project.js';
 import { hasLocalAssetBytes, hasRemoteAsset } from '../assets.js';
 
 export interface ValidateOptions {
@@ -62,6 +63,16 @@ export async function runValidate(options: ValidateOptions): Promise<ValidateRes
         PROJECT_FILE,
         `Unknown theme "${loaded.project.theme}". Known themes: ${Object.keys(demoThemePresetsById).join(', ')}.`,
       );
+    }
+
+    const brandLogo = loaded.project.brand?.logo?.trim();
+    if (brandLogo && !isAbsoluteBrandRef(brandLogo)) {
+      const logoPath = brandLogoSourcePath(loaded.root, loaded.project.brand);
+      if (!logoPath) {
+        add(issues, 'error', PROJECT_FILE, `brand.logo "${brandLogo}" escapes the project root.`);
+      } else if (!existsSync(logoPath)) {
+        add(issues, 'error', PROJECT_FILE, `brand.logo "${brandLogo}" was not found in the project.`);
+      }
     }
 
     const demoSlugs = new Set(loaded.demos.map((d) => d.slug));

@@ -3,6 +3,7 @@ import { dirname, join, resolve, sep } from 'node:path';
 import { z } from 'zod';
 import {
   AssetsManifestSchema,
+  BrandSchema,
   ThemeTokensSchema,
   healDemoConfig,
   RESERVED_DEMO_SLUGS,
@@ -36,15 +37,50 @@ export const PROJECT_FILE = 'interactive-demo.json';
  * }
  * ```
  */
+/**
+ * Project-level brand shown in the page header above every demo: a logo
+ * (absolute URL or a path relative to the project root), the brand name,
+ * where the mark links to, and up to two call-to-action buttons. Same shape
+ * as the runtime's brand schema minus the hosted-only fields.
+ */
+export const ProjectBrandSchema = BrandSchema.pick({
+  logo: true,
+  name: true,
+  logoHref: true,
+  cta: true,
+  secondaryCta: true,
+});
+
+export type ProjectBrand = z.infer<typeof ProjectBrandSchema>;
+
 export const ProjectSchema = z.object({
   $schema: z.string().optional(),
   name: z.string().min(1),
   demos: z.array(z.string().min(1)).optional(),
   theme: z.string().min(1).optional(),
   tokens: ThemeTokensSchema.optional(),
+  brand: ProjectBrandSchema.optional(),
 });
 
 export type ProjectConfig = z.infer<typeof ProjectSchema>;
+
+/** True for `https://…`, `//…`, `data:…`, `#…` — anything that is not a project path. */
+export function isAbsoluteBrandRef(value: string): boolean {
+  return /^(?:[a-z][a-z0-9+.-]*:|\/\/|#|\/)/i.test(value.trim());
+}
+
+/**
+ * Absolute path of a project-relative brand logo, or null when the logo is
+ * absent or an absolute URL. Paths that escape the project root are refused.
+ */
+export function brandLogoSourcePath(root: string, brand: ProjectBrand | null | undefined): string | null {
+  const logo = brand?.logo?.trim();
+  if (!logo || isAbsoluteBrandRef(logo)) return null;
+  const abs = resolve(root, logo.replace(/^\.\/+/, ''));
+  const rootAbs = resolve(root);
+  if (abs !== rootAbs && !abs.startsWith(rootAbs + sep)) return null;
+  return abs;
+}
 
 export function parseProjectConfig(input: unknown): ProjectConfig {
   return ProjectSchema.parse(input);

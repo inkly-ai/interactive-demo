@@ -41,7 +41,7 @@ describe('runInit', () => {
     const project = JSON.parse(await readFile(join(result.dir, PROJECT_FILE), 'utf8'));
     expect(ProjectSchema.safeParse(project).success).toBe(true);
     expect(project.name).toBe('sample');
-    expect(project.theme).toBe('mono');
+    expect(project.theme).toBe('default');
     expect(project.demos).toEqual(['getting-started']);
     expect(project.runtime).toBeUndefined();
     expect(project.collections).toBeUndefined();

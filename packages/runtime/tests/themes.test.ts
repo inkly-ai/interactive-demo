@@ -9,7 +9,8 @@ import {
 } from '../src/themes';
 
 describe('demoThemePresetsById', () => {
-  it('includes the mono preset', () => {
+  it('includes the default and mono presets', () => {
+    expect(demoThemePresetsById['default']).toBeDefined();
     expect(demoThemePresetsById['mono']).toBeDefined();
   });
 
@@ -61,12 +62,12 @@ describe('resolveDemoBrand', () => {
 });
 
 describe('resolveDemoTheme', () => {
-  it('uses mono tokens and css by default', () => {
+  it('uses default tokens and css by default', () => {
     const resolved = resolveDemoTheme();
 
-    expect(resolved.themeId).toBe('mono');
+    expect(resolved.themeId).toBe('default');
     expect(resolved.tokens.primary).toBe('#5b6cff');
-    expect(resolved.css).toContain('[data-demo-theme="mono"]');
+    expect(resolved.css).toContain('[data-demo-theme="default"]');
   });
 
   it('cascades preset tokens, host tokens, then demo tokens', () => {
@@ -94,12 +95,12 @@ describe('resolveDemoTheme', () => {
     );
   });
 
-  it('falls back to mono when the requested preset is unknown', () => {
+  it('falls back to default when the requested preset is unknown', () => {
     const resolved = resolveDemoTheme({
       demoTheme: { preset: 'missing-theme' },
     });
 
-    expect(resolved.themeId).toBe('mono');
+    expect(resolved.themeId).toBe('default');
     expect(resolved.tokens.primary).toBe('#5b6cff');
   });
 
@@ -126,5 +127,18 @@ describe('resolveDemoTheme', () => {
         },
       },
     });
+  });
+});
+
+describe('default preset', () => {
+  it('resolves with no input and still resolves mono explicitly', () => {
+    expect(resolveDemoTheme({}).themeId).toBe('default');
+    expect(resolveDemoTheme({ demoTheme: { preset: 'mono' } }).themeId).toBe('mono');
+  });
+
+  it('carries only player-scoped css', () => {
+    const css = demoThemePresetsById['default']!.css;
+    expect(css).toContain('[data-demo-theme="default"]');
+    expect(css).not.toMatch(/hub-index|inkly|http/i);
   });
 });

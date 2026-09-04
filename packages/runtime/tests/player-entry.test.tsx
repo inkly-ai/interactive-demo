@@ -80,8 +80,10 @@ describe('standalone player entry', () => {
     expect(document.getElementById('root')!.style.backgroundSize).toBe('cover');
 
     await mountEntry(demo);
-    // The mono theme's default canvas.
-    expect(document.getElementById('root')!.style.background).toMatch(/#f7f7f7|rgb\(247, 247, 247\)/);
+    // The default theme's dotted canvas.
+    expect(document.getElementById('root')!.style.background).toMatch(/#f5f5f5|rgb\(245, 245, 245\)/);
+    expect(document.getElementById('root')!.style.backgroundImage).toContain('radial-gradient');
+    expect(document.getElementById('root')!.style.backgroundSize).toBe('10px 10px');
   });
 
   it('marks the contract complete when the demo ends', async () => {

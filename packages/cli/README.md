@@ -114,6 +114,7 @@ Nothing is uploaded anywhere: sessions, frames and profiles stay on your machine
 
 - `/` — a list of the project's demos
 - `/<slug>/` — the demo page; `/<slug>/player.js`, `/<slug>/player.css`, `/<slug>/assets/<file>`
+- `/__demo/editor/` — the editor; open a demo at `/__demo/editor/#/<slug>` (the `/` list links to it)
 - `/__demo/demos`, `/__demo/demo/<slug>` — JSON used by the editor
 - `/__demo/editor/demos/<slug>/files` (GET, PUT) and `/__demo/editor/demos/<slug>/assets?name=<file>` (POST) — the editor's read/write API
 

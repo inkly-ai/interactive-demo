@@ -1,0 +1,28 @@
+{
+  "id": "demoBasic001",
+  "version": 1,
+  "title": "Basic Product Tour",
+  "steps": [
+    {
+      "id": "s1",
+      "duration": 3000,
+      "background": {
+        "type": "image",
+        "src": "https://cdn.example.com/screen-1.png",
+        "naturalWidth": 1200,
+        "naturalHeight": 600,
+        "alt": "Product dashboard"
+      },
+      "annotations": [
+        {
+          "id": "a1",
+          "type": "message",
+          "variant": "pointer",
+          "x": 0.5,
+          "y": 0.45,
+          "text": "Start here"
+        }
+      ]
+    }
+  ]
+}

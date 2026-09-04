@@ -1,0 +1,123 @@
+{
+  "id": "demoIntro001",
+  "version": 1,
+  "title": "Product Tour",
+  "theme": {
+    "primary": "#5b3df5",
+    "radius": "12px"
+  },
+  "chapters": [
+    {
+      "id": "ch_1",
+      "title": "Welcome",
+      "stepIds": ["s1"]
+    },
+    {
+      "id": "ch_2",
+      "title": "Features",
+      "stepIds": ["s2", "s3"]
+    }
+  ],
+  "steps": [
+    {
+      "id": "s1",
+      "kind": "content",
+      "background": {
+        "type": "image",
+        "src": "https://cdn.example.com/screen-1.png",
+        "naturalWidth": 1200,
+        "naturalHeight": 600
+      },
+      "voiceover": {
+        "src": "https://cdn.example.com/vo-1.mp3"
+      },
+      "captions": [
+        {
+          "id": "s1_c1",
+          "start": 0,
+          "end": 1500,
+          "text": "Welcome!"
+        },
+        {
+          "id": "s1_c2",
+          "start": 1500,
+          "end": 4200,
+          "text": "This demo will walk you through the basics."
+        }
+      ],
+      "advance": {
+        "trigger": "auto"
+      },
+      "annotations": [
+        {
+          "id": "a1",
+          "type": "message",
+          "variant": "callout",
+          "x": 0.7,
+          "y": 0.4,
+          "text": "Welcome"
+        }
+      ]
+    },
+    {
+      "id": "s2",
+      "kind": "content",
+      "duration": 3000,
+      "background": {
+        "type": "image",
+        "src": "https://cdn.example.com/screen-2.png",
+        "naturalWidth": 1200,
+        "naturalHeight": 600
+      },
+      "transform": {
+        "zoom": 1.5,
+        "x": 0.3,
+        "y": 0.4
+      },
+      "advance": {
+        "trigger": "click"
+      },
+      "annotations": [
+        {
+          "id": "a2",
+          "type": "message",
+          "variant": "pointer",
+          "x": 0.3,
+          "y": 0.4,
+          "text": "Click here"
+        },
+        {
+          "id": "a3",
+          "type": "blur",
+          "x": 0.6,
+          "y": 0.1,
+          "w": 0.3,
+          "h": 0.1,
+          "intensity": 8
+        }
+      ]
+    },
+    {
+      "id": "s3",
+      "kind": "content",
+      "duration": 5000,
+      "background": {
+        "type": "image",
+        "src": "https://cdn.example.com/screen-3.png",
+        "naturalWidth": 1200,
+        "naturalHeight": 600
+      },
+      "annotations": [
+        {
+          "id": "a4",
+          "type": "text",
+          "x": 0.5,
+          "y": 0.2,
+          "text": "All set.",
+          "fontSize": 20,
+          "color": "#0a0a0a"
+        }
+      ]
+    }
+  ]
+}

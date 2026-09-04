@@ -10,7 +10,8 @@ const toast = vi.hoisted(() => ({ error: vi.fn() }));
 vi.mock("@/api", () => api);
 vi.mock("sonner", () => ({ toast }));
 // The real editor view needs a parsed demo and a stage; the shell's saving
-// logic only needs something that reports a change.
+// logic only needs something that reports a change. The button's `data-p`
+// picks the file, `data-v` the content.
 vi.mock("@/components/demo-editor/view", () => ({
     DemoEditorView: ({
         onChange,
@@ -19,7 +20,10 @@ vi.mock("@/components/demo-editor/view", () => ({
     }) => (
         <button
             type="button"
-            onClick={(event) => onChange("demo.config.json", (event.target as HTMLElement).dataset.v ?? "")}
+            onClick={(event) => {
+                const el = event.target as HTMLElement;
+                onChange(el.dataset.p ?? "demo.config.json", el.dataset.v ?? "");
+            }}
             data-testid="edit"
         >
             edit
@@ -29,7 +33,7 @@ vi.mock("@/components/demo-editor/view", () => ({
 
 import { EditorShell } from "./shell";
 
-const FILES = { "demo.config.json": "{}" };
+const FILES = { "demo.config.json": "{}", "notes.md": "hello" };
 
 function deferred<T>() {
     let resolve!: (value: T) => void;
@@ -41,70 +45,130 @@ function deferred<T>() {
     return { promise, resolve, reject };
 }
 
+async function flushMicrotasks() {
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+}
+
 describe("EditorShell saving", () => {
     beforeEach(() => {
         api.getDemoFiles.mockResolvedValue({ files: FILES, binary: [] });
         api.listDemoAssets.mockResolvedValue([]);
         api.putDemoFiles.mockReset();
+        toast.error.mockReset();
     });
     afterEach(() => {
         vi.useRealTimers();
     });
 
-    async function mountAndEdit(values: string[]) {
+    async function mount() {
         render(<EditorShell slug="tour" />);
         // Mount with real timers (findBy polls), then fake them for the
         // debounce and retry delays.
         const button = await screen.findByTestId("edit");
         vi.useFakeTimers();
-        for (const value of values) {
-            button.dataset.v = value;
-            fireEvent.click(button);
-        }
         return button;
     }
 
-    it("serialises saves so an older batch never lands after a newer one", async () => {
-        const first = deferred<void>();
-        const second = deferred<void>();
-        api.putDemoFiles.mockReturnValueOnce(first.promise).mockReturnValueOnce(second.promise);
-
-        const button = await mountAndEdit(["v1"]);
-        await act(async () => {
-            vi.advanceTimersByTime(700);
-        });
-        expect(api.putDemoFiles).toHaveBeenCalledTimes(1);
-        expect(api.putDemoFiles.mock.calls[0]![1]).toEqual({ "demo.config.json": "v1" });
-
-        // A second edit while the first save is still in flight.
-        button.dataset.v = "v2";
+    function edit(button: HTMLElement, value: string, path = "demo.config.json") {
+        button.dataset.p = path;
+        button.dataset.v = value;
         fireEvent.click(button);
+    }
+
+    it("marks edited files dirty and autosaves every dirty file 5s after the last edit", async () => {
+        api.putDemoFiles.mockResolvedValue(undefined);
+        const button = await mount();
+        edit(button, "v1");
+        edit(button, "world", "notes.md");
+        expect(screen.getByText(/unsaved changes/i)).toBeTruthy();
+        expect(screen.getByTestId("save-badge").getAttribute("title")).toContain("demo.config.json +1 −1");
+
         await act(async () => {
-            vi.advanceTimersByTime(700);
+            vi.advanceTimersByTime(4000);
         });
-        // Not sent yet: it waits for the first PUT to settle.
+        expect(api.putDemoFiles).not.toHaveBeenCalled();
+        // Another edit restarts the 5s window.
+        edit(button, "v2");
+        await act(async () => {
+            vi.advanceTimersByTime(4000);
+        });
+        expect(api.putDemoFiles).not.toHaveBeenCalled();
+
+        await act(async () => {
+            vi.advanceTimersByTime(1100);
+            await flushMicrotasks();
+        });
+        expect(api.putDemoFiles).toHaveBeenCalledTimes(1);
+        // Every file, at its current content, in one write.
+        expect(api.putDemoFiles.mock.calls[0]![1]).toEqual({
+            "demo.config.json": "v2",
+            "notes.md": "world",
+        });
+        expect(screen.getByText(/^saved$/i)).toBeTruthy();
+        // The "Saved" pill decays back to idle.
+        await act(async () => {
+            vi.advanceTimersByTime(1600);
+        });
+        expect(screen.queryByText(/^saved$/i)).toBeNull();
+        expect(screen.queryByText(/unsaved changes/i)).toBeNull();
+    });
+
+    it("saves immediately on ⌘S / Ctrl+S", async () => {
+        api.putDemoFiles.mockResolvedValue(undefined);
+        const button = await mount();
+        edit(button, "v1");
+        await act(async () => {
+            fireEvent.keyDown(window, { key: "s", metaKey: true });
+            await flushMicrotasks();
+        });
+        expect(api.putDemoFiles).toHaveBeenCalledTimes(1);
+        expect(api.putDemoFiles.mock.calls[0]![1]).toEqual({ "demo.config.json": "v1", "notes.md": "hello" });
+
+        // Nothing dirty: ⌘S is a no-op.
+        await act(async () => {
+            fireEvent.keyDown(window, { key: "s", ctrlKey: true });
+            await flushMicrotasks();
+        });
+        expect(api.putDemoFiles).toHaveBeenCalledTimes(1);
+    });
+
+    it("keeps a file dirty when it changes again while its save is in flight", async () => {
+        const first = deferred<void>();
+        api.putDemoFiles.mockReturnValueOnce(first.promise).mockResolvedValue(undefined);
+        const button = await mount();
+        edit(button, "v1");
+        await act(async () => {
+            fireEvent.keyDown(window, { key: "s", metaKey: true });
+            await flushMicrotasks();
+        });
         expect(api.putDemoFiles).toHaveBeenCalledTimes(1);
 
+        // An edit during the in-flight save.
+        edit(button, "v2");
         await act(async () => {
             first.resolve();
-            await Promise.resolve();
-            await Promise.resolve();
+            await flushMicrotasks();
+        });
+        // The first save landed v1, but the file is still dirty at v2 …
+        expect(screen.getByText(/unsaved changes/i)).toBeTruthy();
+        // … and the autosave window picks it up with the newer content.
+        await act(async () => {
+            vi.advanceTimersByTime(5100);
+            await flushMicrotasks();
         });
         expect(api.putDemoFiles).toHaveBeenCalledTimes(2);
-        expect(api.putDemoFiles.mock.calls[1]![1]).toEqual({ "demo.config.json": "v2" });
-        await act(async () => {
-            second.resolve();
-        });
+        expect(api.putDemoFiles.mock.calls[1]![1]["demo.config.json"]).toBe("v2");
     });
 
     it("reports a failed save and retries it after a pause", async () => {
         api.putDemoFiles.mockRejectedValueOnce(new Error("disk full")).mockResolvedValueOnce(undefined);
-
-        await mountAndEdit(["v1"]);
+        const button = await mount();
+        edit(button, "v1");
         await act(async () => {
-            vi.advanceTimersByTime(700);
-            await Promise.resolve();
-            await Promise.resolve();
+            vi.advanceTimersByTime(5100);
+            await flushMicrotasks();
         });
         expect(api.putDemoFiles).toHaveBeenCalledTimes(1);
         expect(toast.error).toHaveBeenCalledWith("Save failed: disk full");
@@ -112,20 +176,21 @@ describe("EditorShell saving", () => {
 
         await act(async () => {
             vi.advanceTimersByTime(3100);
-            await Promise.resolve();
-            await Promise.resolve();
+            await flushMicrotasks();
         });
         expect(api.putDemoFiles).toHaveBeenCalledTimes(2);
-        expect(api.putDemoFiles.mock.calls[1]![1]).toEqual({ "demo.config.json": "v1" });
+        expect(api.putDemoFiles.mock.calls[1]![1]["demo.config.json"]).toBe("v1");
     });
 
-    it("flushes with keepalive when the page is hidden", async () => {
+    it("flushes the dirty files with keepalive when the page is hidden", async () => {
         api.putDemoFiles.mockResolvedValue(undefined);
-        await mountAndEdit(["v1"]);
+        const button = await mount();
+        edit(button, "v1");
         Object.defineProperty(document, "visibilityState", { value: "hidden", configurable: true });
         await act(async () => {
             window.dispatchEvent(new Event("pagehide"));
         });
         expect(api.putDemoFiles).toHaveBeenCalledWith("tour", { "demo.config.json": "v1" }, [], { keepalive: true });
+        Object.defineProperty(document, "visibilityState", { value: "visible", configurable: true });
     });
 });

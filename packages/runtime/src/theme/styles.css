@@ -1343,7 +1343,6 @@
 .demo-builtwith-badge:hover,
 .demo-builtwith-badge:focus-visible {
   outline: none;
-  color: var(--demo-watermark-fg-hover);
 }
 
 .demo-builtwith-badge::before {
@@ -1405,7 +1404,9 @@
 
 @media (prefers-reduced-motion: reduce) {
   .demo-builtwith-badge {
-    transition: none;
+    transition:
+      opacity 120ms ease,
+      color 120ms ease;
   }
 }
 
@@ -1433,6 +1434,8 @@
    via `controls="always"` (set as `data-controls="always"` on the shell). */
 .demo-controls:hover,
 .demo-controls:focus-within,
+.demo-player-shell:has(.demo-builtwith-badge:hover) .demo-controls,
+.demo-player-shell:has(.demo-builtwith-badge:focus-visible) .demo-controls,
 .demo-player-shell[data-controls="always"] .demo-controls {
   opacity: 1;
 }

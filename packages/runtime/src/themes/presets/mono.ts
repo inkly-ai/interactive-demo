@@ -110,7 +110,8 @@ const monoCss = `
     max-width: 560px;
 }
 
-/* Mobile breakpoint. Mono keeps its uppercase weight-800 look but shrinks the
+/* Mobile breakpoint — see the matching block in default.ts for the
+   rationale. Mono keeps its uppercase weight-800 look but shrinks the
    point size to something legible on a 390px frame. */
 @container demo-player (max-width: 640px) {
     [data-demo-theme="mono"] .demo-intro{
@@ -237,6 +238,11 @@ const monoCss = `
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
     box-shadow: none;
+}
+
+[data-demo-theme="mono"] .demo-builtwith-badge {
+    --demo-watermark-fg: rgba(78,78,78,0.58);
+    --demo-watermark-fg-hover: rgba(54,54,54,0.76);
 }
 
 /* Embedded widget image — flat white with hairline border, no shadow. */

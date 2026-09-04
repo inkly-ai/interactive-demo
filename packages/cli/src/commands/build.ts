@@ -71,7 +71,8 @@ export async function runBuild(options: BuildOptions): Promise<BuildResult> {
     process.stdout.write(
       `Built ${built.length} demo${built.length === 1 ? '' : 's'} into ${outDir}\n${lines}\n\n` +
         `Deploy the folder as static files and embed a demo with\n` +
-        `  <iframe src="https://your-site/<path>/<slug>/" width="960" height="600" allow="fullscreen"></iframe>\n`,
+        `  <iframe src="https://<your-host>/<slug>/" width="960" height="600" allow="fullscreen"></iframe>\n` +
+        `  (replace <your-host> with wherever you deploy the dist/ folder)\n`,
     );
   }
 

@@ -89,8 +89,8 @@ Point editors at the schema with:
 \`\`\`
 
 ${sections.join('\n')}
-> The published schema leaves \`annotations[]\` and \`widgets[]\` untyped (\`items: {}\`);
-> their shapes are described in [authoring.md](authoring.md#steps).
+> \`annotations[]\` and \`widgets[]\` also accept any object whose \`type\` is not one
+> of the variants above; the player skips those (forward compatibility).
 `;
 writeFileSync(join(root, 'docs/schema.md'), out);
 console.log(`docs/schema.md: ${sections.length} sections, ${out.split('\n').length} lines`);

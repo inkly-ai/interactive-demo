@@ -102,7 +102,7 @@ Per-demo configuration. One per demo, lives at demos/<slug>/demo.config.json.
 | `voiceover` | [voiceover](#voiceover) |  |  |
 | `transform` | [transform](#transform) |  |  |
 | `advance` | [advance](#advance) |  | Default `{"trigger":"auto"}`. |
-| `annotations` | any[] |  | Default `[]`. |
+| `annotations` | [annotations (type = `message`)](#annotations-type-message) \| [annotations (type = `blur`)](#annotations-type-blur) \| [annotations (type = `text`)](#annotations-type-text)[] |  | Default `[]`. |
 | `captions` | [captions](#captions)[] |  |  |
 
 #### background (type = `image`)
@@ -157,6 +157,60 @@ Per-demo configuration. One per demo, lives at demos/<slug>/demo.config.json.
 |---|---|---|---|
 | `trigger` | `"auto"` \| `"click"` |  | Default `"auto"`. |
 
+#### annotations (type = `message`)
+
+| field | type | required | notes |
+|---|---|---|---|
+| `id` | string | yes |  |
+| `type` | `"message"` | yes |  |
+| `variant` | `"pointer"` \| `"callout"` \| `"area"` \| `"cursor"` |  | Default `"callout"`. |
+| `x` | number | yes | Range 0–1. |
+| `y` | number | yes | Range 0–1. |
+| `w` | number |  | Range 0–1. |
+| `h` | number |  | Range 0–1. |
+| `text` | string |  |  |
+| `showMessage` | boolean |  |  |
+| `advancesStep` | boolean |  | Default `true`. |
+| `background` | string |  |  |
+| `textColor` | string |  |  |
+| `borderRadius` | string |  |  |
+| `textAlign` | `"left"` \| `"middle"` \| `"right"` |  | Default `"left"`. |
+| `anchor` | `"top"` \| `"right"` \| `"bottom"` \| `"left"` \| `"auto"` |  | Default `"auto"`. |
+| `showNavigation` | boolean |  | Default `true`. |
+| `prevButton` | [prevButton](#prevbutton) |  |  |
+| `nextButton` | [prevButton](#prevbutton) |  |  |
+
+##### prevButton
+
+| field | type | required | notes |
+|---|---|---|---|
+| `label` | string |  |  |
+| `hidden` | boolean |  | Default `false`. |
+
+#### annotations (type = `blur`)
+
+| field | type | required | notes |
+|---|---|---|---|
+| `id` | string | yes |  |
+| `type` | `"blur"` | yes |  |
+| `x` | number | yes | Range 0–1. |
+| `y` | number | yes | Range 0–1. |
+| `w` | number | yes | Range 0–1. |
+| `h` | number | yes | Range 0–1. |
+| `intensity` | number |  | Default `8`. Range 0–20. |
+
+#### annotations (type = `text`)
+
+| field | type | required | notes |
+|---|---|---|---|
+| `id` | string | yes |  |
+| `type` | `"text"` | yes |  |
+| `x` | number | yes | Range 0–1. |
+| `y` | number | yes | Range 0–1. |
+| `text` | string | yes |  |
+| `fontSize` | number |  | Default `16`. |
+| `color` | string |  |  |
+
 #### captions
 
 | field | type | required | notes |
@@ -173,7 +227,7 @@ Per-demo configuration. One per demo, lives at demos/<slug>/demo.config.json.
 | `kind` | `"cover"` | yes |  |
 | `id` | string | yes |  |
 | `label` | string |  |  |
-| `widgets` | any[] | yes |  |
+| `widgets` | [widgets (type = `headline`)](#widgets-type-headline) \| [widgets (type = `form`)](#widgets-type-form) \| [widgets (type = `embed`)](#widgets-type-embed) \| [widgets (type = `custom`)](#widgets-type-custom)[] | yes |  |
 | `background` | [background](#background) |  |  |
 | `backgroundImage` | [backgroundImage](#backgroundimage) |  |  |
 | `backgroundDim` | number |  | Range 0–1. |
@@ -181,6 +235,152 @@ Per-demo configuration. One per demo, lives at demos/<slug>/demo.config.json.
 | `voiceover` | [voiceover](#voiceover) |  |  |
 | `duration` | number |  |  |
 | `advance` | [advance](#advance) |  | Default `{"trigger":"click"}`. |
+
+#### widgets (type = `headline`)
+
+| field | type | required | notes |
+|---|---|---|---|
+| `type` | `"headline"` | yes |  |
+| `id` | string | yes |  |
+| `logo` | [logo](#logo) |  |  |
+| `image` | [image](#image) |  |  |
+| `title` | string | yes |  |
+| `titleColor` | string |  |  |
+| `description` | string |  |  |
+| `descriptionColor` | string |  |  |
+| `textAlign` | `"left"` \| `"middle"` \| `"right"` |  |  |
+| `cta` | [cta](#cta) |  |  |
+| `secondaryCta` | [cta](#cta) |  |  |
+
+##### logo
+
+| field | type | required | notes |
+|---|---|---|---|
+| `src` | string | yes |  |
+| `alt` | string |  |  |
+| `height` | integer |  |  |
+
+##### image
+
+| field | type | required | notes |
+|---|---|---|---|
+| `src` | string | yes |  |
+| `alt` | string |  |  |
+| `naturalWidth` | number |  |  |
+| `naturalHeight` | number |  |  |
+| `position` | `"left"` \| `"right"` \| `"top"` |  | Default `"right"`. |
+| `layout` | `"standard"` \| `"hero"` |  | Default `"hero"`. |
+
+##### cta
+
+| field | type | required | notes |
+|---|---|---|---|
+| `label` | string | yes |  |
+| `action` | [action (type = `next`)](#action-type-next) \| [action (type = `prev`)](#action-type-prev) \| [action (type = `step`)](#action-type-step) \| [action (type = `chapter`)](#action-type-chapter) \| [action (type = `url`)](#action-type-url) \| [action (type = `restart`)](#action-type-restart) |  | Default `{"type":"next"}`. |
+| `animation` | `"none"` \| `"shimmer"` |  | Default `"shimmer"`. |
+| `background` | string |  |  |
+| `textColor` | string |  |  |
+
+##### action (type = `next`)
+
+| field | type | required | notes |
+|---|---|---|---|
+| `type` | `"next"` | yes |  |
+
+##### action (type = `prev`)
+
+| field | type | required | notes |
+|---|---|---|---|
+| `type` | `"prev"` | yes |  |
+
+##### action (type = `step`)
+
+| field | type | required | notes |
+|---|---|---|---|
+| `type` | `"step"` | yes |  |
+| `stepId` | string | yes |  |
+
+##### action (type = `chapter`)
+
+| field | type | required | notes |
+|---|---|---|---|
+| `type` | `"chapter"` | yes |  |
+| `chapterId` | string | yes |  |
+
+##### action (type = `url`)
+
+| field | type | required | notes |
+|---|---|---|---|
+| `type` | `"url"` | yes |  |
+| `href` | string | yes |  |
+| `target` | `"_self"` \| `"_blank"` |  | Default `"_blank"`. |
+
+##### action (type = `restart`)
+
+| field | type | required | notes |
+|---|---|---|---|
+| `type` | `"restart"` | yes |  |
+
+#### widgets (type = `form`)
+
+| field | type | required | notes |
+|---|---|---|---|
+| `type` | `"form"` | yes |  |
+| `id` | string | yes |  |
+| `logo` | [logo](#logo) |  |  |
+| `image` | [image](#image) |  |  |
+| `title` | string |  |  |
+| `description` | string |  |  |
+| `fields` | [fields](#fields)[] | yes |  |
+| `submit` | [submit](#submit) |  | Default `{"label":"Submit","action":{"type":"next"},"animation":"shimmer"}`. |
+
+##### fields
+
+| field | type | required | notes |
+|---|---|---|---|
+| `id` | string | yes |  |
+| `label` | string | yes |  |
+| `type` | `"text"` \| `"dropdown"` |  | Default `"text"`. |
+| `placeholder` | string |  |  |
+| `required` | boolean |  | Default `false`. |
+| `options` | [options](#options)[] |  |  |
+
+##### options
+
+| field | type | required | notes |
+|---|---|---|---|
+| `value` | string | yes |  |
+| `label` | string | yes |  |
+
+##### submit
+
+| field | type | required | notes |
+|---|---|---|---|
+| `label` | string | yes |  |
+| `action` | [action (type = `next`)](#action-type-next) \| [action (type = `prev`)](#action-type-prev) \| [action (type = `step`)](#action-type-step) \| [action (type = `chapter`)](#action-type-chapter) \| [action (type = `url`)](#action-type-url) \| [action (type = `restart`)](#action-type-restart) |  | Default `{"type":"next"}`. |
+| `animation` | `"none"` \| `"shimmer"` |  | Default `"shimmer"`. |
+| `background` | string |  |  |
+| `textColor` | string |  |  |
+
+#### widgets (type = `embed`)
+
+| field | type | required | notes |
+|---|---|---|---|
+| `type` | `"embed"` | yes |  |
+| `id` | string | yes |  |
+| `src` | string | yes |  |
+| `iframeTitle` | string |  |  |
+| `sandbox` | string |  | Default `"allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-presentation"`. |
+| `allow` | string |  | Default `"camera; microphone; fullscreen; payment; clipboard-write"`. |
+
+#### widgets (type = `custom`)
+
+| field | type | required | notes |
+|---|---|---|---|
+| `type` | `"custom"` | yes |  |
+| `id` | string | yes |  |
+| `name` | string | yes |  |
+| `data` | object |  |  |
 
 #### background
 
@@ -208,5 +408,5 @@ Per-demo configuration. One per demo, lives at demos/<slug>/demo.config.json.
 |---|---|---|---|
 | `trigger` | `"auto"` \| `"click"` |  | Default `"click"`. |
 
-> The published schema leaves `annotations[]` and `widgets[]` untyped (`items: {}`);
-> their shapes are described in [authoring.md](authoring.md#steps).
+> `annotations[]` and `widgets[]` also accept any object whose `type` is not one
+> of the variants above; the player skips those (forward compatibility).

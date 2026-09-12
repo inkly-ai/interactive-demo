@@ -248,14 +248,14 @@ export const CustomWidgetSchema = z.object({
  * }
  * ```
  */
-const KnownWidgetSchema = z.discriminatedUnion('type', [
+export const KnownWidgetSchema = z.discriminatedUnion('type', [
   HeadlineWidgetSchema,
   FormWidgetSchema,
   EmbedWidgetSchema,
   CustomWidgetSchema,
 ]);
 
-const KNOWN_WIDGET_TYPES = new Set([
+export const KNOWN_WIDGET_TYPES = new Set([
   'headline',
   'form',
   'embed',

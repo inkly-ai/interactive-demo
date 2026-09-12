@@ -111,13 +111,13 @@ export const TextAnnotationSchema = BaseAnnotation.extend({
  * }
  * ```
  */
-const KnownAnnotationSchema = z.discriminatedUnion('type', [
+export const KnownAnnotationSchema = z.discriminatedUnion('type', [
   MessageSchema,
   BlurAnnotationSchema,
   TextAnnotationSchema,
 ]);
 
-const KNOWN_ANNOTATION_TYPES = new Set(['message', 'blur', 'text']);
+export const KNOWN_ANNOTATION_TYPES = new Set(['message', 'blur', 'text']);
 
 /**
  * Forward-compat catch-all for annotations whose `type` is not one of the

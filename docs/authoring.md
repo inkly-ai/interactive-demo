@@ -4,7 +4,7 @@
 
 ```
 my-demos/
-  interactive-demo.json        { "name", "theme"?, "tokens"?, "demos"? }
+  interactive-demo.json        { "name", "theme"?, "tokens"?, "brand"?, "demos"? }
   package.json                 scripts: dev, validate, build
   demos/
     onboarding/
@@ -19,10 +19,41 @@ my-demos/
 that fixes the order `dev` lists demos in; demos are discovered by walking
 `demos/`, so a folder is enough. `theme` names the preset (`default` or `mono`
 ships) and `tokens` overrides its colours, font and radius for every demo.
+`brand` fills the page header (below).
 
 Add a demo with `interactive-demo init --demo <slug>`, import a folder with
 `--from <dir>`, or record one with `capture` (below). The editor at
 `/__demo/editor/#/<slug>` edits `demo.config.json` in place.
+
+### Brand and the page header
+
+`dev` and `build` put a bar above the player: the brand mark and name on the
+left, the demo title, and up to two call-to-action buttons on the right. It
+is plain HTML around the player, not part of `player.js`, so an iframe of a
+built page shows it and a page you assemble from the page contract does not.
+All of `brand` is optional; with nothing set the bar shows only the demo
+title.
+
+```json
+{
+  "name": "Acme demos",
+  "brand": {
+    "logo": "brand/logo.svg",
+    "name": "Acme",
+    "logoHref": "https://www.example.com",
+    "cta": { "label": "Try Acme", "href": "https://www.example.com/signup" },
+    "secondaryCta": { "label": "Docs", "href": "https://docs.example.com" }
+  }
+}
+```
+
+`logo` is an absolute URL or a path relative to the project root; `validate`
+checks a relative file exists and stays inside the project, and `build`
+copies it to `dist/<slug>/brand/` next to the page. Leave `name` out when the
+logo image already carries the wordmark. `logoHref` turns the mark into a
+link opening in a new tab; without it the mark links to `/`. CTA and
+`logoHref` URLs must be `http(s)` or `mailto`. The buttons take their colour
+from the theme preset and the `primary` token.
 
 ## demo.config.json
 

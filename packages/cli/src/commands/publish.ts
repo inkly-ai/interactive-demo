@@ -12,6 +12,7 @@ import {
 } from '../publish/sync.js';
 import { resolveRuntimeFile } from '../page.js';
 import { isAbsoluteBrandRef, type ProjectBrand } from '../project.js';
+import { persistDemoId } from '../demo-id-maintenance.js';
 import { readCliVersion } from './version.js';
 import {
   loadProject,
@@ -190,6 +191,16 @@ async function publishResolvedDemo(args: {
   token: string;
 }): Promise<PublishResult> {
   const { project, demo, options, apiBase, token } = args;
+  if (demo.idHealed) {
+    // The id was minted in memory while loading. Write it to disk first: the
+    // hosted URL is keyed on it, and a later publish must find the same id
+    // to update the deployment in place rather than mint a new one.
+    await persistDemoId(demo.configPath, demo.config.id);
+    out(
+      options.silent,
+      `Wrote id ${demo.config.id} to demos/${demo.slug}/demo.config.json (it had none); commit it.\n`,
+    );
+  }
   const demoId = demo.config.id || null;
   const replace = !options.new;
 

@@ -311,6 +311,33 @@ describe('publish against a fake hosting server', () => {
     expect(body.hub.brand).toEqual({ logo: 'https://cdn.srv.example/logo.svg', name: 'Srv' });
   });
 
+  it('publish writes a minted id into a config that had none, touching nothing else', async () => {
+    const init = await runInit({ name: 'srv-site', cwd: workdir, silent: true });
+    const configPath = join(init.dir, 'demos', 'getting-started', 'demo.config.json');
+    const original = JSON.parse(await readFile(configPath, 'utf8'));
+    original.id = 'not-a-valid-id-at-all';
+    await writeFile(configPath, JSON.stringify(original, null, 2) + '\n');
+
+    const stdout = vi.spyOn(process.stdout, 'write').mockImplementation(() => true);
+    let printed = '';
+    try {
+      await runPublish({ cwd: init.dir });
+      printed = stdout.mock.calls.map((c) => String(c[0])).join('');
+    } finally {
+      stdout.mockRestore();
+    }
+
+    const after = JSON.parse(await readFile(configPath, 'utf8'));
+    expect(after.id).toMatch(/^[A-Za-z0-9_-]{12}$/);
+    expect(printed).toContain(`Wrote id ${after.id}`);
+    // Only the id changed; the author's file keeps its shape.
+    expect({ ...after, id: original.id }).toEqual(original);
+
+    const publish = requests.find((r) => r.url === '/api/previews')!;
+    const body = JSON.parse(publish.body.toString('utf8'));
+    expect(body.config.id).toBe(after.id);
+  });
+
   it('publish lowercases an uppercase file extension before syncing', async () => {
     const init = await runInit({ name: 'srv-site', cwd: workdir, silent: true });
     const demoDir = join(init.dir, 'demos', 'getting-started');

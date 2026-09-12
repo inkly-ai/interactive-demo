@@ -128,6 +128,21 @@ describe('runValidate — project', () => {
     expect(result.warnings).toBe(0);
   });
 
+  it('warns when a demo id is missing or malformed instead of healing it silently', async () => {
+    const init = await runInit({ name: 'badid', cwd: workdir, silent: true });
+    const configPath = join(init.dir, 'demos', 'getting-started', 'demo.config.json');
+    const config = JSON.parse(await readFile(configPath, 'utf8'));
+    config.id = 'gettingStarted1';
+    await writeFile(configPath, JSON.stringify(config, null, 2));
+    const result = await runValidate({ cwd: init.dir, silent: true });
+    expect(result.errors).toBe(0);
+    expect(result.warnings).toBe(1);
+    expect(result.issues[0]?.file).toBe('demos/getting-started/demo.config.json');
+    expect(result.issues[0]?.message).toMatch(/12-character/);
+    // validate is read-only: the file is left as the author wrote it.
+    expect(JSON.parse(await readFile(configPath, 'utf8')).id).toBe('gettingStarted1');
+  });
+
   it('errors when brand.logo names a project file that does not exist, and accepts URLs and present files', async () => {
     const init = await runInit({ name: 'branded', cwd: workdir, silent: true });
     const projectFile = join(init.dir, PROJECT_FILE);

@@ -80,6 +80,14 @@ export async function runValidate(options: ValidateOptions): Promise<ValidateRes
     for (const demo of loaded.demos) {
       const slugError = validateSlugForPath(demo.slug);
       if (slugError) add(issues, 'error', `demos/${demo.slug}`, slugError);
+      if (demo.idHealed) {
+        add(
+          issues,
+          'warning',
+          `demos/${demo.slug}/demo.config.json`,
+          'id is missing or not a 12-character URL-safe id; dev and publish write one, and the published URL is keyed on it.',
+        );
+      }
       // A demo's `id` is a permanent opaque identity, deliberately
       // independent of its folder slug — so an id ≠ slug is expected, not
       // a warning. What IS a problem is two folders sharing one id

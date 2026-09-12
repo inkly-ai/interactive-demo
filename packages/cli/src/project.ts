@@ -91,6 +91,8 @@ export interface LoadedDemoConfig {
   dir: string;
   configPath: string;
   config: Demo;
+  /** True when the file had no valid `id` and `config.id` was minted in memory. */
+  idHealed: boolean;
   assetsPath: string;
   assets: AssetsManifest | null;
 }
@@ -180,8 +182,11 @@ export async function loadProject(cwd: string): Promise<LoadedProject> {
     // (validate) so the mint is not persisted here — `dev` owns the
     // write-back pass.
     let config: Demo;
+    let idHealed = false;
     try {
-      config = healDemoConfig(await readJsonFile(d.configPath)).config;
+      const healed = healDemoConfig(await readJsonFile(d.configPath));
+      config = healed.config;
+      idHealed = healed.changed;
     } catch (err) {
       throw new Error(
         `demos/${d.slug}/demo.config.json failed schema validation: ${(err as Error).message}`,
@@ -203,6 +208,7 @@ export async function loadProject(cwd: string): Promise<LoadedProject> {
       dir: d.dir,
       configPath: d.configPath,
       config,
+      idHealed,
       assetsPath,
       assets,
     });

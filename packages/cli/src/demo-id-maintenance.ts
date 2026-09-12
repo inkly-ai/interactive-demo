@@ -113,7 +113,11 @@ export async function runDemoIdMaintenance(
     }
 
     if (result.changed) {
-      await writeConfig(demo.configPath, result.config);
+      // Patch only the id into the file as the author wrote it (same as the
+      // remint pass below): writing the parsed config would expand every
+      // default and reorder keys, turning a one-line heal into a full rewrite.
+      const patched = { ...(parsed as Record<string, unknown>), id: result.config.id };
+      await writeConfig(demo.configPath, patched);
       healed.push({ slug: demo.slug, configPath: demo.configPath, reason: 'heal' });
     }
 
@@ -156,4 +160,15 @@ export function relForLog(projectRoot: string, configPath: string): string {
 /** Pretty-print + trailing newline — matches every other config write. */
 async function writeConfig(configPath: string, config: unknown): Promise<void> {
   await atomicWriteFile(configPath, JSON.stringify(config, null, 2) + '\n');
+}
+
+/**
+ * Persist a minted id into a demo.config.json, touching nothing else in the
+ * file. Used by `publish` when the loaded config had no valid id: the
+ * published URL is keyed on the id, so it must be on disk before the first
+ * publish or every later publish would mint a different one.
+ */
+export async function persistDemoId(configPath: string, id: string): Promise<void> {
+  const raw = JSON.parse(await readFile(configPath, 'utf8')) as Record<string, unknown>;
+  await writeConfig(configPath, { ...raw, id });
 }

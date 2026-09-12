@@ -64,7 +64,7 @@ The full field list is in [schema.md](schema.md). The shape:
 ```json
 {
   "$schema": "https://cdn.jsdelivr.net/npm/@inkly-org/interactive-demo/dist/schema/demo.config.json",
-  "id": "tourExample01",
+  "id": "tourExample0",
   "version": 1,
   "title": "Onboarding",
   "subtitle": "From sign-up to first project",

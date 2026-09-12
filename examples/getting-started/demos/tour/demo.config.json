@@ -1,6 +1,6 @@
 {
   "$schema": "https://cdn.jsdelivr.net/npm/@inkly-org/interactive-demo/dist/schema/demo.config.json",
-  "id": "tourExample01",
+  "id": "tourExample0",
   "version": 1,
   "title": "A tour of interactive-demo",
   "subtitle": "Three screens, three hotspots, one static build.",

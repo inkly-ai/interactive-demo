@@ -260,6 +260,57 @@ describe('publish against a fake hosting server', () => {
     expect(body.config.steps.length).toBeGreaterThan(0);
   });
 
+  it('publish drops a project-relative brand logo and warns, keeping the rest of the brand', async () => {
+    const init = await runInit({ name: 'srv-site', cwd: workdir, silent: true });
+    const projectFile = join(init.dir, 'interactive-demo.json');
+    const project = JSON.parse(await readFile(projectFile, 'utf8'));
+    await mkdir(join(init.dir, 'brand'), { recursive: true });
+    await writeFile(join(init.dir, 'brand', 'logo.svg'), '<svg xmlns="http://www.w3.org/2000/svg"/>');
+    project.brand = { logo: 'brand/logo.svg', name: 'Srv', logoHref: 'https://srv.example' };
+    await writeFile(projectFile, JSON.stringify(project));
+
+    const stderr = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
+    const stdout = vi.spyOn(process.stdout, 'write').mockImplementation(() => true);
+    let warning = '';
+    try {
+      await runPublish({ cwd: init.dir });
+      warning = stderr.mock.calls.map((c) => String(c[0])).join('');
+    } finally {
+      stderr.mockRestore();
+      stdout.mockRestore();
+    }
+    expect(warning).toContain('brand.logo "brand/logo.svg"');
+    expect(warning).toContain('does not upload');
+
+    const publish = requests.find((r) => r.url === '/api/previews')!;
+    const body = JSON.parse(publish.body.toString('utf8'));
+    expect(body.hub.brand).toEqual({ name: 'Srv', logoHref: 'https://srv.example' });
+  });
+
+  it('publish passes an absolute brand logo URL through untouched', async () => {
+    const init = await runInit({ name: 'srv-site', cwd: workdir, silent: true });
+    const projectFile = join(init.dir, 'interactive-demo.json');
+    const project = JSON.parse(await readFile(projectFile, 'utf8'));
+    project.brand = { logo: 'https://cdn.srv.example/logo.svg', name: 'Srv' };
+    await writeFile(projectFile, JSON.stringify(project));
+
+    const stderr = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
+    const stdout = vi.spyOn(process.stdout, 'write').mockImplementation(() => true);
+    let stderrCalls = -1;
+    try {
+      await runPublish({ cwd: init.dir });
+      stderrCalls = stderr.mock.calls.length;
+    } finally {
+      stderr.mockRestore();
+      stdout.mockRestore();
+    }
+    expect(stderrCalls).toBe(0);
+
+    const publish = requests.find((r) => r.url === '/api/previews')!;
+    const body = JSON.parse(publish.body.toString('utf8'));
+    expect(body.hub.brand).toEqual({ logo: 'https://cdn.srv.example/logo.svg', name: 'Srv' });
+  });
+
   it('publish lowercases an uppercase file extension before syncing', async () => {
     const init = await runInit({ name: 'srv-site', cwd: workdir, silent: true });
     const demoDir = join(init.dir, 'demos', 'getting-started');

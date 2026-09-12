@@ -49,7 +49,9 @@ title.
 
 `logo` is an absolute URL or a path relative to the project root; `validate`
 checks a relative file exists and stays inside the project, and `build`
-copies it to `dist/<slug>/brand/` next to the page. Leave `name` out when the
+copies it to `dist/<slug>/brand/` next to the page. `publish` does not upload
+it: the hosted page shows the rest of the brand and the command warns, so use
+an absolute URL for a logo that should appear there. Leave `name` out when the
 logo image already carries the wordmark. `logoHref` turns the mark into a
 link opening in a new tab; without it the mark links to `/`. CTA and
 `logoHref` URLs must be `http(s)` or `mailto`. The buttons take their colour

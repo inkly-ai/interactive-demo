@@ -11,6 +11,7 @@ import {
   type SyncFinalizedUpload,
 } from '../publish/sync.js';
 import { resolveRuntimeFile } from '../page.js';
+import { isAbsoluteBrandRef, type ProjectBrand } from '../project.js';
 import { readCliVersion } from './version.js';
 import {
   loadProject,
@@ -135,14 +136,35 @@ async function resolveRuntimeVersion(cwd: string): Promise<string> {
   return (await readCliVersion()).version;
 }
 
+/**
+ * The brand the hosting service can render. A project-relative logo is a
+ * file next to the project that `publish` does not upload, so the hosted
+ * page would show a broken image where `build` copies the file; drop it
+ * and say so. Absolute URLs pass through unchanged.
+ */
+function hostedBrand(brand: ProjectBrand | undefined, silent: boolean | undefined): ProjectBrand | undefined {
+  const logo = brand?.logo?.trim();
+  if (!brand || !logo || isAbsoluteBrandRef(logo)) return brand;
+  if (!silent) {
+    process.stderr.write(
+      `⚠ brand.logo "${logo}" is a project file, which publish does not upload;\n` +
+        `  the hosted page will show the brand without it. Use an absolute URL\n` +
+        `  (https://…) in interactive-demo.json to show a logo there.\n`,
+    );
+  }
+  const { logo: _dropped, ...rest } = brand;
+  return rest;
+}
+
 /** The project-level context the hosting service stores next to the demo. */
-async function projectContext(project: LoadedProject, cwd: string) {
+async function projectContext(project: LoadedProject, cwd: string, silent: boolean | undefined) {
+  const brand = hostedBrand(project.project.brand, silent);
   return {
     name: project.project.name,
     runtime: await resolveRuntimeVersion(cwd),
     ...(project.project.theme ? { theme: project.project.theme } : {}),
     ...(project.project.tokens ? { tokens: project.project.tokens } : {}),
-    ...(project.project.brand ? { brand: project.project.brand } : {}),
+    ...(brand ? { brand } : {}),
   };
 }
 
@@ -218,7 +240,7 @@ async function publishResolvedDemo(args: {
       title: demo.config.title ?? null,
       config: demo.config,
       assets: frozenAssets,
-      hub: await projectContext(project, options.cwd),
+      hub: await projectContext(project, options.cwd, options.silent),
       replace,
     }),
   });

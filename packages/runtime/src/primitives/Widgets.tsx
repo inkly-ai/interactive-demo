@@ -17,6 +17,7 @@ import type {
   CustomWidget,
   EmbedWidget,
   FormWidget,
+  SubmittedFormField,
   HeadlineWidget,
   MessageTextAlign,
   Widget,
@@ -79,6 +80,35 @@ function headlineAlignmentStyle(
  * the demo's primary: a white secondary button gets a grey edge, not a
  * blue one.
  */
+/**
+ * Send a submission to the author's endpoint. Fire-and-forget: the demo
+ * advances right away, `keepalive` lets the request outlive a navigation,
+ * and a failure is logged rather than shown, since the form is gone by
+ * then. Nothing is sent unless the config names an address.
+ */
+export function postFormSubmission(
+  url: string,
+  payload: { demoId: string; stepId: string; widgetId: string; fields: SubmittedFormField[]; timestamp: number },
+): void {
+  if (typeof fetch !== 'function') return;
+  fetch(url, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(payload),
+    keepalive: true,
+  })
+    .then((res) => {
+      if (!res.ok && typeof console !== 'undefined') {
+        console.warn(`[interactive-demo] Form submission to ${url} failed: HTTP ${res.status}`);
+      }
+    })
+    .catch((err: unknown) => {
+      if (typeof console !== 'undefined') {
+        console.warn(`[interactive-demo] Form submission to ${url} failed:`, err);
+      }
+    });
+}
+
 export function ctaStyle(cta: Cta): CSSProperties | undefined {
   if (!cta.background && !cta.textColor) return undefined;
   return {
@@ -199,16 +229,21 @@ function WidgetSlot({
             // analytics stores "Email" not the opaque field id — the config
             // (and thus the label) is only reliably available here, at the
             // producer. Order follows the authored field order.
-            emitEvent({
-              type: 'form_submit',
-              stepId,
-              widgetId: widget.id,
-              fields: widget.fields.map((field) => ({
-                id: field.id,
-                label: field.label,
-                value: values[field.id] ?? '',
-              })),
-            });
+            const fields = widget.fields.map((field) => ({
+              id: field.id,
+              label: field.label,
+              value: values[field.id] ?? '',
+            }));
+            emitEvent({ type: 'form_submit', stepId, widgetId: widget.id, fields });
+            if (widget.submitTo) {
+              postFormSubmission(widget.submitTo, {
+                demoId: demo?.id ?? '',
+                stepId,
+                widgetId: widget.id,
+                fields,
+                timestamp: Date.now(),
+              });
+            }
             runButtonAction(widget.submit.action, controls, demo);
           }}
         />

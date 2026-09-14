@@ -186,6 +186,17 @@ export const FormWidgetSchema = z.object({
     action: { type: 'next' },
     animation: 'shimmer',
   }),
+  /**
+   * Where a submission is sent: the player POSTs the fields as JSON to
+   * this URL (your own endpoint, a Zapier or Make webhook, Formspree…),
+   * then follows the submit button's action. The endpoint must accept a
+   * cross-origin POST. Omit it and the values only reach the host through
+   * the `form_submit` runtime event.
+   */
+  submitTo: z
+    .string()
+    .refine((v) => /^https?:\/\//i.test(v), 'submitTo must be an http(s) URL')
+    .optional(),
 });
 
 export const DEFAULT_EMBED_SANDBOX =

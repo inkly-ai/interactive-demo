@@ -36,6 +36,7 @@
     },
     "./styles.css": "./dist/styles.css",
     "./player.js": "./dist/player.js",
+    "./embed.js": "./dist/embed.js",
     "./schema/demo.config.json": "./dist/schema/demo.config.json",
     "./fonts.css": "./dist/fonts.css"
   },

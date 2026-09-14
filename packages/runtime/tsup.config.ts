@@ -20,6 +20,20 @@ export default defineConfig([
     },
   },
   {
+    // Pop-up embed loader for host pages: no React, no dependencies.
+    entry: { embed: "src/embed/entry.ts" },
+    format: ["iife"],
+    platform: "browser",
+    target: "es2020",
+    dts: false,
+    sourcemap: false,
+    clean: false,
+    minify: true,
+    outExtension() {
+      return { js: '.js' };
+    },
+  },
+  {
     // Self-contained player for static output: React is bundled in.
     entry: { player: "src/player-entry.tsx" },
     format: ["iife"],

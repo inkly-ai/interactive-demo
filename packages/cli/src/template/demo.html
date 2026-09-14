@@ -80,11 +80,13 @@
         gap: 8px;
         font-weight: 700;
       }
-      .demo-page-brand img { display: block; max-height: 28px; max-width: 96px; }
+      .demo-page-brand img { display: block; max-height: 28px; max-width: 140px; }
+      /* A square mark renders at its own size up to 28px; a wide wordmark
+       * keeps its aspect ratio instead of being boxed into 28x28. */
       .demo-page-brand-mark {
         line-height: 1;
-        height: 28px;
-        width: 28px;
+        height: auto;
+        width: auto;
         border-radius: 0;
         object-fit: contain;
       }

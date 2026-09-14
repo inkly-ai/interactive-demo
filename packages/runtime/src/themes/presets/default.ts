@@ -60,6 +60,34 @@ const defaultCss = `
 [data-demo-theme="default"] .demo-intro{
     background-color: #f5f5f5;
 }
+/* Watercolor backdrop lives on a ::before so it can be mirrored
+   horizontally — the source image's dark pine sits bottom-LEFT, right where
+   the left-aligned headline/description go. scaleX(-1) flips it to the
+   right (empty) side without touching the text. The image is 16:9 inside a
+   16:9 cover, so background-position can't slide it; mirroring is the only
+   way to move the pine off the copy without zooming or washing it out.
+   z-index:-1 keeps it above the solid #f5f5f5 fill but below the (un-
+   positioned) cover content, so the copy stays on top. A translucent white
+   wash pales the watercolor back a touch for headline contrast.
+   The image itself is set by the optional fonts.css (self-hosted next to
+   the player as ./backgrounds/…); without that sheet only the wash paints. */
+[data-demo-theme="default"] .demo-intro::before{
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border-radius: inherit;
+    background-image:
+        linear-gradient(rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0.3));
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    transform: scaleX(-1);
+    pointer-events: none;
+}
+[data-demo-theme="default"] .demo-intro[data-background-type]::before{
+    content: none;
+}
 
 /* Header — design's macOS chrome: 52px tall, gradient surface, single
    border-bottom (no full border), inset white highlight just above it. */

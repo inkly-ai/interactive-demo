@@ -1,9 +1,11 @@
 /*
- * Optional web fonts, self-hosted next to this file under ./fonts/ (copied
- * from the fontsource packages at build, SIL OFL 1.1). The player and the
- * stylesheet never load fonts on their own: link this file (or `@import` it)
- * when you want the UI sans and the mono to render the same everywhere
- * instead of falling back to the system fonts.
+ * Optional self-hosted files next to this stylesheet: web fonts under
+ * ./fonts/ (copied from the fontsource packages at build, SIL OFL 1.1) and
+ * the default theme's cover backdrop under ./backgrounds/. The player and
+ * the stylesheet never load either on their own: link this file (or
+ * `@import` it) when you want the UI sans and the mono to render the same
+ * everywhere instead of falling back to the system fonts, and the
+ * watercolor behind cover steps instead of a flat fill.
  *
  * Inter: the UI/body sans as a variable font (100-900). Geist Mono: the
  * monospace used for step numbers and code-like labels. The display face
@@ -24,4 +26,15 @@
     font-weight: 100 900;
     font-display: swap;
     src: url("./fonts/geist-mono-latin-wght-normal.woff2") format("woff2-variations");
+}
+
+/* The default theme's cover backdrop (the original preset's watercolor,
+   mirrored by the theme so its pines sit on the empty side of the copy).
+   Declared here rather than in the theme so the URL resolves next to this
+   file wherever it is served from. A cover with its own `background` keeps
+   that instead. */
+[data-demo-theme="default"] .demo-intro:not([data-background-type])::before {
+    background-image:
+        linear-gradient(rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0.3)),
+        url("./backgrounds/watercolor-background.jpg");
 }

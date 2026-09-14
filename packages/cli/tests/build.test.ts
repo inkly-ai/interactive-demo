@@ -29,6 +29,7 @@ describe('runBuild', () => {
     expect(result.demos.map((d) => d.slug)).toEqual(['getting-started']);
 
     const dir = join(result.outDir, 'getting-started');
+    expect(existsSync(join(result.outDir, 'embed.js'))).toBe(true);
     expect((await readdir(dir)).sort()).toEqual(['assets', 'fonts', 'index.html', 'player-fonts.css', 'player.css', 'player.js']);
     expect((await readdir(join(dir, 'fonts'))).sort()).toEqual([
       'geist-mono-latin-wght-normal.woff2',

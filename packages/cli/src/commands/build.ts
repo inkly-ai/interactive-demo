@@ -4,8 +4,10 @@ import { basename, join, resolve } from 'node:path';
 import { ASSETS_DIR, assetsForPage } from '../assets.js';
 import { brandLogoSourcePath, loadProject, orderDemos } from '../project.js';
 import {
+  EMBED_LOADER_FILE,
   PLAYER_FONT_FILES,
   readTemplate,
+  resolveRuntimeFile,
   renderDemoPage,
   resolvePlayerFiles,
   resolveRuntimeFontsDir,
@@ -90,12 +92,19 @@ export async function runBuild(options: BuildOptions): Promise<BuildResult> {
     built.push({ slug: demo.slug, dir });
   }
 
+  // The pop-up loader sits once at the output root, next to the demo folders.
+  const loaderSrc = resolveRuntimeFile(EMBED_LOADER_FILE, options.cwd);
+  if (loaderSrc) await copyFile(loaderSrc, join(outDir, EMBED_LOADER_FILE));
+
   if (!options.silent) {
     const lines = built.map((d) => `  ${d.slug}/`).join('\n');
     process.stdout.write(
       `Built ${built.length} demo${built.length === 1 ? '' : 's'} into ${outDir}\n${lines}\n\n` +
         `Deploy the folder as static files and embed a demo with\n` +
         `  <iframe src="https://<your-host>/<slug>/" width="960" height="600" allow="fullscreen"></iframe>\n` +
+        `or open it from a button in a pop-up:\n` +
+        `  <script src="https://<your-host>/embed.js" async></script>\n` +
+        `  <button onclick="InteractiveDemo.open('https://<your-host>/<slug>/')">Try the demo</button>\n` +
         `  (replace <your-host> with wherever you deploy the dist/ folder)\n`,
     );
   }

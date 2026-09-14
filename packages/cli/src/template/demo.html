@@ -6,6 +6,18 @@
     <title>demo</title>
     <link rel="stylesheet" href="./player.css" />
     <link rel="stylesheet" href="./player-fonts.css" />
+    <script>
+      // Framed by the pop-up loader (`?embed=inline`): render the player
+      // alone, and let Escape inside the frame dismiss the overlay.
+      (function () {
+        var embed = /[?&]embed=(inline|1)(&|$)/.test(location.search);
+        if (embed) document.documentElement.setAttribute("data-embed", "inline");
+        document.addEventListener("keydown", function (ev) {
+          if (ev.key !== "Escape" || window.parent === window) return;
+          try { window.parent.postMessage({ type: "interactive-demo:close" }, "*"); } catch (e) {}
+        });
+      })();
+    </script>
     <style>
       /*
        * Player page: a light canvas with the demo player centred on it.
@@ -48,6 +60,8 @@
       .demo-wrap {
         width: 100%;
       }
+      html[data-embed="inline"] header.demo-page-bar { display: none; }
+      html[data-embed="inline"] #root { background: transparent; background-image: none; }
 
       /* ── Page header: brand pill + demo name + CTAs (from the original
          viewer shell). ─────────────────────────────────────────────── */

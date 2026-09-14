@@ -52,6 +52,13 @@ export function resolveRuntimeFontsDir(cwd: string): string | null {
 export type PlayerFileName = keyof typeof PLAYER_FILES;
 
 /**
+ * The pop-up loader a host page includes to open a demo in a modal. Not part
+ * of the page contract: `build` copies it once to the output root so a static
+ * host serves it at `/embed.js`, matching what the hosting service serves.
+ */
+export const EMBED_LOADER_FILE = 'embed.js';
+
+/**
  * Locate the HTML template shipped next to this module: `dist/template/`
  * in the built CLI, `src/template/` when running from source.
  */
@@ -67,7 +74,7 @@ export function resolveTemplate(name: string): string {
  * workspace's `packages/runtime/dist`.
  */
 export function resolveRuntimeFile(
-  file: (typeof PLAYER_FILES)[PlayerFileName],
+  file: (typeof PLAYER_FILES)[PlayerFileName] | typeof EMBED_LOADER_FILE,
   cwd: string,
 ): string | null {
   const specifier = `${RUNTIME_PACKAGE}/${file}`;

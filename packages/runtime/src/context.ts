@@ -14,7 +14,7 @@ import type {
 } from './engine';
 
 /**
- * Resolves an `asset:<id>` URI (or any raw URL — see pass-through rules
+ * Resolves a media reference (a relative path, or any raw URL — see pass-through rules
  * in `Root.tsx`) to something an `<img>`/`<video>` `src` can actually
  * fetch. Always provided by `Root`; falls back to identity when the host
  * doesn't supply an assets manifest + url builder.
@@ -44,7 +44,7 @@ export type DemoPlayerContextValue = {
    */
   emitEvent: (event: DemoEventInput) => void;
   /**
-   * Resolves an `asset:<id>` URI to a fetchable URL. Always non-null —
+   * Resolves a media reference to a fetchable URL. Always non-null —
    * `Root` supplies a pass-through fallback when no host resolver is
    * configured. Read via the `useAssetUrl` hook rather than the raw
    * context so call sites don't have to short-circuit on falsy inputs.
@@ -73,7 +73,7 @@ export function useDemoPlayerContext(): DemoPlayerContextValue {
 }
 
 /**
- * Resolve an `asset:<id>` URI (or any other string the host wants to
+ * Resolve a media reference (or any other string the host wants to
  * pass through unchanged) to a fetchable URL. Hook form so call sites
  * read the player context exactly once per render and stay
  * rules-of-hooks-clean.

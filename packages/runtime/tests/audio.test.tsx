@@ -1,7 +1,6 @@
 import { act, render, renderHook, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Captions, Root, usePlayer } from '../src';
-import type { AssetEntry } from '../src';
 
 const audioDemo = {
   id: 'demoaudio001',
@@ -57,22 +56,14 @@ const assetAudioDemo = {
     {
       ...audioDemo.steps[0],
       voiceover: {
-        src: 'asset:voiceover-step',
+        src: 'assets/voiceover-step.mp3',
       },
     },
     audioDemo.steps[1],
   ],
 } as const;
 
-const audioAsset: AssetEntry = {
-  id: 'voiceover-step',
-  path: 'public/voiceover-step.mp3',
-  uri: 'asset:legacy-voiceover-alias',
-  sha256: 'a'.repeat(64),
-  kind: 'audio',
-  contentType: 'audio/mpeg',
-  publicUrl: 'https://cdn.example.com/resolved-voiceover.mp3',
-};
+const VOICEOVER_URL = 'https://cdn.example.com/resolved-voiceover-step.mp3';
 
 type MockAudio = HTMLAudioElement & {
   load: ReturnType<typeof vi.fn>;
@@ -205,82 +196,25 @@ describe('audio and captions', () => {
     expect(caption.getAttribute('aria-live')).toBe('polite');
   });
 
-  it('resolves asset voiceovers through Root before loading audio', () => {
+  it('resolves a relative voiceover path through the host rule before loading audio', () => {
     render(
-      <Root
-        config={assetAudioDemo}
-        assets={[audioAsset]}
-        resolveAssetUrl={(entry) => entry.publicUrl ?? `asset:${entry.id}`}
-      >
+      <Root config={assetAudioDemo} resolveAssetUrl={(path) => `https://cdn.example.com/resolved-${path.split('/').pop()}`}>
         <Captions />
       </Root>,
     );
 
-    expect(currentAudio.src).toBe(audioAsset.publicUrl);
+    expect(currentAudio.src).toBe(VOICEOVER_URL);
     expect(currentAudio.load).toHaveBeenCalledOnce();
   });
 
-  it('waits for asset voiceovers to resolve instead of loading raw asset URIs', () => {
-    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    const { rerender } = render(
-      <Root
-        config={assetAudioDemo}
-        assets={[]}
-        resolveAssetUrl={(entry) => entry.publicUrl ?? `asset:${entry.id}`}
-      >
+  it('resolves a relative voiceover path against baseUrl', () => {
+    render(
+      <Root config={assetAudioDemo} baseUrl="/demos/tour/">
         <Captions />
       </Root>,
     );
 
-    expect(currentAudio.getAttribute('src')).toBeNull();
-    expect(currentAudio.load).not.toHaveBeenCalled();
-
-    rerender(
-      <Root
-        config={assetAudioDemo}
-        assets={[audioAsset]}
-        resolveAssetUrl={(entry) => entry.publicUrl ?? `asset:${entry.id}`}
-      >
-        <Captions />
-      </Root>,
-    );
-
-    expect(currentAudio.src).toBe(audioAsset.publicUrl);
+    expect(currentAudio.getAttribute('src')).toBe('/demos/tour/assets/voiceover-step.mp3');
     expect(currentAudio.load).toHaveBeenCalledOnce();
-    warnSpy.mockRestore();
   });
-
-  it.each(['asset:public/voiceover-step.mp3', 'asset:legacy-voiceover-alias'])(
-    'does not resolve asset voiceovers by manifest path or uri alias (%s)',
-    (src) => {
-      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-      render(
-        <Root
-          config={{
-            ...assetAudioDemo,
-            steps: [
-              {
-                ...assetAudioDemo.steps[0],
-                voiceover: {
-                  src,
-                },
-              },
-              assetAudioDemo.steps[1],
-            ],
-          }}
-          assets={[audioAsset]}
-          resolveAssetUrl={(entry) => entry.publicUrl ?? `asset:${entry.id}`}
-        >
-          <Captions />
-        </Root>,
-      );
-
-      expect(currentAudio.getAttribute('src')).toBeNull();
-      expect(currentAudio.load).not.toHaveBeenCalled();
-      expect(warnSpy).toHaveBeenCalledWith(
-        expect.stringContaining('id not found in assets manifest'),
-      );
-      warnSpy.mockRestore();
-    },
-  );
 });

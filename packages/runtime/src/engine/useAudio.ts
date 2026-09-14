@@ -39,16 +39,6 @@ function playAudio(audio: HTMLAudioElement): void {
   }
 }
 
-function isUnresolvedAssetUri(
-  authoredSrc: string | null,
-  resolvedSrc: string,
-): boolean {
-  return (
-    !!authoredSrc &&
-    authoredSrc.startsWith('asset:') &&
-    resolvedSrc === authoredSrc
-  );
-}
 
 export function useAudio({
   demo,
@@ -63,14 +53,13 @@ export function useAudio({
     () => demo?.steps[state.currentStepIndex] ?? null,
     [demo, state.currentStepIndex],
   );
-  // Authored voiceover URI as-written (asset:<id> | relative repo path |
-  // absolute URL). Used as the "is there audio?" gate and as a stable
+  // Authored voiceover source as-written (relative path | absolute URL). Used as the "is there audio?" gate and as a stable
   // dep for the effects below — its identity changes only when the demo
   // author edits the field. The actual `audio.src` we feed the element
   // is the resolved form (see `resolvedVoiceoverSrc`).
   const voiceoverSrc = currentStep?.voiceover?.src ?? null;
-  // Resolved URL: `asset:<id>` → fetchable URL via the host resolver,
-  // relative + raw URLs pass through. Audio is owned by the player
+  // Resolved URL: a relative path goes through the host resolver (base
+  // URL or custom rule); absolute URLs pass through. Audio is owned by the player
   // controller, which runs before Root's context provider exists, so the
   // resolver is passed directly by Root instead of read from context.
   const resolvedVoiceoverSrc = voiceoverSrc
@@ -149,8 +138,7 @@ export function useAudio({
     dispatch({ type: 'AUDIO_TIME', currentTime: 0 });
 
     if (
-      !voiceoverSrc ||
-      isUnresolvedAssetUri(voiceoverSrc, resolvedVoiceoverSrc)
+      !voiceoverSrc
     ) {
       audio.removeAttribute('src');
       return;
@@ -193,8 +181,7 @@ export function useAudio({
     if (
       !enabled ||
       !demo ||
-      !voiceoverSrc ||
-      isUnresolvedAssetUri(voiceoverSrc, resolvedVoiceoverSrc)
+      !voiceoverSrc
     ) {
       return;
     }

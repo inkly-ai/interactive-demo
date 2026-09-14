@@ -129,7 +129,7 @@ function ContentStage({
   const title = demo?.title;
   // Resolve the background URI through the host resolver. The runtime
   // never reads `step.background.src` directly when handing a value to
-  // `<img>`/`<video>` — `asset:<id>` would otherwise be a dead string.
+  // `<img>`/`<video>` — a relative path needs the host's base to be fetchable.
   const backgroundSrc = useAssetUrl(step.background.src);
   const videoPosterSrc = useAssetUrl(
     step.background.type === 'video' ? (step.background.posterSrc ?? null) : null,
@@ -721,7 +721,7 @@ function CoverStage({
       : undefined;
   const renderInlineBackground = !!backgroundImage;
   // Resolve cover backgroundImage through the host resolver so
-  // `asset:<id>` URIs and in-repo relative paths render correctly. Hook
+  // relative media paths render correctly. Hook
   // runs unconditionally (rules of hooks); '' is returned when the field
   // is absent, which renders as a no-op <img src="">.
   const backgroundImageSrc = useAssetUrl(backgroundImage?.src);

@@ -946,7 +946,7 @@ type StageProps = {
     /** Preset id used for `data-demo-theme` scoped CSS and preset tokens so
      * the Editor paints the same chrome the player does. */
     themeId?: string;
-    resolveAssetUri?: (uri: string) => string;
+    resolveAssetUrl?: (uri: string) => string;
 };
 
 /**
@@ -1154,7 +1154,7 @@ export function Stage({
     zoomMode,
     setZoomMode,
     themeId,
-    resolveAssetUri,
+    resolveAssetUrl,
 }: StageProps) {
     // The Editor renders `<Demo>` directly so it can pass drag/select
     // renderers. Use the shared theme resolver here too, matching the
@@ -1318,7 +1318,7 @@ export function Stage({
                                     components={editorRenderers}
                                     layout={editorLayout}
                                     themeId={resolvedTheme.themeId}
-                                    resolveAssetUri={resolveAssetUri}
+                                    resolveAssetUrl={resolveAssetUrl}
                                 />
                             </AnnotationEditModeContext.Provider>
                         </NavCtx.Provider>

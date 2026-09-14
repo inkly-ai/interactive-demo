@@ -2275,7 +2275,7 @@ export function DemoEditorView({
                                 zoomMode={zoomMode}
                                 setZoomMode={setZoomMode}
                                 themeId={themeId}
-                                resolveAssetUri={resolveAssetUri}
+                                resolveAssetUrl={resolveAssetUri}
                             />
                         </div>
                         {selectedStep ? (

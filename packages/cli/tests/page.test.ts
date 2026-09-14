@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 import { readFile } from 'node:fs/promises';
 import { parseDemo } from '@inkly-org/interactive-demo/schema';
 import { applyProjectTheme, brandLogoPageUrl, injectJsonScript, renderDemoPage, renderPageHeader, resolveTemplate } from '../src/page';
-import { assetDeliveryUrl } from '../src/assets';
 import { starterDemoConfig } from '../src/starter';
 
 describe('player page template', () => {
@@ -63,16 +62,6 @@ describe('injectJsonScript', () => {
   });
 });
 
-describe('assetDeliveryUrl', () => {
-  it('prefers an absolute publicUrl, else the page-relative assets path', () => {
-    const base = { id: 'a', sha256: 'c'.repeat(64), kind: 'image' as const };
-    expect(assetDeliveryUrl({ ...base, publicUrl: 'https://cdn.example.com/a.png', file: 'a.png' })).toBe(
-      'https://cdn.example.com/a.png',
-    );
-    expect(assetDeliveryUrl({ ...base, file: 'a.png' })).toBe('./assets/a.png');
-    expect(assetDeliveryUrl(base)).toBeNull();
-  });
-});
 
 describe('page header', () => {
   const template = `<!doctype html><html><head><title>demo</title>

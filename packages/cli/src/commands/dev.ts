@@ -12,7 +12,6 @@ import {
   RESERVED_DEMO_SLUGS,
   validateDemoSlug,
   type Demo,
-  type AssetEntry,
   type SlugValidation,
 } from '@inkly-org/interactive-demo/schema';
 import { runDemoIdMaintenance, relForLog } from '../demo-id-maintenance.js';
@@ -98,7 +97,6 @@ interface LoadedDemo {
   slug: string;
   configPath: string;
   config: Demo;
-  assets: AssetEntry[];
 }
 
 interface BrokenDemo {
@@ -121,21 +119,6 @@ interface ProjectState {
   broken: Map<string, BrokenDemo>;
 }
 
-async function readDemoAssets(configPath: string): Promise<AssetEntry[]> {
-  const assetsPath = join(dirname(configPath), 'assets.json');
-  try {
-    const raw = await readFile(assetsPath, 'utf8');
-    const parsed = JSON.parse(raw) as { assets?: unknown };
-    if (!Array.isArray(parsed.assets)) return [];
-    return parsed.assets.filter((entry): entry is AssetEntry => {
-      if (!entry || typeof entry !== 'object') return false;
-      const record = entry as { id?: unknown };
-      return typeof record.id === 'string' && record.id.length > 0;
-    });
-  } catch {
-    return [];
-  }
-}
 
 /**
  * Walk `<root>/demos` recursively. Each `demo.config.json` found defines a
@@ -255,7 +238,6 @@ async function loadProjectState(
       slug: d.slug,
       configPath: d.configPath,
       config,
-      assets: await readDemoAssets(d.configPath),
     });
   }
 

@@ -10,7 +10,7 @@ const demo = {
       kind: 'content',
       background: {
         type: 'image',
-        src: 'asset:shot',
+        src: 'assets/shot.png',
         naturalWidth: 1200,
         naturalHeight: 600,
       },
@@ -28,13 +28,10 @@ const demo = {
   ],
 };
 
-const assets = [{ id: 'shot', file: 'shot.png', kind: 'image', sha256: 'a'.repeat(64) }];
-
 async function mountEntry(config: unknown, options: { search?: string } = {}) {
   document.head.innerHTML = '';
   document.body.innerHTML =
     `<script id="demo-config" type="application/json">${JSON.stringify(config)}</script>` +
-    `<script id="demo-assets" type="application/json">${JSON.stringify(assets)}</script>` +
     '<div id="root"></div>';
   window.history.replaceState({}, '', options.search ?? '/');
   delete window.__demo;
@@ -58,8 +55,8 @@ describe('standalone player entry', () => {
     expect(window.__demo?.stepIds).toEqual(['s1', 's2']);
     expect(typeof window.__demo?.controls.play).toBe('function');
     expect(window.__demo?.demo.id).toBe('demoEntry001');
-    // Managed assets resolve to the page-relative assets folder.
-    expect(document.querySelector('img')?.getAttribute('src')).toBe('./assets/shot.png');
+    // Media paths stay relative; the page sits in the demo folder.
+    expect(document.querySelector('img')?.getAttribute('src')).toBe('assets/shot.png');
   });
 
   it('stays paused by default and plays with ?autoplay=1', async () => {
@@ -75,8 +72,8 @@ describe('standalone player entry', () => {
     const root = document.getElementById('root')!;
     expect(root.style.background).toMatch(/#123456|rgb\(18, 52, 86\)/);
 
-    await mountEntry({ ...demo, background: { type: 'image', src: 'asset:shot' } });
-    expect(document.getElementById('root')!.style.backgroundImage).toBe('url("./assets/shot.png")');
+    await mountEntry({ ...demo, background: { type: 'image', src: 'assets/shot.png' } });
+    expect(document.getElementById('root')!.style.backgroundImage).toBe('url("assets/shot.png")');
     expect(document.getElementById('root')!.style.backgroundSize).toBe('cover');
 
     await mountEntry(demo);

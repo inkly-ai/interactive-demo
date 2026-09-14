@@ -2,13 +2,11 @@ import { access, readFile, readdir, stat } from 'node:fs/promises';
 import { dirname, join, resolve, sep } from 'node:path';
 import { z } from 'zod';
 import {
-  AssetsManifestSchema,
   BrandSchema,
   ThemeTokensSchema,
   healDemoConfig,
   RESERVED_DEMO_SLUGS,
   validateDemoSlug,
-  type AssetsManifest,
   type Demo,
 } from '@inkly-org/interactive-demo/schema';
 
@@ -93,8 +91,6 @@ export interface LoadedDemoConfig {
   config: Demo;
   /** True when the file had no valid `id` and `config.id` was minted in memory. */
   idHealed: boolean;
-  assetsPath: string;
-  assets: AssetsManifest | null;
 }
 
 export interface LoadedProject {
@@ -192,25 +188,12 @@ export async function loadProject(cwd: string): Promise<LoadedProject> {
         `demos/${d.slug}/demo.config.json failed schema validation: ${(err as Error).message}`,
       );
     }
-    const assetsPath = join(d.dir, 'assets.json');
-    let assets: AssetsManifest | null = null;
-    if (await pathExists(assetsPath)) {
-      const assetsResult = AssetsManifestSchema.safeParse(await readJsonFile(assetsPath));
-      if (!assetsResult.success) {
-        throw new Error(
-          `demos/${d.slug}/assets.json failed schema validation: ${assetsResult.error.message}`,
-        );
-      }
-      assets = assetsResult.data;
-    }
     demos.push({
       slug: d.slug,
       dir: d.dir,
       configPath: d.configPath,
       config,
       idHealed,
-      assetsPath,
-      assets,
     });
   }
 

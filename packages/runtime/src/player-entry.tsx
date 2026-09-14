@@ -5,13 +5,11 @@
  *
  *   <link rel="stylesheet" href="./player.css" />
  *   <script id="demo-config" type="application/json">{ ...demo.config.json }</script>
- *   <script id="demo-assets" type="application/json">[ ...assets ]</script>  (optional)
  *   <div id="root"></div>
  *   <script src="./player.js"></script>
  *
- * `demo-assets` is the `assets` array of an assets manifest. `asset:<id>`
- * URIs in the config resolve to the entry's `publicUrl` when set, otherwise
- * to `./assets/<file>` relative to the page.
+ * Media paths in the config (`assets/<file>`) are left relative, so the
+ * browser resolves them against the page, which sits in the demo folder.
  *
  * The mount logic is the pre-pivot CLI page template's module script, with
  * the CDN runtime import replaced by this bundle: it applies the demo-level
@@ -23,7 +21,7 @@
 import { createElement } from 'react';
 import { createRoot } from 'react-dom/client';
 import { Demo } from './ui/Demo';
-import { DemoSchema, type AssetEntry, type Demo as DemoConfig, type DemoEvent } from './schema';
+import { DemoSchema, type Demo as DemoConfig, type DemoEvent } from './schema';
 import type { usePlayerController } from './engine/usePlayer';
 import { resolveDemoTheme } from './themes/resolve';
 
@@ -60,27 +58,7 @@ function readInlineConfig(): unknown {
   }
 }
 
-function readInlineAssets(): AssetEntry[] {
-  const node = document.getElementById('demo-assets');
-  if (!node) return [];
-  try {
-    const parsed = JSON.parse(node.textContent || '[]');
-    return Array.isArray(parsed) ? (parsed as AssetEntry[]) : [];
-  } catch {
-    return [];
-  }
-}
 
-// Managed assets carry the URL they should render from when they were
-// synced somewhere; local builds fall back to the page-relative `assets/`
-// folder next to the page.
-function resolveAssetUrl(entry: AssetEntry): string {
-  if (entry && typeof entry.publicUrl === 'string' && entry.publicUrl) {
-    return entry.publicUrl;
-  }
-  const file = entry.file ?? entry.path;
-  return file ? `./assets/${file.split('/').map(encodeURIComponent).join('/')}` : '';
-}
 
 function ensureThemeStyle(themeId: string, css: string) {
   if (!css) return;
@@ -108,7 +86,7 @@ function mount() {
     );
   }
 
-  function renderConfig(rawConfig: unknown, assets: AssetEntry[]) {
+  function renderConfig(rawConfig: unknown) {
     if (!rawConfig) {
       renderError(
         'No demo config',
@@ -155,14 +133,6 @@ function mount() {
     }
 
     function resolveCanvasAssetUri(uri: string): string {
-      if (!uri) return uri;
-      if (/^(https?:|data:|blob:)/i.test(uri)) return uri;
-      const list = Array.isArray(assets) ? assets : [];
-      if (uri.startsWith('asset:')) {
-        const id = uri.slice('asset:'.length);
-        const found = list.find((entry) => entry && entry.id === id);
-        return found ? resolveAssetUrl(found) : uri;
-      }
       return uri;
     }
 
@@ -202,8 +172,6 @@ function mount() {
         createElement(Demo, {
           config,
           themeId,
-          assets: assets || [],
-          resolveAssetUrl,
           // Expose the window.__demo contract so a host page or exporter
           // can detect readiness, drive step seeks, and wait for completion.
           onReady: (info) => {
@@ -235,7 +203,7 @@ function mount() {
   }
 
   // First paint uses the config + assets inlined into the HTML — no fetch.
-  renderConfig(readInlineConfig(), readInlineAssets());
+  renderConfig(readInlineConfig());
 }
 
 if (document.readyState === 'loading') {

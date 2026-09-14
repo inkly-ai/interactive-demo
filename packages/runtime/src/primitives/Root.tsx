@@ -13,7 +13,6 @@ import {
 } from '../context';
 import { usePlayerController } from '../engine/usePlayer';
 import type {
-  AssetEntry,
   DemoEvent,
   DemoBackground,
   ThemeTokens,
@@ -66,34 +65,17 @@ export type RootProps = {
     controls: ReturnType<typeof usePlayerController>['controls'];
   }) => void;
   /**
-   * Optional capture-asset manifest. Each entry's `id` is what the
-   * demo config references via `asset:<id>`. When omitted (or an id is
-   * missing), the resolver falls back to passing the URI through
-   * unchanged — host configs that ship raw URLs keep working.
+   * Escape hatch for hosts with their own URL rule (a CDN, signed URLs):
+   * turns a relative media path from the config (`assets/shot.png`) into
+   * the URL to fetch. Absolute URLs never reach it. Takes precedence over
+   * `baseUrl`.
    */
-  assets?: AssetEntry[];
-  /**
-   * Builds a fetchable URL for a given asset entry. Host-supplied so each
-   * host (a static page, the CLI dev server, the editor) can implement its
-   * own URL strategy without the player knowing about any of them.
-   * Called only when an `asset:<id>` URI matches an entry in
-   * `assets`; raw URLs (`http://`, `https://`, `data:`, `blob:`)
-   * bypass it.
-   */
-  resolveAssetUrl?: (entry: AssetEntry) => string;
-  /**
-   * Builds a fetchable URL for raw in-repo media paths such as
-   * `assets/logo.png` or `./images/logo.png`. `asset:<id>` still goes
-   * through `resolveAssetUrl`; this hook is only for authored/repo paths
-   * that are not in assets.json.
-   */
-  resolveAssetUri?: (uri: string) => string;
+  resolveAssetUrl?: (path: string) => string;
   /**
    * Where relative media paths in the config (`assets/shot.png`) are
    * served from: the demo's folder as a URL, absolute or site-relative,
    * with or without a trailing slash. Relative paths are joined onto it;
-   * absolute URLs pass through untouched. `resolveAssetUri`, when given,
-   * takes precedence.
+   * absolute URLs pass through untouched.
    */
   baseUrl?: string;
   /**
@@ -121,77 +103,45 @@ export function Root({
   attribution,
   onEvent,
   onReady,
-  assets,
   resolveAssetUrl,
-  resolveAssetUri,
   baseUrl,
   shareUrl,
 }: RootProps) {
-  // Asset URI resolver. Three URI shapes the runtime sees in
-  // `demo.config` (`background.src`, `backgroundImage.src`,
-  // `voiceover.src`, cover bg image, etc.):
+  // Media resolver. Two shapes the runtime sees in `demo.config`
+  // (`background.src`, `backgroundImage.src`, `voiceover.src`, widget
+  // logo and image, cover backdrop):
   //
-  //   1. `asset:<id>` — the canonical capture pointer. Looked up in
-  //      `assets` by id, then handed to `resolveAssetUrl` (a static page
-  //      builds a relative URL; the CLI dev server builds a
-  //      `/<slug>/<file>` URL). This is what the capture pipeline writes.
+  //   1. Absolute URL (`http(s)://`, `data:`, `blob:`, `/…`) — pass-through.
+  //   2. Relative path (`assets/foo.png`, `./assets/foo.png`) — the host's
+  //      `resolveAssetUrl` if given, else joined onto `baseUrl`, else passed
+  //      through for the browser to resolve against the page.
   //
-  //   2. Absolute URL (`http(s)://`, `data:`, `blob:`) — pass-through.
-  //      Theme-preview demos, embeds, and any author-supplied external
-  //      media land here.
-  //
-  //   3. Relative path (`./assets/foo.png`, `assets/foo.png`) — joined
-  //      onto `baseUrl` when the host gives one (the demo's folder), else
-  //      handed to `resolveAssetUri`, else passed through for the browser
-  //      to resolve against the page.
-  //
-  // Mapping is built once per render and memoised on
-  // `[assets, resolveAssetUrl]`. `asset:<id>` not present in the
-  // manifest (or no `resolveAssetUrl` supplied) returns the URI
-  // verbatim and warns once per id — avoids cascading errors when an
-  // asset is dropped from the manifest before the config is updated.
+  // The pre-release `asset:<id>` pointer is not resolved by anything any
+  // more; it passes through with one warning per id so a stale config is
+  // visible rather than silently blank.
   const warnedAssetIdsRef = useRef<Set<string>>(new Set());
   const resolveAsset = useMemo<AssetResolver>(() => {
-    const byId = new Map<string, AssetEntry>();
-    if (assets) {
-      for (const entry of assets) {
-        byId.set(entry.id, entry);
-      }
-    }
     return (uri: string): string => {
       if (!uri) return uri;
-      const isAbsolute =
-        uri.startsWith('http://') ||
-        uri.startsWith('https://') ||
-        uri.startsWith('data:') ||
-        uri.startsWith('blob:');
-      if (isAbsolute) {
+      if (/^(?:[a-z][a-z0-9+.-]*:|\/\/|\/)/i.test(uri) && !uri.startsWith('asset:')) {
         return uri;
       }
-      if (!uri.startsWith('asset:')) {
-        if (resolveAssetUri) return resolveAssetUri(uri);
-        return baseUrl ? joinBaseUrl(baseUrl, uri) : uri;
-      }
-      const id = uri.slice('asset:'.length);
-      const entry = byId.get(id);
-      if (!entry || !resolveAssetUrl) {
-        if (!warnedAssetIdsRef.current.has(id)) {
-          warnedAssetIdsRef.current.add(id);
+      if (uri.startsWith('asset:')) {
+        if (!warnedAssetIdsRef.current.has(uri)) {
+          warnedAssetIdsRef.current.add(uri);
           if (typeof console !== 'undefined') {
             console.warn(
-              `[interactive-demo] Unresolved asset URI "asset:${id}" — ` +
-                (entry
-                  ? 'no resolveAssetUrl prop supplied'
-                  : 'id not found in assets manifest') +
-                '. Passing URI through unchanged.',
+              `[interactive-demo] "${uri}" is an asset pointer, which is no longer supported; ` +
+                'reference the file by a path such as assets/<file>.',
             );
           }
         }
         return uri;
       }
-      return resolveAssetUrl(entry);
+      if (resolveAssetUrl) return resolveAssetUrl(uri);
+      return baseUrl ? joinBaseUrl(baseUrl, uri) : uri;
     };
-  }, [assets, baseUrl, resolveAssetUri, resolveAssetUrl]);
+  }, [baseUrl, resolveAssetUrl]);
 
   const player = usePlayerController(config, { resolveAsset });
   // 4-token cascade (primary, secondary, font, radius). Resolve the

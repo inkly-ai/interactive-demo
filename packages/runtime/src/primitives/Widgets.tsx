@@ -311,7 +311,7 @@ function DefaultHeadlineWidget({ widget }: HeadlineWidgetProps) {
   // without escaping into JSX.
   const alignStyle = headlineAlignmentStyle(widget.textAlign);
   // Resolve the logo URI through the host asset resolver so an
-  // `asset:<id>` ref resolves the same way media backgrounds do in `Stage`.
+  // A relative path resolves the same way media backgrounds do in `Stage`.
   const logoSrc = useAssetUrl(widget.logo?.src);
   return (
     <WidgetWithImage image={widget.image}>
@@ -380,7 +380,7 @@ function DefaultHeadlineWidget({ widget }: HeadlineWidgetProps) {
 function DefaultFormWidget({ widget, onSubmit }: FormWidgetProps) {
   const [values, setValues] = useState<Record<string, string>>({});
   // Resolve the logo URI through the host asset resolver so an
-  // `asset:<id>` ref resolves the same way the headline logo does.
+  // A relative path resolves the same way the headline logo does.
   const logoSrc = useAssetUrl(widget.logo?.src);
 
   const handleSubmit = useCallback(

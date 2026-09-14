@@ -5,6 +5,7 @@ import {
   formatEmbedSnippet,
   type EmbedMode,
 } from '../publish/embed-snippets.js';
+import { playerSizeForConfig } from '../player-size.js';
 import { loadProject } from '../project.js';
 import { runPublish, selectDemo } from './publish.js';
 
@@ -53,19 +54,20 @@ export async function runEmbed(options: EmbedOptions): Promise<{ mode: EmbedMode
 
   const mode: EmbedMode = options.mode ?? 'inline';
   const label = options.label ?? 'Try the demo';
+  const size = playerSizeForConfig(demo.config);
 
   if (options.json) {
     out(
       options.silent,
       JSON.stringify(
-        { mode, url, snippets: buildEmbedSnippetData({ mode, url, origin: apiBase, label }) },
+        { mode, url, snippets: buildEmbedSnippetData({ mode, url, origin: apiBase, label, size }) },
         null,
         2,
       ) + '\n',
     );
   } else {
     out(options.silent, `Embedding ${demo.slug} (${url})\n\n`);
-    out(options.silent, formatEmbedSnippet({ mode, url, origin: apiBase, label }));
+    out(options.silent, formatEmbedSnippet({ mode, url, origin: apiBase, label, size }));
   }
   return { mode, url };
 }

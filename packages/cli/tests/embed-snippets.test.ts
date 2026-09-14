@@ -18,6 +18,15 @@ describe('embed snippets', () => {
     expect(html).toContain('allowfullscreen');
   });
 
+  it('inline iframe with a size sits in a wrapper of the demo ratio plus its header', () => {
+    const html = buildInlineIframe(URL, { aspectRatio: { width: 1440, height: 900 }, verticalChromeHeight: 52 });
+    expect(html).toContain('container-type: inline-size');
+    expect(html).toContain('height: calc(100cqw * 900 / 1440 + 52px + 2px);');
+    expect(html).toContain('max-width: calc(max(0px, 80vh - 54px) * 1440 / 900)');
+    expect(html).toContain('position: absolute; inset: 0; width: 100%; height: 100%; border: 0;');
+    expect(html).toContain('src="https://demos.example/p/abc123?embed=inline"');
+  });
+
   it('inline iframe appends embed=inline without clobbering an existing query', () => {
     // `&` is HTML-escaped inside the src attribute.
     expect(buildInlineIframe(`${URL}?foo=1`)).toContain('?foo=1&amp;embed=inline');

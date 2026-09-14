@@ -40,18 +40,58 @@ function withInlineEmbed(url: string): string {
   return url.includes('?') ? `${url}&embed=inline` : `${url}?embed=inline`;
 }
 
-/** Inline iframe — drop straight into a page. No loader script required. */
-export function buildInlineIframe(url: string): string {
+export interface InlineSnippetSize {
+  /** The demo's player ratio. */
+  aspectRatio: { width: number; height: number };
+  /** The player header the theme draws above the stage, in px. */
+  verticalChromeHeight?: number;
+}
+
+const INLINE_MAX_HEIGHT_VIEWPORT_PERCENT = 80;
+const INLINE_PLAYER_EDGE_ALLOWANCE_PX = 2;
+
+function formatCssNumber(value: number): string {
+  return String(Number(value.toFixed(4)));
+}
+
+function maxWidthForViewportHeight(size: InlineSnippetSize, unit: 'vh' | 'svh'): string {
+  const { width, height } = size.aspectRatio;
+  const chrome = size.verticalChromeHeight ?? 0;
+  if (chrome > 0) {
+    const reserve = chrome + INLINE_PLAYER_EDGE_ALLOWANCE_PX;
+    return `calc(max(0px, ${INLINE_MAX_HEIGHT_VIEWPORT_PERCENT}${unit} - ${formatCssNumber(reserve)}px) * ${formatCssNumber(width)} / ${formatCssNumber(height)})`;
+  }
+  return `${formatCssNumber(INLINE_MAX_HEIGHT_VIEWPORT_PERCENT * (width / height))}${unit}`;
+}
+
+/**
+ * Inline iframe — drop straight into a page. No loader script required.
+ * With a size, the iframe sits in a wrapper that is exactly the demo's
+ * ratio plus its header, so the chrome-free page fills it with no
+ * letterbox, capped so it never exceeds 80% of the viewport height.
+ */
+export function buildInlineIframe(url: string, size?: InlineSnippetSize): string {
   const src = escapeAttribute(withInlineEmbed(url));
-  return `<iframe
+  const iframe = (style: string) => `<iframe
   src="${src}"
   loading="lazy"
   title="Interactive demo"
   allow="clipboard-read; clipboard-write; fullscreen"
   frameborder="0"
   allowfullscreen
-  style="display: block; width: 100%; height: min(900px, 80vh); height: min(900px, 80svh); border: 0;"
+  style="${style}"
 ></iframe>`;
+  if (!size) {
+    return iframe('display: block; width: 100%; height: min(900px, 80vh); height: min(900px, 80svh); border: 0;');
+  }
+  const { width, height } = size.aspectRatio;
+  const chrome = size.verticalChromeHeight ?? 0;
+  const edge = chrome > 0 ? INLINE_PLAYER_EDGE_ALLOWANCE_PX : 0;
+  return `<div style="container-type: inline-size; width: 100%; max-width: ${maxWidthForViewportHeight(size, 'vh')}; max-width: ${maxWidthForViewportHeight(size, 'svh')}; margin: 0 auto;">
+  <div style="position: relative; width: 100%; height: calc(100cqw * ${formatCssNumber(height)} / ${formatCssNumber(width)} + ${formatCssNumber(chrome)}px + ${formatCssNumber(edge)}px);">
+    ${iframe('position: absolute; inset: 0; width: 100%; height: 100%; border: 0;').split('\n').join('\n    ')}
+  </div>
+</div>`;
 }
 
 /** Where the loader script lives: next to the hosted demos, or next to a static build. */
@@ -107,9 +147,10 @@ export function formatEmbedSnippet(args: {
   url: string;
   origin: string;
   label: string;
+  size?: InlineSnippetSize;
 }): string {
   if (args.mode === 'inline') {
-    return `Inline embed — paste into your page:\n\n${buildInlineIframe(args.url)}\n`;
+    return `Inline embed — paste into your page:\n\n${buildInlineIframe(args.url, args.size)}\n`;
   }
   const buttons = POPUP_FRAMEWORKS.map(
     (fw) =>
@@ -136,9 +177,10 @@ export function buildEmbedSnippetData(args: {
   url: string;
   origin: string;
   label: string;
+  size?: InlineSnippetSize;
 }): Record<string, unknown> {
   if (args.mode === 'inline') {
-    return { iframe: buildInlineIframe(args.url) };
+    return { iframe: buildInlineIframe(args.url, args.size) };
   }
   return {
     loader: buildPopupLoader(args.origin),

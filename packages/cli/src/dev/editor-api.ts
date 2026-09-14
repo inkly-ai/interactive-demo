@@ -1,10 +1,11 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { dirname, extname } from 'node:path';
-import type { AssetKind } from '@inkly-org/interactive-demo/schema';
+import { parseDemo, type AssetKind } from '@inkly-org/interactive-demo/schema';
 import { ASSETS_DIR } from '../assets.js';
 import { LocalFsWorkspace, type WorkspaceProvider } from '../workspace.js';
 import { MAX_ASSET_BYTES, assertSafeAssetPath } from './asset-helpers.js';
-import { buildInlineIframe, buildPopupButton, buildPopupLoader } from '../publish/embed-snippets.js';
+import { buildInlineIframe, buildPopupButton, buildPopupLoader, type InlineSnippetSize } from '../publish/embed-snippets.js';
+import { playerSizeForConfig } from '../player-size.js';
 
 export { MAX_ASSET_BYTES, generatedAssetId } from './asset-helpers.js';
 
@@ -197,12 +198,12 @@ export interface EmbedSnippets {
  * `embed` command uses so the editor never shows a different shape. The
  * host is a placeholder: the editor does not know where `dist/` will live.
  */
-export function embedSnippetsFor(slug: string): EmbedSnippets {
+export function embedSnippetsFor(slug: string, size?: InlineSnippetSize): EmbedSnippets {
   const pageUrl = `${EMBED_HOST_PLACEHOLDER}/${slug.split('/').map(encodeURIComponent).join('/')}/`;
   const label = 'Try the demo';
   return {
     pageUrl,
-    inline: buildInlineIframe(pageUrl),
+    inline: buildInlineIframe(pageUrl, size),
     popup: {
       loader: buildPopupLoader(EMBED_HOST_PLACEHOLDER),
       triggers: {
@@ -271,7 +272,16 @@ export async function handleEditorApi(
 
   try {
     if (resource === 'embed' && req.method === 'GET') {
-      sendJson(res, 200, embedSnippetsFor(slug));
+      // Size the inline snippet from the config when it parses; the
+      // placeholder host still works without it.
+      let size: InlineSnippetSize | undefined;
+      try {
+        const raw = await workspace.readFile(demoDir, 'demo.config.json');
+        if (raw) size = playerSizeForConfig(parseDemo(JSON.parse(raw)));
+      } catch {
+        size = undefined;
+      }
+      sendJson(res, 200, embedSnippetsFor(slug, size));
       return true;
     }
     if (resource === 'files' && req.method === 'GET') {

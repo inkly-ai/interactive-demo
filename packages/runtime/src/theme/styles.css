@@ -3156,8 +3156,15 @@ a.demo-header-title-pill {
   }
 }
 
+/* Shown by <Demo src="…/"> while its config is being fetched. */
+.demo-loading {
+  padding: 16px;
+  color: #6b6b6b;
+  font: 14px/1.5 ui-sans-serif, system-ui, sans-serif;
+}
+
 /* Shown by the standalone player when the page has no config or the
-   config fails validation. */
+   config fails validation, and by <Demo src="…/"> when the fetch fails. */
 .demo-error {
   margin: 16px;
   padding: 16px;

@@ -5,7 +5,8 @@ import { useAssetUrl, useDemoPlayerContext } from '../context';
 import { Controls } from '../primitives/Controls';
 import { Header } from '../primitives/Header';
 import { MobileFooter } from '../primitives/MobileFooter';
-import { Root, type RootProps } from '../primitives/Root';
+import { useEffect, useState } from 'react';
+import { joinBaseUrl, Root, type RootProps } from '../primitives/Root';
 import { Stage, type StageProps } from '../primitives/Stage';
 import { ProgressBar } from '../primitives/ProgressBar';
 import { StepIndicator } from '../primitives/StepIndicator';
@@ -31,7 +32,16 @@ type WarmSlot = {
   rawPosterSrc?: string;
 };
 
-export type DemoProps = Omit<RootProps, 'children'> & {
+export type DemoProps = Omit<RootProps, 'children' | 'config'> & {
+  /**
+   * The demo. A string is the URL of its folder: `demo.config.json` is
+   * fetched from there and relative media paths resolve against it. An
+   * object is the config itself (an imported JSON, or one built in code);
+   * relative media paths then need `baseUrl`.
+   */
+  src?: string | unknown;
+  /** The config object. Same as an object `src`; kept for existing hosts. */
+  config?: unknown;
   components?: StageProps['components'];
   size?: DemoSize;
   /**
@@ -47,13 +57,15 @@ export type DemoProps = Omit<RootProps, 'children'> & {
   controls?: DemoControlsVisibility;
 };
 
+type PlayerProps = Omit<DemoProps, 'src' | 'config'> & { config: unknown };
+
 function DemoPlayer({
   components,
   size = 'md',
   layout = 'default',
   controls = 'auto',
   ...rootProps
-}: DemoProps) {
+}: PlayerProps) {
   const Layout = typeof layout === 'string' ? demoLayouts[layout] : layout;
   return (
     <Root {...rootProps}>
@@ -227,7 +239,58 @@ const hiddenWarmMediaStyle: React.CSSProperties = {
  * widget authors who want to render an authored button with the same
  * destination model as built-in widgets.
  */
-export const Demo = Object.assign(DemoPlayer, {
+/**
+ * Folder form: fetch the config from `<url>/demo.config.json` and play it
+ * with the folder as the media base. A short placeholder shows while the
+ * request is in flight; a failed request renders the standalone player's
+ * error card so a wrong URL is visible on the page.
+ */
+function DemoFolder({ url, ...rest }: Omit<PlayerProps, 'config'> & { url: string }) {
+  const [state, setState] = useState<
+    { kind: 'loading' } | { kind: 'ready'; config: unknown } | { kind: 'error'; message: string }
+  >({ kind: 'loading' });
+
+  useEffect(() => {
+    let cancelled = false;
+    setState({ kind: 'loading' });
+    fetch(joinBaseUrl(url, 'demo.config.json'))
+      .then(async (res) => {
+        if (!res.ok) throw new Error(`HTTP ${res.status} for ${res.url || url}`);
+        return (await res.json()) as unknown;
+      })
+      .then(
+        (config) => {
+          if (!cancelled) setState({ kind: 'ready', config });
+        },
+        (err: unknown) => {
+          if (!cancelled) setState({ kind: 'error', message: err instanceof Error ? err.message : String(err) });
+        },
+      );
+    return () => {
+      cancelled = true;
+    };
+  }, [url]);
+
+  if (state.kind === 'loading') {
+    return <div className="demo-loading">Loading demo…</div>;
+  }
+  if (state.kind === 'error') {
+    return (
+      <div className="demo-error" role="alert">
+        <h2>Demo failed to load</h2>
+        <pre>{`Could not fetch demo.config.json from ${url}\n${state.message}`}</pre>
+      </div>
+    );
+  }
+  return <DemoPlayer {...rest} config={state.config} baseUrl={rest.baseUrl ?? url} />;
+}
+
+function DemoEntry({ src, config, ...rest }: DemoProps) {
+  if (typeof src === 'string') return <DemoFolder {...rest} url={src} />;
+  return <DemoPlayer {...rest} config={src ?? config} />;
+}
+
+export const Demo = Object.assign(DemoEntry, {
   Root,
   Stage,
   Button,

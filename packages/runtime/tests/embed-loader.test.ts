@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it } from 'vitest';
-import { EMBED_CLOSE_MESSAGE, installEmbedLoader } from '../src/embed/loader';
+import { EMBED_CLOSE_MESSAGE, EMBED_SIZE_MESSAGE, installEmbedLoader } from '../src/embed/loader';
 
 const ROOT = '#interactive-demo-embed-root';
 
@@ -53,6 +53,18 @@ describe('embed loader', () => {
     installEmbedLoader().open('https://demos.example/p/abc');
     window.dispatchEvent(new MessageEvent('message', { data: { type: EMBED_CLOSE_MESSAGE }, source: null }));
     expect(document.querySelector(ROOT)).not.toBeNull();
+  });
+
+  it('takes the frame ratio from the page\'s size report, ignoring other windows', () => {
+    installEmbedLoader().open('https://demos.example/p/abc');
+    const frame = document.querySelector<HTMLElement>(`${ROOT} .idm-frame`)!;
+    const frameWindow = document.querySelector<HTMLIFrameElement>(`${ROOT} iframe`)!.contentWindow;
+    window.dispatchEvent(new MessageEvent('message', { data: { type: EMBED_SIZE_MESSAGE, width: 1440, height: 952 }, source: null }));
+    expect(frame.style.aspectRatio).toBe('');
+    window.dispatchEvent(new MessageEvent('message', { data: { type: EMBED_SIZE_MESSAGE, width: 1440, height: 952 }, source: frameWindow }));
+    expect(frame.style.aspectRatio).toBe('1440 / 952');
+    // jsdom folds the calc into a vh value; the shape is what matters.
+    expect(frame.style.width).toMatch(/^min\(1100px, 92vw, /);
   });
 
   it('drains open() calls queued by the host page stub, and installs once', () => {

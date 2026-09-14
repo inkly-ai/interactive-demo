@@ -13,7 +13,9 @@
  * path relative to the page that loaded this script.
  *
  * The framed page may post `{ type: "interactive-demo:close" }` (the static
- * page and the hosted viewer do so on Escape) to dismiss the overlay.
+ * page and the hosted viewer do so on Escape) to dismiss the overlay, and
+ * `{ type: "interactive-demo:size", width, height }` with its player's
+ * size, which the overlay adopts as the frame's aspect ratio.
  *
  * The host page may pre-declare a stub `window.InteractiveDemo` that queues
  * `open` calls; the queue is drained once the real implementation installs.
@@ -21,8 +23,14 @@
 
 export const EMBED_GLOBAL = 'InteractiveDemo';
 export const EMBED_CLOSE_MESSAGE = 'interactive-demo:close';
-/** The message the pre-pivot viewer posted; still honoured. */
+/**
+ * Posted by the framed page with its player's rendered width and height,
+ * so the overlay can take the demo's own ratio instead of assuming 16:9.
+ */
+export const EMBED_SIZE_MESSAGE = 'interactive-demo:size';
+/** The messages the pre-pivot viewer posted; still honoured. */
 const LEGACY_CLOSE_MESSAGE = 'inkly:close-popup';
+const LEGACY_SIZE_MESSAGE = 'inkly:resize';
 
 const STYLE_ID = 'interactive-demo-embed-style';
 const ROOT_ID = 'interactive-demo-embed-root';
@@ -78,13 +86,38 @@ export function installEmbedLoader(win: Window = window): EmbedApi {
     if (e.key === 'Escape') close();
   }
 
+  /** The frame itself, or a page nested one level inside it (the hosted viewer frames its player). */
+  function fromActiveFrame(source: MessageEventSource | null): boolean {
+    if (!activeFrameWindow || !source) return false;
+    if (source === activeFrameWindow) return true;
+    try {
+      return (source as Window).parent === activeFrameWindow;
+    } catch {
+      return false;
+    }
+  }
+
   function onMessage(e: MessageEvent): void {
-    if (activeFrameWindow && e.source !== activeFrameWindow) return;
+    if (activeFrameWindow && !fromActiveFrame(e.source)) return;
     const data = e && e.data;
     if (!data || typeof data !== 'object') return;
     markLoaded();
     const type = (data as { type?: unknown }).type;
     if (type === EMBED_CLOSE_MESSAGE || type === LEGACY_CLOSE_MESSAGE) close();
+    if (type === EMBED_SIZE_MESSAGE || type === LEGACY_SIZE_MESSAGE) {
+      const { width, height } = data as { width?: unknown; height?: unknown };
+      if (typeof width === 'number' && typeof height === 'number' && width > 0 && height > 0) {
+        fitFrame(width, height);
+      }
+    }
+  }
+
+  /** Give the frame the demo's own ratio, still capped to the viewport. */
+  function fitFrame(width: number, height: number): void {
+    const frame = doc.querySelector('#' + ROOT_ID + ' .idm-frame') as HTMLElement | null;
+    if (!frame) return;
+    frame.style.aspectRatio = width + ' / ' + height;
+    frame.style.width = 'min(1100px, 92vw, calc(88vh * ' + width + ' / ' + height + '))';
   }
 
   function markLoaded(): void {

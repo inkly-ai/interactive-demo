@@ -58,6 +58,18 @@ export async function putDemoFiles(
   );
 }
 
+export interface EmbedSnippets {
+  /** Where the built page lands once `dist/` is deployed (host is a placeholder). */
+  pageUrl: string;
+  inline: string;
+  popup: { loader: string; triggers: Record<'html' | 'react' | 'next' | 'vue' | 'svelte', string> };
+}
+
+/** The embed snippets for the demo's static build, from the same builders the CLI uses. */
+export async function getDemoEmbed(slug: string): Promise<EmbedSnippets> {
+  return json(await fetch(demoPath(slug, 'embed'), { cache: 'no-store' }));
+}
+
 export async function listDemoAssets(slug: string): Promise<AssetMeta[]> {
   const body = await json<{ assets: AssetMeta[] }>(
     await fetch(demoPath(slug, 'assets'), { cache: 'no-store' }),

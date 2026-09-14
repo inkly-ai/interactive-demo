@@ -5,6 +5,7 @@ const api = vi.hoisted(() => ({
     getDemoFiles: vi.fn(),
     listDemoAssets: vi.fn(),
     putDemoFiles: vi.fn(),
+    getDemoEmbed: vi.fn(),
 }));
 const toast = vi.hoisted(() => ({ error: vi.fn() }));
 vi.mock("@/api", () => api);
@@ -192,5 +193,46 @@ describe("EditorShell saving", () => {
         });
         expect(api.putDemoFiles).toHaveBeenCalledWith("tour", { "demo.config.json": "v1" }, [], { keepalive: true });
         Object.defineProperty(document, "visibilityState", { value: "visible", configurable: true });
+    });
+});
+
+describe("EditorShell header", () => {
+    beforeEach(() => {
+        api.getDemoFiles.mockResolvedValue({
+            files: { "demo.config.json": JSON.stringify({ title: "Onboarding tour" }) },
+            binary: [],
+        });
+        api.listDemoAssets.mockResolvedValue([]);
+        api.getDemoEmbed.mockResolvedValue({
+            pageUrl: "https://YOUR-HOST/onboarding/",
+            inline: '<iframe src="https://YOUR-HOST/onboarding/?embed=inline"></iframe>',
+            popup: {
+                loader: '<script src="https://YOUR-HOST/embed.js" async></script>',
+                triggers: { html: "<button>html</button>", react: "<button>react</button>", next: "next", vue: "vue", svelte: "svelte" },
+            },
+        });
+    });
+
+    it("shows the title alone, themed Open demo and Share buttons, and no home link or slug", async () => {
+        render(<EditorShell slug="onboarding" />);
+        await act(flushMicrotasks);
+        expect(screen.getByText("Onboarding tour")).toBeTruthy();
+        expect(screen.queryByLabelText("All demos")).toBeNull();
+        expect(document.querySelector("header code")).toBeNull();
+        const open = screen.getByText("Open demo").closest("a")!;
+        expect(open.getAttribute("href")).toBe("/onboarding/");
+        expect(open.className).toContain("btn-3d-secondary");
+        expect(screen.getByText("Share").closest("button")!.className).toContain("btn-3d-primary");
+    });
+
+    it("Share opens the embed instructions with the snippets from the dev server", async () => {
+        render(<EditorShell slug="onboarding" />);
+        await act(flushMicrotasks);
+        fireEvent.click(screen.getByText("Share"));
+        await act(flushMicrotasks);
+        expect(api.getDemoEmbed).toHaveBeenCalledWith("onboarding");
+        expect(screen.getByText("Share this demo")).toBeTruthy();
+        expect(screen.getByText(/onboarding\/\?embed=inline/)).toBeTruthy();
+        expect(screen.getByText(/YOUR-HOST\/embed\.js/)).toBeTruthy();
     });
 });

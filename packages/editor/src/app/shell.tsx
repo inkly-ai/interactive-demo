@@ -1,4 +1,4 @@
-import { ExternalLinkIcon, HomeIcon } from "lucide-react";
+import { ExternalLinkIcon, Share2Icon } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
@@ -7,6 +7,7 @@ import { CONFIG_PATH, parseDemoConfig } from "@/components/demo-editor/codec";
 import { DemoEditorView } from "@/components/demo-editor/view";
 import { lineDiff } from "@/components/preview-client/helpers";
 import { SaveBadge } from "@/components/preview-client/sub-components";
+import { ShareDialog } from "./share-dialog";
 import { Button } from "@/components/ui/button";
 import { type AssetMeta } from "@/lib/assets";
 
@@ -55,6 +56,7 @@ export function EditorShell({ slug }: { slug: string }) {
     const [saveStatus, setSaveStatus] = useState<
         "idle" | "saving" | "saved" | "error"
     >("idle");
+    const [shareOpen, setShareOpen] = useState(false);
 
     useEffect(() => {
         filesRef.current = files ?? {};
@@ -300,34 +302,27 @@ export function EditorShell({ slug }: { slug: string }) {
 
     return (
         <div className="flex h-screen w-screen flex-col overflow-hidden bg-background text-foreground">
-            <header className="flex h-11 shrink-0 items-center gap-3 border-b px-3">
-                <Button
-                    variant="ghost"
-                    size="icon"
-                    nativeButton={false}
-                    render={<a href="#/" aria-label="All demos" />}
-                >
-                    <HomeIcon className="size-4" />
-                </Button>
-                <div className="flex min-w-0 items-baseline gap-2">
-                    <span className="truncate text-sm font-medium">{title}</span>
-                    <code className="text-xs text-muted-foreground">{slug}</code>
-                </div>
+            <header className="flex h-12 shrink-0 items-center gap-3 border-b px-4">
+                <span className="truncate text-sm font-semibold">{title}</span>
                 <div className="ml-auto flex items-center gap-2">
                     <span title={dirtyTitle || undefined} data-testid="save-badge">
                         <SaveBadge hasUnsavedChanges={dirty.size > 0} status={saveStatus} />
                     </span>
                     <Button
-                        variant="outline"
-                        size="sm"
+                        variant="secondary"
                         nativeButton={false}
                         render={<a href={demoHref(slug)} target="_blank" rel="noreferrer" />}
                     >
                         Open demo
                         <ExternalLinkIcon className="size-3.5" />
                     </Button>
+                    <Button variant="primary" onClick={() => setShareOpen(true)}>
+                        <Share2Icon className="size-3.5" />
+                        Share
+                    </Button>
                 </div>
             </header>
+            <ShareDialog slug={slug} open={shareOpen} onOpenChange={setShareOpen} />
             <section className="relative min-h-0 flex-1">
                 {loadError ? (
                     <div className="p-6 text-sm text-destructive">{loadError}</div>

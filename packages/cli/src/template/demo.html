@@ -16,6 +16,26 @@
           if (ev.key !== "Escape" || window.parent === window) return;
           try { window.parent.postMessage({ type: "interactive-demo:close" }, "*"); } catch (e) {}
         });
+        // Tell the pop-up loader the player's rendered size so the overlay
+        // takes the demo's own ratio (header included) instead of 16:9.
+        if (!embed || window.parent === window) return;
+        var last = "";
+        function postSize() {
+          var player = document.querySelector(".demo-player");
+          if (!player) return;
+          var rect = player.getBoundingClientRect();
+          if (!rect.width || !rect.height) return;
+          var key = Math.round(rect.width) + "x" + Math.round(rect.height);
+          if (key === last) return;
+          last = key;
+          try {
+            window.parent.postMessage({ type: "interactive-demo:size", width: Math.round(rect.width), height: Math.round(rect.height) }, "*");
+          } catch (e) {}
+        }
+        window.addEventListener("load", postSize);
+        window.addEventListener("resize", postSize);
+        if ("ResizeObserver" in window) new ResizeObserver(postSize).observe(document.documentElement);
+        setTimeout(postSize, 0); setTimeout(postSize, 250); setTimeout(postSize, 1000);
       })();
     </script>
     <style>

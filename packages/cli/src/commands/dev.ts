@@ -778,6 +778,7 @@ export async function runDev(options: DevOptions): Promise<DevHandle> {
                   themeId: state.project.theme,
                   themeTokens: state.project.tokens ?? null,
                   project: state.project,
+                  editHref: editorDir ? `${EDITOR_STATIC_PREFIX}/#/${demo.slug}` : null,
                 });
                 // Vite adds its client script so `full-reload` reaches the page.
                 vite.transformIndexHtml(pathname, html).then(

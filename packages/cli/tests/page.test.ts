@@ -130,6 +130,21 @@ describe('page header', () => {
     expect(html).toContain('<a href="https://acme.example/start" class="demo-page-cta is-primary" target="_blank" rel="noopener noreferrer">Get started</a>');
   });
 
+  it('renders a same-origin Edit button ahead of the CTAs only when dev passes an editor link', () => {
+    const withEdit = renderPageHeader({
+      project: { name: 'Acme', brand: { cta: { label: 'Start', href: 'https://acme.example' } } },
+      demoTitle: 'Tour',
+      themeId: 'default',
+      editHref: '/__demo/editor/#/tour',
+    });
+    expect(withEdit).toContain('<a href="/__demo/editor/#/tour" class="demo-page-cta is-secondary demo-page-edit">Edit</a>');
+    expect(withEdit).not.toContain('demo-page-edit" target');
+    expect(withEdit.indexOf('demo-page-edit')).toBeLessThan(withEdit.indexOf('is-primary'));
+
+    const built = renderPageHeader({ project: { name: 'Acme' }, demoTitle: 'Tour', themeId: 'default' });
+    expect(built).not.toContain('demo-page-edit');
+  });
+
   it('keys the buttons on the effective theme and carries the primary token as the accent', () => {
     const html = renderDemoPage({
       template,

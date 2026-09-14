@@ -141,6 +141,8 @@ export interface DemoPageInput {
   themeTokens?: ThemeTokens | null;
   /** Project name + brand for the page header above the player. */
   project?: DemoPageProject | null;
+  /** Same-origin link to this demo in the local editor. `dev` only; `build` leaves it out. */
+  editHref?: string | null;
 }
 
 export interface DemoPageProject {
@@ -178,6 +180,8 @@ export function renderPageHeader(input: {
   demoTitle: string;
   themeId: string;
   accent?: string | null;
+  /** Link to the local editor for this demo; rendered as an Edit button ahead of the CTAs. */
+  editHref?: string | null;
 }): string {
   const brand = input.project?.brand ?? null;
   const logoUrl = brandLogoPageUrl(brand);
@@ -199,6 +203,9 @@ export function renderPageHeader(input: {
   }
   parts.push(`<span class="demo-page-demo-name">${escapeHtml(input.demoTitle)}</span>`);
   const ctas: string[] = [];
+  if (input.editHref) {
+    ctas.push(`<a href="${attr(input.editHref)}" class="demo-page-cta is-secondary demo-page-edit">Edit</a>`);
+  }
   if (brand?.secondaryCta) ctas.push(externalLink('demo-page-cta is-secondary', brand.secondaryCta));
   if (brand?.cta) ctas.push(externalLink('demo-page-cta is-primary', brand.cta));
   const accentStyle = input.accent ? ` style="--demo-page-accent: ${attr(input.accent)}"` : '';
@@ -248,6 +255,7 @@ export function renderDemoPage(input: DemoPageInput): string {
     demoTitle: title,
     themeId: config.theme?.preset ?? 'default',
     accent: config.theme?.tokens?.primary ?? null,
+    editHref: input.editHref ?? null,
   });
   html = html.includes(HEADER_PLACEHOLDER)
     ? html.replace(HEADER_PLACEHOLDER, header)

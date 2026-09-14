@@ -5,6 +5,7 @@ import type { AssetEntry, AssetKind } from '@inkly-org/interactive-demo/schema';
 import { ASSETS_DIR } from '../assets.js';
 import { LocalFsWorkspace, type WorkspaceProvider } from '../workspace.js';
 import { MAX_ASSET_BYTES, assertSafeAssetPath, nextGeneratedAssetId } from './asset-helpers.js';
+import { buildInlineIframe, buildPopupButton, buildPopupLoader } from '../publish/embed-snippets.js';
 
 export { MAX_ASSET_BYTES, generatedAssetId } from './asset-helpers.js';
 
@@ -227,6 +228,40 @@ function toEditorAsset(
  * Handle one request. Returns `false` when the URL is not an editor API
  * route so the caller can fall through to the next middleware.
  */
+/** Host placeholder in the snippets the editor's Share dialog shows for a static build. */
+export const EMBED_HOST_PLACEHOLDER = 'https://YOUR-HOST';
+
+export interface EmbedSnippets {
+  /** Where the built demo page lands once `dist/` is deployed. */
+  pageUrl: string;
+  inline: string;
+  popup: { loader: string; triggers: Record<'html' | 'react' | 'next' | 'vue' | 'svelte', string> };
+}
+
+/**
+ * The embed snippets for a demo's static build, built by the same code the
+ * `embed` command uses so the editor never shows a different shape. The
+ * host is a placeholder: the editor does not know where `dist/` will live.
+ */
+export function embedSnippetsFor(slug: string): EmbedSnippets {
+  const pageUrl = `${EMBED_HOST_PLACEHOLDER}/${slug.split('/').map(encodeURIComponent).join('/')}/`;
+  const label = 'Try the demo';
+  return {
+    pageUrl,
+    inline: buildInlineIframe(pageUrl),
+    popup: {
+      loader: buildPopupLoader(EMBED_HOST_PLACEHOLDER),
+      triggers: {
+        html: buildPopupButton('html', pageUrl, label),
+        react: buildPopupButton('react', pageUrl, label),
+        next: buildPopupButton('next', pageUrl, label),
+        vue: buildPopupButton('vue', pageUrl, label),
+        svelte: buildPopupButton('svelte', pageUrl, label),
+      },
+    },
+  };
+}
+
 export async function handleEditorApi(
   req: IncomingMessage,
   res: ServerResponse,
@@ -237,7 +272,7 @@ export async function handleEditorApi(
   if (!pathname.startsWith(EDITOR_API_DEMOS_PREFIX)) return false;
 
   const rest = pathname.slice(EDITOR_API_DEMOS_PREFIX.length);
-  const match = /^(.+)\/(files|assets)$/.exec(rest);
+  const match = /^(.+)\/(files|assets|embed)$/.exec(rest);
   if (!match) {
     sendJson(res, 404, { error: 'not found' });
     return true;
@@ -249,7 +284,7 @@ export async function handleEditorApi(
     sendJson(res, 400, { error: 'bad slug' });
     return true;
   }
-  const resource = match[2] as 'files' | 'assets';
+  const resource = match[2] as 'files' | 'assets' | 'embed';
   const demo = deps.findDemo(slug);
   if (!demo) {
     sendJson(res, 404, { error: `No such demo: ${slug}` });
@@ -261,6 +296,10 @@ export async function handleEditorApi(
   const params = new URLSearchParams(query);
 
   try {
+    if (resource === 'embed' && req.method === 'GET') {
+      sendJson(res, 200, embedSnippetsFor(slug));
+      return true;
+    }
     if (resource === 'files' && req.method === 'GET') {
       const paths = await workspace.listFiles(demoDir);
       const files: Record<string, string> = {};

@@ -52,6 +52,17 @@ describe('dev server editor API', () => {
     expect(body.binary).toEqual(['assets/shot.png']);
   });
 
+  it('serves the embed snippets for a demo with a host placeholder', async () => {
+    const res = await fetch(`${handle!.url}__demo/editor/demos/tour/embed`);
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { pageUrl: string; inline: string; popup: { loader: string; triggers: Record<string, string> } };
+    expect(body.pageUrl).toBe('https://YOUR-HOST/tour/');
+    expect(body.inline).toContain('src="https://YOUR-HOST/tour/?embed=inline"');
+    expect(body.popup.loader).toContain('src="https://YOUR-HOST/embed.js"');
+    expect(Object.keys(body.popup.triggers)).toEqual(['html', 'react', 'next', 'vue', 'svelte']);
+    expect(body.popup.triggers.html).toContain("InteractiveDemo.open('https://YOUR-HOST/tour/')");
+  });
+
   it('writes files, deletes files and refreshes the served state', async () => {
     const edited = { ...(minimalDemoConfig('Edited') as object) };
     const res = await fetch(`${handle!.url}__demo/editor/demos/tour/files`, {

@@ -60,6 +60,28 @@ It gives you:
 The page lists what to look for at the bottom — the parts that only a browser
 can show (letterboxing, scroll locking, the overlay ratio).
 
+## Re-shooting the self-demo
+
+`examples/self-demo` is a walkthrough of this product whose screens are all
+real. `testbed/shoot.mjs` produces them:
+
+```
+npm run build
+node testbed/shoot.mjs           # writes examples/self-demo/demos/product-tour/assets/
+node testbed/shoot.mjs --keep    # and leave the throwaway project behind
+node testbed/shoot.mjs --out /tmp/shots   # somewhere else, to compare first
+```
+
+It scaffolds a project, records `testbed/app/` with the real `capture` command
+(clicks driven over CDP), writes the capture up, builds it, serves it from the
+stand-in site, and photographs the dev preview, the editor, the Share dialog
+and both embeds — plus two terminal cards rendered from the transcripts of the
+commands it just ran. Needs Chrome.
+
+Element positions land in `metrics.json` beside the screens; the hotspot
+coordinates in `demo.config.json` come from there. A re-shoot never touches the
+copy or the hotspots, so check they still land where they should afterwards.
+
 ## The manual pass
 
 The automated run covers everything reachable over HTTP and the filesystem.

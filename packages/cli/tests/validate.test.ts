@@ -8,17 +8,17 @@ import { PROJECT_FILE } from '../src/project';
 import { starterDemoConfig, titleFromSlug } from '../src/starter';
 
 /**
- * A captured demo references its screenshots as `asset:<id>` and registers
- * each one in `assets.json` with a `file` that lives in the demo's `assets/`
- * dir. That is a fully valid, previewable state and must NOT warn.
+ * A captured demo references its screenshots by path under the demo's
+ * `assets/` folder. That is a fully valid, previewable state and must NOT
+ * warn.
  */
-describe('runValidate — local assets', () => {
+describe('runValidate — media paths', () => {
   let workdir: string;
   let projectDir: string;
 
-  const SHA = 'a'.repeat(64);
+  const FILE = `${'a'.repeat(64)}.png`;
 
-  async function writeCapturedDemo(opts: { withFile: boolean }): Promise<void> {
+  async function writeCapturedDemo(opts: { src: string; withFile: boolean }): Promise<void> {
     const demoDir = join(projectDir, 'demos', 'tour');
     await mkdir(join(demoDir, 'assets'), { recursive: true });
     await writeFile(
@@ -31,34 +31,14 @@ describe('runValidate — local assets', () => {
           {
             kind: 'content',
             id: 's1',
-            background: {
-              type: 'image',
-              src: `asset:cap-001`,
-              naturalWidth: 1440,
-              naturalHeight: 900,
-            },
+            background: { type: 'image', src: opts.src, naturalWidth: 1440, naturalHeight: 900 },
             advance: { trigger: 'click' },
           },
         ],
       }),
     );
-    await writeFile(
-      join(demoDir, 'assets.json'),
-      JSON.stringify({
-        version: 1,
-        assets: [
-          {
-            id: 'cap-001',
-            sha256: SHA,
-            kind: 'image',
-            contentType: 'image/png',
-            file: `${SHA}.png`,
-          },
-        ],
-      }),
-    );
     if (opts.withFile) {
-      await writeFile(join(demoDir, 'assets', `${SHA}.png`), 'png-bytes');
+      await writeFile(join(demoDir, 'assets', FILE), 'png-bytes');
     }
     await writeFile(
       join(projectDir, PROJECT_FILE),
@@ -77,35 +57,30 @@ describe('runValidate — local assets', () => {
     await rm(workdir, { recursive: true, force: true });
   });
 
-  it('does not warn when the local asset file exists in the demo assets/ dir', async () => {
-    await writeCapturedDemo({ withFile: true });
+  it('does not warn when the referenced file exists in the demo assets/ dir', async () => {
+    await writeCapturedDemo({ src: `assets/${FILE}`, withFile: true });
     const result = await runValidate({ cwd: projectDir, silent: true });
     expect(result.errors).toBe(0);
     expect(result.warnings).toBe(0);
     expect(result.issues).toHaveLength(0);
   });
 
-  it('warns when the asset file is registered but missing on disk', async () => {
-    await writeCapturedDemo({ withFile: true });
-    await rename(
-      join(projectDir, 'demos', 'tour', 'assets', `${SHA}.png`),
-      join(projectDir, 'demos', 'tour', 'assets', `${SHA}.png.bak`),
-    );
-    const result = await runValidate({ cwd: projectDir, silent: true });
-    expect(result.errors).toBe(0);
-    expect(result.warnings).toBe(1);
-    expect(result.issues[0]?.message).toMatch(/cap-001/);
-  });
-
-  it('errors when the config references an asset id the manifest does not have', async () => {
-    await writeCapturedDemo({ withFile: true });
-    await writeFile(
-      join(projectDir, 'demos', 'tour', 'assets.json'),
-      JSON.stringify({ version: 1, assets: [] }),
-    );
+  it('errors when the referenced file is missing on disk', async () => {
+    await writeCapturedDemo({ src: `assets/${FILE}`, withFile: true });
+    await rename(join(projectDir, 'demos', 'tour', 'assets', FILE), join(projectDir, 'demos', 'tour', 'assets', `${FILE}.bak`));
     const result = await runValidate({ cwd: projectDir, silent: true });
     expect(result.ok).toBe(false);
-    expect(result.issues.some((i) => i.level === 'error' && /asset:cap-001/.test(i.message))).toBe(true);
+    expect(result.issues[0]?.message).toBe(`References assets/${FILE}, but demos/tour/assets/${FILE} does not exist.`);
+  });
+
+  it('errors on a path that escapes the demo folder and on an asset pointer', async () => {
+    await writeCapturedDemo({ src: '../secrets.png', withFile: false });
+    let result = await runValidate({ cwd: projectDir, silent: true });
+    expect(result.issues.some((i) => i.level === 'error' && /escapes the demo folder/.test(i.message))).toBe(true);
+
+    await writeCapturedDemo({ src: 'asset:cap-001', withFile: false });
+    result = await runValidate({ cwd: projectDir, silent: true });
+    expect(result.issues.some((i) => i.level === 'error' && /asset pointers are not supported/.test(i.message))).toBe(true);
   });
 });
 

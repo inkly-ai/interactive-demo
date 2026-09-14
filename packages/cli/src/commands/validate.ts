@@ -1,7 +1,8 @@
 import { existsSync } from 'node:fs';
 import { demoThemePresetsById } from '@inkly-org/interactive-demo/themes';
 import { brandLogoSourcePath, isAbsoluteBrandRef, loadProject, PROJECT_FILE, validateSlugForPath } from '../project.js';
-import { hasLocalAssetBytes, hasRemoteAsset } from '../assets.js';
+import { collectMediaPaths, mapMediaRefs } from '../media.js';
+import { resolve, sep } from 'node:path';
 
 export interface ValidateOptions {
   cwd: string;
@@ -33,20 +34,6 @@ function add(
   issues.push({ level, file, message });
 }
 
-function collectAssetRefs(value: unknown, refs: Set<string>): void {
-  if (typeof value === 'string') {
-    if (value.startsWith('asset:')) refs.add(value.slice('asset:'.length));
-    return;
-  }
-  if (!value || typeof value !== 'object') return;
-  if (Array.isArray(value)) {
-    for (const item of value) collectAssetRefs(item, refs);
-    return;
-  }
-  for (const nested of Object.values(value as Record<string, unknown>)) {
-    collectAssetRefs(nested, refs);
-  }
-}
 
 export async function runValidate(options: ValidateOptions): Promise<ValidateResult> {
   const issues: ValidateIssue[] = [];
@@ -105,30 +92,33 @@ export async function runValidate(options: ValidateOptions): Promise<ValidateRes
         );
       }
 
-      const refs = new Set<string>();
-      collectAssetRefs(demo.config, refs);
-      const assets = new Set((demo.assets?.assets ?? []).map((asset) => asset.id));
-      for (const ref of refs) {
-        if (!assets.has(ref)) {
+      // Every relative media path must be a file inside the demo folder.
+      const root = resolve(demo.dir);
+      for (const path of collectMediaPaths(demo.config)) {
+        const abs = resolve(root, path);
+        if (abs !== root && !abs.startsWith(root + sep)) {
+          add(issues, 'error', `demos/${demo.slug}/demo.config.json`, `References ${path}, which escapes the demo folder.`);
+        } else if (!existsSync(abs)) {
           add(
             issues,
             'error',
             `demos/${demo.slug}/demo.config.json`,
-            `References asset:${ref}, but demos/${demo.slug}/assets.json has no matching asset id.`,
+            `References ${path}, but demos/${demo.slug}/${path} does not exist.`,
           );
         }
       }
-      for (const asset of demo.assets?.assets ?? []) {
-        if (await hasLocalAssetBytes(demo.dir, asset)) continue;
-        if (!hasRemoteAsset(asset)) {
+      // The pre-release pointer form is no longer resolved by anything.
+      mapMediaRefs(demo.config, (value) => {
+        if (value.startsWith('asset:')) {
           add(
             issues,
-            'warning',
-            `demos/${demo.slug}/assets.json`,
-            `Asset "${asset.id}" has no local file and no absolute URL.`,
+            'error',
+            `demos/${demo.slug}/demo.config.json`,
+            `References ${value}: asset pointers are not supported; use a path under assets/ or an absolute URL.`,
           );
         }
-      }
+        return value;
+      });
     }
 
     for (const [id, slugs] of idToSlugs) {

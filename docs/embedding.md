@@ -4,7 +4,7 @@
 
 ```
 dist/<slug>/
-  index.html      the page (five lines: stylesheet, two JSON script tags, root, player.js)
+  index.html      the page (four lines: stylesheet, the config script tag, root, player.js)
   player.js       the player with React bundled in
   player.css      the stylesheet
   player-fonts.css  optional self-hosted files: fonts/*.woff2 and backgrounds/ (the
@@ -78,24 +78,29 @@ HTML, React, Next.js, Vue and Svelte.
 
 ## Using the React component instead
 
-If the host page is React, skip the iframe and render the player inline:
+If the host page is React, skip the iframe and render the player inline.
+Copy the demo folder into your app's static files (Next.js: `public/`,
+Vite: `public/`) and point the player at it:
 
 ```tsx
 import { Demo } from '@inkly-org/interactive-demo';
 import '@inkly-org/interactive-demo/styles.css';
-import config from './demo.config.json';
-import manifest from './assets.json';
 
-<Demo
-  config={config}
-  assets={manifest.assets}
-  resolveAssetUrl={(entry) => `/demos/onboarding/assets/${entry.file}`}
-/>
+<Demo src="/demos/onboarding/" />
 ```
 
-`resolveAssetUrl` turns a manifest entry into the URL your site serves the
-file at. Copy the demo's `assets/` folder somewhere your bundler or static
-server exposes and point the resolver at it.
+The component fetches `demo.config.json` from that folder and resolves the
+media paths in it against the same folder. To import the config at build
+time instead, pass the object and say where its folder is served from:
+
+```tsx
+import config from './demos/onboarding/demo.config.json';
+
+<Demo src={config} baseUrl="/demos/onboarding/" />
+```
+
+Media served from somewhere else, such as a CDN, goes through
+`resolveAssetUrl={(path) => …}`, which receives each relative path.
 
 The component takes the same config the static page embeds, so a demo
 authored in the editor works in both places without changes.
@@ -114,7 +119,7 @@ function TryTheDemo() {
     <>
       <button onClick={() => setOpen(true)}>Try the demo</button>
       <DemoModal open={open} onClose={() => setOpen(false)} label="Onboarding demo">
-        <Demo config={config} assets={manifest.assets} resolveAssetUrl={resolve} />
+        <Demo src="/demos/onboarding/" />
       </DemoModal>
     </>
   );

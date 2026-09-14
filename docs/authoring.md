@@ -9,7 +9,6 @@ my-demos/
   demos/
     onboarding/
       demo.config.json         the demo
-      assets.json              manifest: asset id → file, size, sha256
       assets/                  screenshots, recordings, audio
     billing/
       …
@@ -94,7 +93,7 @@ from widgets).
   "label": "Dashboard",
   "background": {
     "type": "image",
-    "src": "asset:cap-001",
+    "src": "assets/screen-001.png",
     "naturalWidth": 1440,
     "naturalHeight": 900,
     "alt": "The dashboard after sign-in"
@@ -105,7 +104,7 @@ from widgets).
       "text": "Create a project from here." }
   ],
   "captions": [{ "id": "c1", "start": 0, "end": 2500, "text": "Create a project" }],
-  "voiceover": { "src": "asset:vo-001" },
+  "voiceover": { "src": "assets/screen-001.mp3" },
   "transform": { "zoom": 1.6, "x": 0.72, "y": 0.18 },
   "advance": { "trigger": "click" }
 }
@@ -163,32 +162,23 @@ controls the frame around the screen: `hideHeader`, `controls`
 
 ## Assets
 
-Configs never contain file paths. They reference `asset:<id>`, and
-`assets.json` maps the id to a file under `assets/`:
+A config references its media by path, relative to the demo folder:
 
 ```json
-{
-  "version": 1,
-  "assets": [
-    { "id": "cap-001", "kind": "image", "contentType": "image/png",
-      "file": "screen-001.png", "size": 182331, "sha256": "…",
-      "viewport": { "w": 1440, "h": 900 } }
-  ]
-}
+"background": { "type": "image", "src": "assets/screen-001.png" }
 ```
 
-`file` is relative to `assets/`. An entry may instead carry an absolute
-`publicUrl` for a file hosted elsewhere. The dev server, `validate` and
-`build` all resolve assets through this manifest, so a missing file is
-reported by `validate` and a renamed folder never breaks a demo.
-
-The editor's asset panel adds files to the manifest for you. By hand: copy
-the file into `assets/`, add an entry with a fresh id, and reference it.
+Anything under `assets/` works, as does an absolute URL for a file hosted
+elsewhere. `validate` reports a path that has no file behind it, `dev` and
+`build` serve the folder next to the page, and `publish` uploads each
+referenced file once and rewrites the paths to the hosted URLs in the copy
+it sends. The editor's asset panel writes the path for you; by hand, copy
+the file into `assets/` and reference it.
 
 ## What capture writes
 
-`capture stop` writes `demos/<slug>/` with the config, the manifest and
-readable asset names: `screen-001.png`, `screen-002.webm` plus
+`capture stop` writes `demos/<slug>/` with the config and readable file
+names: `screen-001.png`, `screen-002.webm` plus
 `screen-002-poster.png` for a video step. Each click becomes a content step
 with a `pointer` annotation on the clicked element and a zoom towards it;
 the element's label becomes the step label. Scrolling or typing right
@@ -198,8 +188,7 @@ still instead.
 ## Adding a video step by hand
 
 1. Put the recording in `assets/` (WebM or MP4) and a poster frame next to it.
-2. Add both to `assets.json` (`kind: "video"` and `kind: "image"`).
-3. Add a content step with a video background:
+2. Add a content step with a video background:
 
 ```json
 {
@@ -207,8 +196,8 @@ still instead.
   "id": "s3",
   "background": {
     "type": "video",
-    "src": "asset:clip-001",
-    "posterSrc": "asset:clip-001-poster",
+    "src": "assets/clip-001.webm",
+    "posterSrc": "assets/clip-001-poster.png",
     "naturalWidth": 1440,
     "naturalHeight": 900,
     "autoplay": true,

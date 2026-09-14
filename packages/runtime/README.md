@@ -18,33 +18,33 @@ npm install @inkly-org/interactive-demo react react-dom
 ```tsx
 import { Demo } from '@inkly-org/interactive-demo';
 import '@inkly-org/interactive-demo/styles.css';
-import config from './demo.config.json';
 
 export function ProductTour() {
-  return <Demo config={config} />;
+  return <Demo src="/demos/onboarding/" />;
 }
 ```
 
-`Demo` validates `config` with `DemoSchema` and renders the player. Props of
-note: `themeId`, `themeTokens`, `assets` + `resolveAssetUrl` (to resolve
-`asset:<id>` references), `onEvent` (step views, completion, CTA clicks,
-form submits), `layout` and `controls`.
+`src` is either the demo folder's URL (the config is fetched from it and
+media resolves against it) or the config object itself (an imported
+`demo.config.json`; pass `baseUrl` for the folder its media lives in).
+`Demo` validates the config with `DemoSchema` and renders the player. Props
+of note: `baseUrl`, `resolveAssetUrl` (a custom rule for relative media
+paths, e.g. a CDN), `themeId`, `themeTokens`, `onEvent` (step views,
+completion, CTA clicks, form submits), `layout` and `controls`.
 
 ## Use the self-contained player on a static page
 
-`player.js` bundles React and the player. A page mounts a demo with two
-JSON script tags and a root element:
+`player.js` bundles React and the player. A page mounts a demo with one
+JSON script tag and a root element:
 
 ```html
 <link rel="stylesheet" href="./player.css" />
 <script id="demo-config" type="application/json">{ /* demo.config.json */ }</script>
-<script id="demo-assets" type="application/json">[ /* assets.json → assets[] */ ]</script>
 <div id="root"></div>
 <script src="./player.js"></script>
 ```
 
-`demo-assets` is optional. `asset:<id>` references resolve to the entry's
-`publicUrl` when set, otherwise to `./assets/<file>` relative to the page.
+Media paths in the config (`assets/<file>`) resolve relative to the page.
 The CLI's `build` command writes exactly this layout.
 
 The page's `#root` gets the demo-level canvas background (`background` /

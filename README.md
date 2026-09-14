@@ -64,33 +64,36 @@ loader, and the `DemoModal` component for React apps.
 npm install @inkly-org/interactive-demo react react-dom
 ```
 
+Copy the demo folder into your app's static files and point the player at it:
+
 ```tsx
 import { Demo } from '@inkly-org/interactive-demo';
 import '@inkly-org/interactive-demo/styles.css';
-import config from './demos/onboarding/demo.config.json';
 
 export function OnboardingDemo() {
-  return <Demo config={config} />;
+  return <Demo src="/demos/onboarding/" />;
 }
 ```
 
-Assets referenced as `asset:<id>` resolve through the `assets` and
-`resolveAssetUrl` props; see the [runtime README](packages/runtime/README.md).
+`src` is the folder: the component fetches `demo.config.json` from it and
+loads the screenshots next to it. If you already have the config in hand,
+pass the object instead: `<Demo src={config} baseUrl="/demos/onboarding/" />`.
+See the [runtime README](packages/runtime/README.md) for the other props.
 
 ## The static page contract
 
-Every built page is the same five lines, so you can also assemble one yourself:
+Every built page is the same four lines, so you can also assemble one yourself:
 
 ```html
 <link rel="stylesheet" href="./player.css">
 <script id="demo-config" type="application/json">{ …demo.config.json… }</script>
-<script id="demo-assets" type="application/json">[ …assets.json → assets… ]</script>
 <div id="root"></div>
 <script src="./player.js"></script>
 ```
 
-`player.js` bundles React and the player. `asset:<id>` references resolve to
-the manifest entry's `publicUrl`, or to `./assets/<file>` next to the page.
+`player.js` bundles React and the player. Media paths in the config
+(`assets/<file>`) resolve relative to the page, so keep the page in the
+demo folder.
 
 ## Requirements
 

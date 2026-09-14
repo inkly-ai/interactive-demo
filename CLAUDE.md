@@ -27,9 +27,10 @@ then the four commands) is the bar before calling anything done.
 ## Conventions worth knowing
 
 - Reserved internal slug and route prefix: `__demo`. Page contract for static output:
-  `#demo-config` + `#demo-assets` JSON script tags, `#root`, `player.js`/`player.css`;
+  the `#demo-config` JSON script tag, `#root`, `player.js`/`player.css`;
   the player exposes `window.__demo` and honours `?autoplay=1`.
-- Assets live at `demos/<slug>/assets/<file>` with an `assets.json` manifest; `asset:<id>` URIs
-  resolve to `publicUrl` or `./assets/<file>`.
+- Media lives at `demos/<slug>/assets/<file>` and the config references it by that relative
+  path; there is no manifest. `publish` hashes the referenced files and rewrites the paths to
+  hosted URLs in the frozen copy. `packages/cli/src/media.ts` is the one walker.
 - The "Built with Inkly" badge is on by default (`chrome.branding: false` hides it); it links to inklyai.dev.
 - `capture` is headed by default; `--headless` opts in; video needs `ffmpeg` on PATH.

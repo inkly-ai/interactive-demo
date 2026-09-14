@@ -89,12 +89,27 @@ export type RootProps = {
    */
   resolveAssetUri?: (uri: string) => string;
   /**
+   * Where relative media paths in the config (`assets/shot.png`) are
+   * served from: the demo's folder as a URL, absolute or site-relative,
+   * with or without a trailing slash. Relative paths are joined onto it;
+   * absolute URLs pass through untouched. `resolveAssetUri`, when given,
+   * takes precedence.
+   */
+  baseUrl?: string;
+  /**
    * Absolute URL of this demo. Forwarded to context so
    * the minimal controls' copy-link button can copy it. Omit when there is
    * no public URL yet (e.g. an unsaved editor preview) to hide the button.
    */
   shareUrl?: string | null;
 };
+
+/** `base` + `path`, with one slash between them and a leading `./` dropped. */
+export function joinBaseUrl(base: string, path: string): string {
+  const b = base.endsWith('/') ? base : `${base}/`;
+  const p = path.replace(/^\.\//, '').replace(/^\/+/, '');
+  return `${b}${p}`;
+}
 
 export function Root({
   config,
@@ -109,6 +124,7 @@ export function Root({
   assets,
   resolveAssetUrl,
   resolveAssetUri,
+  baseUrl,
   shareUrl,
 }: RootProps) {
   // Asset URI resolver. Three URI shapes the runtime sees in
@@ -124,11 +140,10 @@ export function Root({
   //      Theme-preview demos, embeds, and any author-supplied external
   //      media land here.
   //
-  //   3. In-repo path (`./assets/foo.png`, `assets/foo.png`) —
-  //      pass-through. The "user dropped a file in the repo" path. Not
-  //      recommended (the pointer model dedups + survives moves better)
-  //      but supported: the host is responsible for serving the bytes at
-  //      the URL the browser computes.
+  //   3. Relative path (`./assets/foo.png`, `assets/foo.png`) — joined
+  //      onto `baseUrl` when the host gives one (the demo's folder), else
+  //      handed to `resolveAssetUri`, else passed through for the browser
+  //      to resolve against the page.
   //
   // Mapping is built once per render and memoised on
   // `[assets, resolveAssetUrl]`. `asset:<id>` not present in the
@@ -154,7 +169,8 @@ export function Root({
         return uri;
       }
       if (!uri.startsWith('asset:')) {
-        return resolveAssetUri ? resolveAssetUri(uri) : uri;
+        if (resolveAssetUri) return resolveAssetUri(uri);
+        return baseUrl ? joinBaseUrl(baseUrl, uri) : uri;
       }
       const id = uri.slice('asset:'.length);
       const entry = byId.get(id);
@@ -175,7 +191,7 @@ export function Root({
       }
       return resolveAssetUrl(entry);
     };
-  }, [assets, resolveAssetUri, resolveAssetUrl]);
+  }, [assets, baseUrl, resolveAssetUri, resolveAssetUrl]);
 
   const player = usePlayerController(config, { resolveAsset });
   // 4-token cascade (primary, secondary, font, radius). Resolve the

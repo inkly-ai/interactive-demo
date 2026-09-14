@@ -2442,6 +2442,25 @@ export function FormWidgetFields({
             </InspectorCollapsibleSection>
 
             <InspectorCollapsibleSection
+                title="Submissions"
+                defaultOpen={false}
+            >
+                <Field label="Send submissions to">
+                    <TextInput
+                        value={widget.submitTo ?? ""}
+                        placeholder="https://hooks.example.com/…"
+                        onChange={(v) => set({ submitTo: v.trim() || undefined })}
+                    />
+                </Field>
+                <p className="text-[11.5px] leading-5 text-muted-foreground">
+                    The player POSTs the fields as JSON to this URL: your own endpoint,
+                    a Zapier or Make webhook, Formspree. It must accept a cross-origin
+                    POST. Leave it empty and submissions only reach the page that embeds
+                    the demo, as a runtime event.
+                </p>
+            </InspectorCollapsibleSection>
+
+            <InspectorCollapsibleSection
                 title="Submit button"
                 defaultOpen={false}
             >

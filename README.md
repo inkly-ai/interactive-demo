@@ -48,7 +48,15 @@ Deploy `dist/` (or one `dist/<slug>/` folder) to any static host and embed:
 </iframe>
 ```
 
-See [docs/embedding.md](docs/embedding.md) for hosting and sizing notes.
+Or open it from a button in a pop-up with the loader `build` puts next to the demos:
+
+```html
+<script src="https://your-site.com/demos/embed.js" async></script>
+<button onclick="InteractiveDemo.open('https://your-site.com/demos/onboarding/')">Try the demo</button>
+```
+
+See [docs/embedding.md](docs/embedding.md) for hosting, sizing, the pop-up
+loader, and the `DemoModal` component for React apps.
 
 ## Use the player as a React component
 

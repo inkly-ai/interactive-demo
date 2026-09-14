@@ -9,6 +9,7 @@ dist/<slug>/
   player.css      the stylesheet
 player-fonts.css   optional self-hosted fonts (with fonts/*.woff2); drop both to fall back to system fonts
   assets/…        screenshots, recordings, audio
+dist/embed.js     the pop-up loader, once for the whole folder (see below)
 ```
 
 Nothing in the folder depends on where it is served from: every URL inside
@@ -51,6 +52,28 @@ Two things to keep:
 - The player never reads or writes anything outside its own document. It
   makes no network requests beyond loading its own files and assets.
 
+## Pop-up
+
+To open a demo from a button instead of holding space for it, include the
+loader once and call `InteractiveDemo.open` with the demo's URL. The loader
+is three kilobytes with no dependencies; `build` writes it to `dist/embed.js`
+and the hosting service serves the same file at `/embed.js`.
+
+```html
+<script>window.InteractiveDemo=window.InteractiveDemo||{q:[],open:function(){(this.q=this.q||[]).push(arguments)}};</script>
+<script src="https://your-site.com/demos/embed.js" async></script>
+
+<button onclick="InteractiveDemo.open('https://your-site.com/demos/onboarding/')">Try the demo</button>
+```
+
+The first line is a stub that queues clicks made before the script arrives.
+`open` draws a scrim and a centred 16:9 frame, loads the page inside it with
+`?embed=inline` so the page shows the player alone, and closes on Escape, on a
+click outside the frame, or on `InteractiveDemo.close()`. A relative URL is
+resolved against the host page. Hosted demos work the same way:
+`interactive-demo embed --mode popup` prints the loader and a button for
+HTML, React, Next.js, Vue and Svelte.
+
 ## Using the React component instead
 
 If the host page is React, skip the iframe and render the player inline:
@@ -74,3 +97,27 @@ server exposes and point the resolver at it.
 
 The component takes the same config the static page embeds, so a demo
 authored in the editor works in both places without changes.
+
+For a pop-up in a React app, wrap the player in `DemoModal` rather than
+loading `embed.js`: it renders the player in-process through a portal with
+the same overlay, so there is no iframe and no second copy of the runtime.
+
+```tsx
+import { useState } from 'react';
+import { Demo, DemoModal } from '@inkly-org/interactive-demo';
+
+function TryTheDemo() {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <button onClick={() => setOpen(true)}>Try the demo</button>
+      <DemoModal open={open} onClose={() => setOpen(false)} label="Onboarding demo">
+        <Demo config={config} assets={manifest.assets} resolveAssetUrl={resolve} />
+      </DemoModal>
+    </>
+  );
+}
+```
+
+`DemoModal` mounts its children only while open, so the demo starts from
+the beginning each time, and it hands focus back to the button on close.

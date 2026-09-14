@@ -55,7 +55,7 @@
             "animation": "shimmer"
           },
           "image": {
-            "src": "asset:shot-editor",
+            "src": "assets/03-editor.png",
             "alt": "The local editor with the slide strip open",
             "naturalWidth": 1440,
             "naturalHeight": 900,
@@ -84,7 +84,7 @@
       "label": "Your demos",
       "background": {
         "type": "image",
-        "src": "asset:shot-demos",
+        "src": "assets/01-demos.png",
         "naturalWidth": 1440,
         "naturalHeight": 900,
         "alt": "The dev server listing three demos"
@@ -110,7 +110,7 @@
       "label": "The player",
       "background": {
         "type": "image",
-        "src": "asset:shot-player",
+        "src": "assets/02-player.png",
         "naturalWidth": 1440,
         "naturalHeight": 900,
         "alt": "The player showing a cover step"
@@ -136,7 +136,7 @@
       "label": "The editor",
       "background": {
         "type": "image",
-        "src": "asset:shot-editor",
+        "src": "assets/03-editor.png",
         "naturalWidth": 1440,
         "naturalHeight": 900,
         "alt": "The editor with the slide strip on the right"
@@ -173,7 +173,7 @@
             "animation": "shimmer"
           },
           "image": {
-            "src": "asset:shot-player",
+            "src": "assets/02-player.png",
             "alt": "The player showing the finished demo",
             "naturalWidth": 1440,
             "naturalHeight": 900,

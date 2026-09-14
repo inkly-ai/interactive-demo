@@ -40,8 +40,8 @@ edge to edge. Size the frame to the demo, which is its screen ratio plus the
 player's header (52px in the default theme, 48px in `mono`):
 
 ```html
-<div style="container-type: inline-size; width: 100%; max-width: calc(max(0px, 80vh - 54px) * 1440 / 900); margin: 0 auto;">
-  <div style="position: relative; width: 100%; height: calc(100cqw * 900 / 1440 + 52px + 2px);">
+<div style="container-type: inline-size; width: 100%; max-width: calc(max(0px, 80vh - 52px) * 1440 / 900); margin: 0 auto;">
+  <div style="position: relative; width: 100%; height: calc(100cqw * 900 / 1440 + 52px);">
     <iframe
       src="https://your-site.com/demos/onboarding/?embed=inline"
       title="Onboarding demo"

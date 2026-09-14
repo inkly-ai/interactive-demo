@@ -48,7 +48,6 @@ export interface InlineSnippetSize {
 }
 
 const INLINE_MAX_HEIGHT_VIEWPORT_PERCENT = 80;
-const INLINE_PLAYER_EDGE_ALLOWANCE_PX = 2;
 
 function formatCssNumber(value: number): string {
   return String(Number(value.toFixed(4)));
@@ -58,8 +57,7 @@ function maxWidthForViewportHeight(size: InlineSnippetSize, unit: 'vh' | 'svh'):
   const { width, height } = size.aspectRatio;
   const chrome = size.verticalChromeHeight ?? 0;
   if (chrome > 0) {
-    const reserve = chrome + INLINE_PLAYER_EDGE_ALLOWANCE_PX;
-    return `calc(max(0px, ${INLINE_MAX_HEIGHT_VIEWPORT_PERCENT}${unit} - ${formatCssNumber(reserve)}px) * ${formatCssNumber(width)} / ${formatCssNumber(height)})`;
+    return `calc(max(0px, ${INLINE_MAX_HEIGHT_VIEWPORT_PERCENT}${unit} - ${formatCssNumber(chrome)}px) * ${formatCssNumber(width)} / ${formatCssNumber(height)})`;
   }
   return `${formatCssNumber(INLINE_MAX_HEIGHT_VIEWPORT_PERCENT * (width / height))}${unit}`;
 }
@@ -67,8 +65,9 @@ function maxWidthForViewportHeight(size: InlineSnippetSize, unit: 'vh' | 'svh'):
 /**
  * Inline iframe — drop straight into a page. No loader script required.
  * With a size, the iframe sits in a wrapper that is exactly the demo's
- * ratio plus its header, so the chrome-free page fills it with no
- * letterbox, capped so it never exceeds 80% of the viewport height.
+ * ratio plus its header, so the chrome-free page (square, borderless,
+ * shadowless) fills it to the pixel, capped so it never exceeds 80% of
+ * the viewport height.
  */
 export function buildInlineIframe(url: string, size?: InlineSnippetSize): string {
   const src = escapeAttribute(withInlineEmbed(url));
@@ -86,9 +85,8 @@ export function buildInlineIframe(url: string, size?: InlineSnippetSize): string
   }
   const { width, height } = size.aspectRatio;
   const chrome = size.verticalChromeHeight ?? 0;
-  const edge = chrome > 0 ? INLINE_PLAYER_EDGE_ALLOWANCE_PX : 0;
   return `<div style="container-type: inline-size; width: 100%; max-width: ${maxWidthForViewportHeight(size, 'vh')}; max-width: ${maxWidthForViewportHeight(size, 'svh')}; margin: 0 auto;">
-  <div style="position: relative; width: 100%; height: calc(100cqw * ${formatCssNumber(height)} / ${formatCssNumber(width)} + ${formatCssNumber(chrome)}px + ${formatCssNumber(edge)}px);">
+  <div style="position: relative; width: 100%; height: calc(100cqw * ${formatCssNumber(height)} / ${formatCssNumber(width)} + ${formatCssNumber(chrome)}px);">
     ${iframe('position: absolute; inset: 0; width: 100%; height: 100%; border: 0;').split('\n').join('\n    ')}
   </div>
 </div>`;

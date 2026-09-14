@@ -1,21 +1,19 @@
 /**
  * Assemble the recorded screens of a session into a demo folder:
- * `demo.config.json`, `assets.json` and the `assets/` bytes.
+ * `demo.config.json` and the `assets/` bytes it references.
  */
-import type { CaptureClick } from './build.js';
-import { createHash } from 'node:crypto';
 import { access, mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import {
-  AssetsManifestSchema,
+
   generateDemoId,
   parseDemo,
-  type AssetEntry,
+
   type Demo,
 } from '@inkly-org/interactive-demo/schema';
 import { ASSETS_DIR } from '../assets.js';
 import { atomicWriteFile } from '../fs-atomic.js';
-import { buildImageStep, screenIdFromIndex } from './build.js';
+import { buildImageStep } from './build.js';
 import type { CapturedScreen } from './session.js';
 
 export function slugifyName(name: string): string {
@@ -26,10 +24,6 @@ export function slugifyName(name: string): string {
     .replace(/^-+|-+$/g, '')
     .slice(0, 48);
   return slug || 'captured-demo';
-}
-
-function sha256Hex(bytes: Uint8Array): string {
-  return createHash('sha256').update(bytes).digest('hex');
 }
 
 async function exists(path: string): Promise<boolean> {
@@ -52,7 +46,6 @@ export async function uniqueDemoSlug(demosRoot: string, name: string): Promise<s
 
 export interface AssembledDemo {
   demo: Demo;
-  manifest: ReturnType<typeof AssetsManifestSchema.parse>;
   /** File name under `assets/` → bytes. */
   files: Record<string, Uint8Array>;
   stepCount: number;
@@ -61,14 +54,9 @@ export interface AssembledDemo {
 }
 
 /**
- * Pure-ish assembly: reads the recorded screen files, builds steps and the
- * asset manifest. Writes nothing.
+ * Pure-ish assembly: reads the recorded screen files and builds the steps,
+ * each referencing its media by path under `assets/`. Writes nothing.
  */
-function omitOuterHtml(click: CaptureClick): Omit<CaptureClick, 'outerHTML'> {
-  const { outerHTML: _outerHtml, ...rest } = click;
-  return rest;
-}
-
 export async function assembleCapturedDemo(opts: {
   name: string;
   screens: CapturedScreen[];
@@ -78,35 +66,14 @@ export async function assembleCapturedDemo(opts: {
   const { name, screens, autoApplyZoom = true, compressImages = false } = opts;
   if (screens.length === 0) throw new Error('No screens captured.');
 
-  const assets: AssetEntry[] = [];
-  const auditScreens: unknown[] = [];
   const files: Record<string, Uint8Array> = {};
   const steps: Demo['steps'] = [];
   const labels: string[] = [];
-  let assetCounter = 0;
 
-  async function pushAsset(
-    bytes: Uint8Array,
-    contentType: string,
-    kind: 'image' | 'video',
-    filename: string,
-    viewport?: { width: number; height: number },
-  ): Promise<string> {
+  /** Register the bytes under `assets/` and return the path a step references. */
+  function pushAsset(bytes: Uint8Array, filename: string): string {
     files[filename] = bytes;
-    assetCounter += 1;
-    const id = `cap-${String(assetCounter).padStart(3, '0')}`;
-    assets.push({
-      id,
-      sha256: sha256Hex(bytes),
-      kind,
-      contentType,
-      size: bytes.byteLength,
-      viewport: viewport ? { w: viewport.width, h: viewport.height } : undefined,
-      // The local file under assets/. The page resolver derives `./assets/<file>`
-      // from it, so moving or renaming the demo folder can never break a step.
-      file: filename,
-    });
-    return id;
+    return `${ASSETS_DIR}/${filename}`;
   }
 
   async function encodeImage(
@@ -129,27 +96,20 @@ export async function assembleCapturedDemo(opts: {
   for (const [i, screen] of screens.entries()) {
     const stepId = `s${i + 1}`;
     const stepNo = String(i + 1).padStart(3, '0');
-    let assetId: string | null = null;
     if (screen.kind === 'video' && screen.videoPath) {
       const videoBytes = new Uint8Array(await readFile(screen.videoPath));
-      assetId = await pushAsset(videoBytes, 'video/webm', 'video', `screen-${stepNo}.webm`, screen.viewport);
-      let posterAssetId: string | undefined;
+      const src = pushAsset(videoBytes, `screen-${stepNo}.webm`);
+      let posterSrc: string | undefined;
       if (screen.posterPngPath) {
         const poster = await encodeImage(new Uint8Array(await readFile(screen.posterPngPath)));
-        posterAssetId = await pushAsset(
-          poster.bytes,
-          poster.contentType,
-          'image',
-          `screen-${stepNo}-poster.${poster.ext}`,
-          screen.viewport,
-        );
+        posterSrc = pushAsset(poster.bytes, `screen-${stepNo}-poster.${poster.ext}`);
       }
       steps.push(
         buildImageStep({
           stepId,
           kind: 'video',
-          assetId,
-          posterAssetId,
+          src,
+          posterSrc,
           naturalWidth: screen.naturalSize.width,
           naturalHeight: screen.naturalSize.height,
           sourceUrl: screen.sourceUrl || undefined,
@@ -162,18 +122,12 @@ export async function assembleCapturedDemo(opts: {
     } else {
       if (!screen.pngPath) continue;
       const image = await encodeImage(new Uint8Array(await readFile(screen.pngPath)));
-      assetId = await pushAsset(
-        image.bytes,
-        image.contentType,
-        'image',
-        `screen-${stepNo}.${image.ext}`,
-        screen.viewport,
-      );
+      const src = pushAsset(image.bytes, `screen-${stepNo}.${image.ext}`);
       steps.push(
         buildImageStep({
           stepId,
           kind: 'image',
-          assetId,
+          src,
           naturalWidth: screen.naturalSize.width,
           naturalHeight: screen.naturalSize.height,
           sourceUrl: screen.sourceUrl || undefined,
@@ -185,18 +139,6 @@ export async function assembleCapturedDemo(opts: {
       );
     }
     labels.push(screen.click?.label || screen.title || `Step ${i + 1}`);
-    auditScreens.push({
-      index: i,
-      id: screenIdFromIndex(i),
-      assetId,
-      sourceUrl: screen.sourceUrl,
-      capturedAt: screen.capturedAt,
-      naturalWidth: screen.naturalSize.width,
-      naturalHeight: screen.naturalSize.height,
-      // The element's markup is only an authoring aid; keep it out of the
-      // exported manifest.
-      precedingClick: screen.click ? omitOuterHtml(screen.click) : screen.click,
-    });
   }
   if (steps.length === 0) throw new Error('No usable screens captured.');
 
@@ -206,13 +148,7 @@ export async function assembleCapturedDemo(opts: {
     title: name,
     steps,
   });
-  const manifest = AssetsManifestSchema.parse({
-    version: 1,
-    assets,
-    screens: auditScreens,
-  });
-
-  return { demo, manifest, files, stepCount: steps.length, labels };
+  return { demo, files, stepCount: steps.length, labels };
 }
 
 /** Write an assembled demo as a self-contained demo folder at `demoDir`. */
@@ -222,5 +158,4 @@ export async function writeDemoFolder(demoDir: string, built: AssembledDemo): Pr
     await writeFile(join(demoDir, ASSETS_DIR, filename), bytes);
   }
   await atomicWriteFile(join(demoDir, 'demo.config.json'), `${JSON.stringify(built.demo, null, 2)}\n`);
-  await atomicWriteFile(join(demoDir, 'assets.json'), `${JSON.stringify(built.manifest, null, 2)}\n`);
 }

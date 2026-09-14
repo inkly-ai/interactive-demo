@@ -1,9 +1,10 @@
+import { existsSync } from 'node:fs';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { mkdtemp, mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import vm from 'node:vm';
-import { AssetsManifestSchema, DemoSchema } from '@inkly-org/interactive-demo/schema';
+import { DemoSchema } from '@inkly-org/interactive-demo/schema';
 import { buildImageStep, cleanClickLabel, nextCaptureAssetId, screenIdFromIndex } from '../src/capture/build';
 import { profileNameFromUrl, resolveProfileDir, sanitizeProfileName } from '../src/capture/profiles';
 import {
@@ -93,7 +94,7 @@ describe('step builder', () => {
     const step = buildImageStep({
       stepId: 's1',
       kind: 'image',
-      assetId: 'cap-001',
+      src: 'assets/screen-001.png',
       naturalWidth: 1440,
       naturalHeight: 900,
       click: { x: 0.5, y: 0.5, label: 'Settings' },
@@ -102,7 +103,7 @@ describe('step builder', () => {
     });
     expect(step.kind).toBe('content');
     if (step.kind !== 'content') return;
-    expect(step.background).toMatchObject({ type: 'image', src: 'asset:cap-001' });
+    expect(step.background).toMatchObject({ type: 'image', src: 'assets/screen-001.png' });
     expect(step.annotations[0]).toMatchObject({ variant: 'cursor', text: 'Click on "Settings"', x: 0.5, y: 0.5 });
     expect(step.transform).toEqual({ zoom: 1.35, x: 0.5, y: 0.5 });
   });
@@ -111,7 +112,7 @@ describe('step builder', () => {
     const zero = buildImageStep({
       stepId: 's1',
       kind: 'image',
-      assetId: 'cap-001',
+      src: 'assets/screen-001.png',
       naturalWidth: 10,
       naturalHeight: 10,
       click: { x: 0, y: 0 },
@@ -122,8 +123,8 @@ describe('step builder', () => {
     const last = buildImageStep({
       stepId: 's2',
       kind: 'video',
-      assetId: 'cap-002',
-      posterAssetId: 'cap-003',
+      src: 'assets/screen-002.webm',
+      posterSrc: 'assets/screen-002-poster.png',
       naturalWidth: 10,
       naturalHeight: 10,
       click: null,
@@ -131,8 +132,8 @@ describe('step builder', () => {
     });
     expect(last.kind === 'content' && last.background).toMatchObject({
       type: 'video',
-      src: 'asset:cap-002',
-      posterSrc: 'asset:cap-003',
+      src: 'assets/screen-002.webm',
+      posterSrc: 'assets/screen-002-poster.png',
     });
     expect(last.kind === 'content' && last.annotations[0]).toMatchObject({
       variant: 'callout',
@@ -354,22 +355,16 @@ describe('demo assembly', () => {
     expect(built.stepCount).toBe(2);
     expect(built.labels).toEqual(['Pricing', 'Pricing']);
     expect(Object.keys(built.files).sort()).toEqual(['screen-001.png', 'screen-002-poster.png', 'screen-002.webm']);
-    expect(built.manifest.assets.map((a) => [a.id, a.kind, a.file])).toEqual([
-      ['cap-001', 'image', 'screen-001.png'],
-      ['cap-002', 'video', 'screen-002.webm'],
-      ['cap-003', 'image', 'screen-002-poster.png'],
-    ]);
 
     const demoDir = join(work, 'demos', 'acme-tour');
     await writeDemoFolder(demoDir, built);
     const config = JSON.parse(await readFile(join(demoDir, 'demo.config.json'), 'utf8'));
-    const manifest = JSON.parse(await readFile(join(demoDir, 'assets.json'), 'utf8'));
     expect(DemoSchema.safeParse(config).success).toBe(true);
-    expect(AssetsManifestSchema.safeParse(manifest).success).toBe(true);
+    expect(existsSync(join(demoDir, 'assets.json'))).toBe(false);
     expect(config.title).toBe('Acme tour');
     expect(config.steps.map((s: { background: { src: string } }) => s.background.src)).toEqual([
-      'asset:cap-001',
-      'asset:cap-002',
+      'assets/screen-001.png',
+      'assets/screen-002.webm',
     ]);
     for (const file of ['screen-001.png', 'screen-002.webm', 'screen-002-poster.png']) {
       expect((await stat(join(demoDir, 'assets', file))).isFile()).toBe(true);

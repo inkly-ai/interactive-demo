@@ -1,6 +1,4 @@
-import { createHash } from 'node:crypto';
 import {
-  AssetsManifestSchema,
   DEMO_CONFIG_SCHEMA_URL,
   DemoSchema,
   generateDemoId,
@@ -48,8 +46,7 @@ const DEFAULT_DEMO_CHROME = {
   autoplay: false,
 } as const;
 
-/** Asset id / file name for the starter's placeholder shot. */
-export const PLACEHOLDER_ASSET_ID = 'placeholder-shot';
+/** File name of the starter's placeholder shot under `assets/`. */
 export const PLACEHOLDER_FILE = 'placeholder.svg';
 const PLACEHOLDER_WIDTH = 1920;
 const PLACEHOLDER_HEIGHT = 1080;
@@ -76,28 +73,6 @@ export function placeholderSvg(): string {
   <text x="50%" y="47%" text-anchor="middle" dominant-baseline="middle" font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif" font-size="84" font-weight="700" fill="#4f46e5">Your captured screen goes here</text>
   <text x="50%" y="56%" text-anchor="middle" dominant-baseline="middle" font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif" font-size="38" font-weight="500" fill="#5b6478">Run interactive-demo capture, or upload a screenshot in the editor and point this step at it.</text>
 </svg>`;
-}
-
-/**
- * `assets.json` for a scaffolded demo — one local placeholder image keyed by
- * its content hash. The caller computes `sha256`/`size` from the bytes
- * returned by {@link placeholderSvg}.
- */
-export function starterAssetsManifest(input: { sha256: string; size?: number }): unknown {
-  return {
-    version: 1,
-    assets: [
-      {
-        id: PLACEHOLDER_ASSET_ID,
-        sha256: input.sha256,
-        kind: 'image',
-        contentType: 'image/svg+xml',
-        file: PLACEHOLDER_FILE,
-        ...(typeof input.size === 'number' ? { size: input.size } : {}),
-        viewport: { w: PLACEHOLDER_WIDTH, h: PLACEHOLDER_HEIGHT },
-      },
-    ],
-  };
 }
 
 /**
@@ -143,7 +118,7 @@ export function starterDemoConfig(slug: string, title?: string): unknown {
         id: 'shot-1',
         background: {
           type: 'image',
-          src: `asset:${PLACEHOLDER_ASSET_ID}`,
+          src: `assets/${PLACEHOLDER_FILE}`,
           naturalWidth: PLACEHOLDER_WIDTH,
           naturalHeight: PLACEHOLDER_HEIGHT,
           alt: 'Placeholder screen — replace with your capture',
@@ -219,8 +194,8 @@ function projectReadme(name: string): string {
 Interactive product demos, built with \`interactive-demo\`.
 
 Each folder under \`demos/\` is one demo: a \`demo.config.json\` describing
-the steps, an \`assets.json\` manifest, and the screenshots and recordings
-under \`assets/\`. The project itself is configured by \`${PROJECT_FILE}\`.
+the steps, and the screenshots and recordings it references under
+\`assets/\`. The project itself is configured by \`${PROJECT_FILE}\`.
 
 ## Preview and edit
 
@@ -263,10 +238,7 @@ export function starterDemoFiles(slug: string, title?: string): {
   id: string;
 } {
   const svg = placeholderSvg();
-  const sha256 = sha256Hex(svg);
-  const size = Buffer.byteLength(svg, 'utf8');
   const demoConfig = starterDemoConfig(slug, title);
-  const assetsManifest = starterAssetsManifest({ sha256, size });
 
   const demoParsed = DemoSchema.safeParse(demoConfig);
   if (!demoParsed.success) {
@@ -274,18 +246,10 @@ export function starterDemoFiles(slug: string, title?: string): {
       `Internal error: scaffolded demo failed schema validation. ${demoParsed.error.message}`,
     );
   }
-  const assetsParsed = AssetsManifestSchema.safeParse(assetsManifest);
-  if (!assetsParsed.success) {
-    throw new Error(
-      `Internal error: scaffolded assets failed schema validation. ${assetsParsed.error.message}`,
-    );
-  }
-
   return {
     id: demoParsed.data.id,
     files: [
       { path: 'demo.config.json', contents: JSON.stringify(demoConfig, null, 2) + '\n' },
-      { path: 'assets.json', contents: JSON.stringify(assetsManifest, null, 2) + '\n' },
       { path: `assets/${PLACEHOLDER_FILE}`, contents: svg },
     ],
   };
@@ -329,6 +293,3 @@ export function getProjectSkeleton(options: ProjectSkeletonOptions): SkeletonFil
   return files;
 }
 
-function sha256Hex(text: string): string {
-  return createHash('sha256').update(text, 'utf8').digest('hex');
-}

@@ -27,7 +27,6 @@ describe('runInit', () => {
         'README.md',
         'package.json',
         PROJECT_FILE,
-        join('demos', 'getting-started', 'assets.json'),
         join('demos', 'getting-started', 'demo.config.json'),
         join('demos', 'getting-started', 'assets', 'placeholder.svg'),
       ].sort(),
@@ -59,15 +58,10 @@ describe('runInit', () => {
     expect(demo.steps[0].widgets[0].cta.animation).toBe('shimmer');
     expect(demo.steps[1].kind).toBe('content');
     expect(demo.steps[1].background.type).toBe('image');
-    expect(demo.steps[1].background.src).toBe('asset:placeholder-shot');
+    expect(demo.steps[1].background.src).toBe('assets/placeholder.svg');
     expect(demo.steps[2].kind).toBe('cover');
 
-    const assets = JSON.parse(
-      await readFile(join(result.dir, 'demos', 'getting-started', 'assets.json'), 'utf8'),
-    );
-    expect(assets.assets[0].id).toBe('placeholder-shot');
-    expect(assets.assets[0].file).toBe('placeholder.svg');
-    expect(/^[0-9a-f]{64}$/.test(assets.assets[0].sha256)).toBe(true);
+    expect((await stat(join(result.dir, 'demos', 'getting-started', 'assets', 'placeholder.svg'))).isFile()).toBe(true);
 
     const ignore = await readFile(join(result.dir, '.gitignore'), 'utf8');
     expect(ignore).toContain('node_modules/');
@@ -198,17 +192,10 @@ describe('runAddDemo', () => {
           {
             kind: 'content',
             id: 's1',
-            background: { type: 'image', src: 'asset:cap-001', naturalWidth: 1440, naturalHeight: 900 },
+            background: { type: 'image', src: `assets/${'a'.repeat(64)}.png`, naturalWidth: 1440, naturalHeight: 900 },
             advance: { trigger: 'click' },
           },
         ],
-      }),
-    );
-    await writeFile(
-      join(dir, 'assets.json'),
-      JSON.stringify({
-        version: 1,
-        assets: [{ id: 'cap-001', sha256: 'a'.repeat(64), kind: 'image', contentType: 'image/png', file: `${'a'.repeat(64)}.png` }],
       }),
     );
     await writeFile(join(dir, 'assets', `${'a'.repeat(64)}.png`), 'png-bytes');
@@ -224,7 +211,6 @@ describe('runAddDemo', () => {
     const config = JSON.parse(await readFile(join(result.demoDir, 'demo.config.json'), 'utf8'));
     expect(DemoSchema.safeParse(config).success).toBe(true);
     expect(config.id).toBe('CaPtUrEd0001');
-    expect((await stat(join(result.demoDir, 'assets.json'))).isFile()).toBe(true);
     expect((await stat(join(result.demoDir, 'assets', `${'a'.repeat(64)}.png`))).isFile()).toBe(true);
     const project = JSON.parse(await readFile(join(projectDir, PROJECT_FILE), 'utf8'));
     expect(project.demos).toContain('tour');

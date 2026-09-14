@@ -44,7 +44,7 @@ describe('runBuild', () => {
     expect(html).toContain('href="./player-fonts.css"');
     expect(html).toContain('src="./player.js"');
     expect(html).toContain('<script id="demo-config" type="application/json">{');
-    expect(html).toContain('"publicUrl":"./assets/placeholder.svg"');
+    expect(html).toContain('"src":"assets/placeholder.svg"');
     expect(html).not.toContain('/@vite/client');
     expect(html).not.toContain('__demo');
 

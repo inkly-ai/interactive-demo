@@ -110,7 +110,7 @@ export interface AddDemoOptions {
    * Import an existing demo folder (one with a `demo.config.json`, e.g. a
    * capture export) into the project at `demos/<slug>/`, instead of
    * scaffolding a fresh starter demo. The folder is copied wholesale (config,
-   * assets.json, assets/ bytes); its opaque id is kept when valid.
+   * assets/ bytes); its opaque id is kept when valid.
    */
   from?: string;
   /** Suppress stdout. Used by tests. */
@@ -219,8 +219,8 @@ async function scaffoldDemoFolder(slug: string, destDir: string): Promise<string
 
 /**
  * Copy an existing demo folder into the project at `destDir`. The source must
- * hold a schema-valid `demo.config.json`; everything beside it (assets.json,
- * assets/ bytes) is copied so the demo is self-contained. The demo's opaque id
+ * hold a schema-valid `demo.config.json`; everything beside it (the assets/
+ * bytes) is copied so the demo is self-contained. The demo's opaque id
  * is preserved when valid and re-minted otherwise.
  */
 async function importDemoFolder(srcDir: string, destDir: string): Promise<string> {

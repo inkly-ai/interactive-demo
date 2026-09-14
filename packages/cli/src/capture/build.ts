@@ -86,10 +86,10 @@ export interface CaptureClick {
 export interface ImageStepInput {
   stepId: string;
   kind: 'image' | 'video';
-  /** Resolved `cap-NNN` id of the main asset (referenced as asset:<id>). */
-  assetId: string;
+  /** Path of the main media file, relative to the demo folder (`assets/…`). */
+  src: string;
   /** Resolved id of the video poster image, when kind === "video". */
-  posterAssetId?: string;
+  posterSrc?: string;
   naturalWidth: number;
   naturalHeight: number;
   sourceUrl?: string;
@@ -123,14 +123,13 @@ function edgeAwareFocalPoint(value: number): number {
 
 /** Build one image/video content step. */
 export function buildImageStep(input: ImageStepInput): Demo['steps'][number] {
-  const { stepId, assetId, posterAssetId, kind, isLast } = input;
-  const src = `asset:${assetId}`;
+  const { stepId, src, posterSrc, kind, isLast } = input;
   const background =
     kind === 'video'
       ? {
           type: 'video' as const,
           src,
-          posterSrc: posterAssetId ? `asset:${posterAssetId}` : undefined,
+          posterSrc,
           naturalWidth: input.naturalWidth,
           naturalHeight: input.naturalHeight,
           alt: input.title,

@@ -208,7 +208,13 @@ describe("EditorShell header", () => {
             inline: '<iframe src="https://YOUR-HOST/onboarding/?embed=inline"></iframe>',
             popup: {
                 loader: '<script src="https://YOUR-HOST/embed.js" async></script>',
-                triggers: { html: "<button>html</button>", react: "<button>react</button>", next: "next", vue: "vue", svelte: "svelte" },
+                triggers: {
+                    html: "<button onclick=\"InteractiveDemo.open('https://YOUR-HOST/onboarding/')\">Try the demo</button>",
+                    react: "<button>react</button>",
+                    next: "next",
+                    vue: "vue",
+                    svelte: "svelte",
+                },
             },
         });
     });
@@ -225,14 +231,24 @@ describe("EditorShell header", () => {
         expect(screen.getByText("Share").closest("button")!.className).toContain("btn-3d-primary");
     });
 
-    it("Share opens the embed instructions with the snippets from the dev server", async () => {
+    it("Share opens the rail-and-pane dialog; pasting the published link fills the snippets", async () => {
         render(<EditorShell slug="onboarding" />);
         await act(flushMicrotasks);
         fireEvent.click(screen.getByText("Share"));
         await act(flushMicrotasks);
         expect(api.getDemoEmbed).toHaveBeenCalledWith("onboarding");
-        expect(screen.getByText("Share this demo")).toBeTruthy();
-        expect(screen.getByText(/onboarding\/\?embed=inline/)).toBeTruthy();
-        expect(screen.getByText(/YOUR-HOST\/embed\.js/)).toBeTruthy();
+        expect(screen.getByLabelText("Share options")).toBeTruthy();
+        expect(screen.getByText("npx interactive-demo publish onboarding")).toBeTruthy();
+
+        fireEvent.click(screen.getByText("Inline embed"));
+        expect(screen.getByText("Paste the link publish printed to fill this in.")).toBeTruthy();
+        fireEvent.change(screen.getByPlaceholderText("https://interactive-demo.inklyai.dev/p/…"), {
+            target: { value: "https://demos.example/p/abc123" },
+        });
+        expect(screen.getByText(/demos\.example\/p\/abc123\?embed=inline/)).toBeTruthy();
+
+        fireEvent.click(screen.getByText("Popup embed"));
+        expect(screen.getByText(/https:\/\/demos\.example\/embed\.js/)).toBeTruthy();
+        expect(screen.getByText(/InteractiveDemo\.open\('https:\/\/demos\.example\/p\/abc123/)).toBeTruthy();
     });
 });

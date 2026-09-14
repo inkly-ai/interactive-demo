@@ -4,7 +4,7 @@ Open-source interactive product demos. Capture screenshots or a short screen
 recording of your product, add hotspots and captions in a local editor, and
 build a static demo you can host anywhere and embed with an iframe.
 
-![The editor](docs/images/editor.png)
+![The editor, with a captured demo open](docs/images/editor.webp)
 
 - **No hosting on our side.** `build` writes a self-contained folder per demo.
   Put it on any static host.
@@ -118,8 +118,10 @@ Docs:
 - [`demo.config.json` reference](docs/schema.md) — every field, generated from
   the schema.
 - [Embedding](docs/embedding.md) — hosting, iframe sizing, the React route.
-- [`examples/getting-started`](examples/getting-started) — a complete project
+- [`examples/getting-started`](examples/getting-started) — a minimal project
   that CI validates and builds.
+- [`examples/self-demo`](examples/self-demo) — a walkthrough of this tool whose
+  screens are all produced from a real run (`node testbed/shoot.mjs`).
 
 ## Built-with badge
 
@@ -138,7 +140,11 @@ Certificate of Origin; see [CONTRIBUTING.md](CONTRIBUTING.md).
 ```sh
 npm install
 npm run build && npm run typecheck && npm run lint && npm test
+npm run testbed     # drives the built CLI, dev server, editor, capture and both embeds
 ```
+
+[`testbed/`](testbed) also holds a stand-in product to capture and a stand-in
+website to embed into, so you can exercise the whole loop offline.
 
 ## License
 

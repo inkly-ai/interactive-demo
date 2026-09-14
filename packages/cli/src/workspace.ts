@@ -1,4 +1,4 @@
-import { lstat, readFile, readdir, realpath, rm } from 'node:fs/promises';
+import { lstat, readFile, readdir, realpath, rm, stat } from 'node:fs/promises';
 import { dirname, join, relative, resolve, sep } from 'node:path';
 import { atomicWriteFile } from './fs-atomic.js';
 
@@ -14,6 +14,10 @@ export interface WorkspaceProvider {
   listFiles(demoDir: string): Promise<string[]>;
   /** Text content, or `null` when the file does not exist. */
   readFile(demoDir: string, path: string): Promise<string | null>;
+  /** Raw bytes, or `null` when the file does not exist. */
+  readBytes(demoDir: string, path: string): Promise<Buffer | null>;
+  /** Size in bytes, or `null` when the file does not exist. */
+  fileSize(demoDir: string, path: string): Promise<number | null>;
   /** Create or replace a file. Parent folders are created as needed. */
   writeFile(demoDir: string, path: string, content: string | Buffer): Promise<void>;
   /** Remove a file. Missing files are not an error. */
@@ -97,6 +101,24 @@ export class LocalFsWorkspace implements WorkspaceProvider {
   async readFile(demoDir: string, path: string): Promise<string | null> {
     try {
       return await readFile(await resolveInsideDemoOnDisk(demoDir, path), 'utf8');
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException).code === 'ENOENT') return null;
+      throw err;
+    }
+  }
+
+  async readBytes(demoDir: string, path: string): Promise<Buffer | null> {
+    try {
+      return await readFile(await resolveInsideDemoOnDisk(demoDir, path));
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException).code === 'ENOENT') return null;
+      throw err;
+    }
+  }
+
+  async fileSize(demoDir: string, path: string): Promise<number | null> {
+    try {
+      return (await stat(await resolveInsideDemoOnDisk(demoDir, path))).size;
     } catch (err) {
       if ((err as NodeJS.ErrnoException).code === 'ENOENT') return null;
       throw err;

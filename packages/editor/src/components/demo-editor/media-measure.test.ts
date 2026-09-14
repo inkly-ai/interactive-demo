@@ -10,7 +10,6 @@ import {
 
 function asset(path: string, contentType: string): AssetMeta {
     return {
-        id: path,
         path,
         contentType,
         size: 1,

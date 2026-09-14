@@ -2688,9 +2688,8 @@ export function MediaAssetPickerDialog({
         asVideo ? measureVideoUrl(url) : measureImageUrl(url);
 
     const applyAsset = async (asset: AssetMeta) => {
-        if (!asset.id) return;
         const displaySrc = assetDisplayUrl(demoId, asset);
-        const src = `asset:${asset.id}`;
+        const src = asset.path;
         const fileName = asset.path.split("/").pop() ?? asset.path;
         const assetIsAudio = isAudioAsset(asset);
         const assetIsVideo = isVideoAsset(asset);

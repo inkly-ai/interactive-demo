@@ -478,10 +478,10 @@ function InlineRecorder({
                 contentType,
                 kind: "audio",
             });
-            if (!commit.assetId) {
-                throw new Error("Saved recording did not return an asset id.");
+            if (!commit.path) {
+                throw new Error("Saved recording did not return a file path.");
             }
-            const src = `asset:${commit.assetId}`;
+            const src = commit.path;
             const probedSec = commit?.publicUrl
                 ? await probeAudioDuration(commit.publicUrl)
                 : null;
@@ -741,8 +741,8 @@ export function VoiceoverInspector({
             contentType,
             kind: "audio",
         });
-        if (!commit.assetId) return null;
-        const src = `asset:${commit.assetId}`;
+        if (!commit.path) return null;
+        const src = commit.path;
         if (commit.publicUrl) {
             setLocalUrls((m) => ({ ...m, [src]: commit.publicUrl as string }));
         }
@@ -757,8 +757,7 @@ export function VoiceoverInspector({
         const src = result.src;
         const publicUrl =
             localUrls[src] ??
-            audioAssets.find((a) => a.id && `asset:${a.id}` === src)
-                ?.publicUrl ??
+            audioAssets.find((a) => a.path === src)?.publicUrl ??
             resolveAudioSrc(src);
         const probedSec = publicUrl
             ? await probeAudioDuration(publicUrl)

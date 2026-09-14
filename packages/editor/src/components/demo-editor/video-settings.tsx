@@ -574,7 +574,7 @@ export function VideoTrimDialog({
         contentType: result.contentType,
         kind: "video",
       });
-      if (!videoCommit.assetId) {
+      if (!videoCommit.path) {
         throw new Error("Saved trim did not return an asset id.");
       }
 
@@ -585,8 +585,8 @@ export function VideoTrimDialog({
         contentType: "image/png",
         kind: "image",
       });
-      if (!posterCommit.assetId) {
-        throw new Error("Saved poster did not return an asset id.");
+      if (!posterCommit.path) {
+        throw new Error("Saved poster did not return a file path.");
       }
 
       onAssetUploaded?.(videoCommit.asset);
@@ -595,8 +595,8 @@ export function VideoTrimDialog({
       onChange({
         background: {
           type: "video",
-          src: `asset:${videoCommit.assetId}`,
-          posterSrc: `asset:${posterCommit.assetId}`,
+          src: videoCommit.path,
+          posterSrc: posterCommit.path,
           naturalWidth: result.width,
           naturalHeight: result.height,
           alt: bg.alt,

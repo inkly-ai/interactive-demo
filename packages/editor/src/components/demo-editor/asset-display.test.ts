@@ -6,9 +6,7 @@ import { resolveDemoAssetReferencesForDisplay } from "./asset-display";
 
 const assets: AssetMeta[] = [
     {
-        id: "hero-asset-id",
         path: "assets/uploads/hero.png",
-        uri: "asset:hero-asset-id",
         publicUrl: "/api/demo-file/demo-slug/assets/uploads/hero.png",
         contentType: "image/png",
         size: 123,
@@ -16,7 +14,7 @@ const assets: AssetMeta[] = [
 ];
 
 describe("resolveDemoAssetReferencesForDisplay", () => {
-    it("rewrites uploaded asset ids to display URLs", () => {
+    it("rewrites referenced file paths to display URLs", () => {
         const config = {
             id: "demo",
             title: "Demo",
@@ -27,7 +25,7 @@ describe("resolveDemoAssetReferencesForDisplay", () => {
                     kind: "content",
                     background: {
                         type: "image",
-                        src: "asset:hero-asset-id",
+                        src: "assets/uploads/hero.png",
                         naturalWidth: 1600,
                         naturalHeight: 900,
                     },

@@ -19,7 +19,6 @@ describe("putDemoAssetBlob", () => {
 
     it("sanitises the file name and returns the entry the server wrote", async () => {
         uploadDemoAsset.mockResolvedValue({
-            id: "hero-2-abc",
             path: "assets/hero-2.png",
             publicUrl: "/tour/assets/hero-2.png",
             contentType: "image/png",
@@ -35,7 +34,6 @@ describe("putDemoAssetBlob", () => {
         expect(uploadDemoAsset).toHaveBeenCalledWith(
             expect.objectContaining({ slug: "tour", name: "hero_1_.png" }),
         );
-        expect(result.assetId).toBe("hero-2-abc");
         expect(result.path).toBe("assets/hero-2.png");
         expect(result.publicUrl).toBe("/tour/assets/hero-2.png");
     });

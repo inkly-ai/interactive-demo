@@ -41,7 +41,7 @@ describe("cover widget media defaults", () => {
         kind: "content",
         background: {
             type: "image",
-            src: "asset:first-content",
+            src: "assets/first-content.png",
             naturalWidth: 1440,
             naturalHeight: 900,
             alt: "First content",
@@ -52,7 +52,7 @@ describe("cover widget media defaults", () => {
 
     it("uses the first content image as the default cover widget image", () => {
         expect(firstContentWidgetImage([imageStep])).toEqual({
-            src: "asset:first-content",
+            src: "assets/first-content.png",
             position: "right",
             layout: "hero",
             naturalWidth: 1440,

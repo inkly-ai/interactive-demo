@@ -4,8 +4,8 @@ import { MAX_ASSET_BYTES, type AssetMeta } from './types';
 
 /**
  * Upload one binary asset for a demo. The dev server writes the bytes to
- * `demos/<slug>/assets/<file>`, registers it in `assets.json`, and returns
- * the manifest entry with a URL the editor can display immediately. The
+ * `demos/<slug>/assets/<file>` and returns the entry with the path a step
+ * should reference and a URL the editor can display immediately. The
  * server may store the file under a de-duplicated name when `<file>` already
  * exists with different bytes; always use the returned entry, never the
  * requested path. Files over `MAX_ASSET_BYTES` are refused client-side.
@@ -17,7 +17,6 @@ export async function putDemoAssetBlob(args: {
     contentType: string;
     kind?: string;
 }): Promise<{
-    assetId: string;
     path: string;
     publicUrl?: string;
     asset: AssetMeta;
@@ -37,11 +36,10 @@ export async function putDemoAssetBlob(args: {
         contentType: args.contentType,
         kind: args.kind,
     });
-    if (!asset.id) {
-        throw new Error('The server did not return an asset id.');
+    if (!asset.path) {
+        throw new Error('The server did not return the file path.');
     }
     return {
-        assetId: asset.id,
         path: asset.path,
         publicUrl: asset.publicUrl,
         asset,

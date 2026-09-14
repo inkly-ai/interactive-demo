@@ -418,15 +418,14 @@ export function ImageSettingsDialog({
         contentType: "image/png",
         kind: "image",
       });
-      if (!commit.assetId) {
-        throw new Error("Saved crop did not return an asset id.");
+      if (!commit.path) {
+        throw new Error("Saved crop did not return a file path.");
       }
-      // Seed the new asset into the manifest + draft files BEFORE
-      // pointing the step at it, so the preview re-render resolves
-      // `asset:<id>` on the first pass and the save keeps it.
+      // Seed the new file into the asset list BEFORE pointing the step at
+      // it, so the preview re-render resolves the path on the first pass.
       onAssetUploaded?.(commit.asset);
       onAssetsChanged();
-      const newSrc = `asset:${commit.assetId}`;
+      const newSrc = commit.path;
       onChange({
         background: {
           type: "image",

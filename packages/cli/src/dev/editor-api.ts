@@ -1,10 +1,9 @@
-import { createHash } from 'node:crypto';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { dirname, extname } from 'node:path';
-import type { AssetEntry, AssetKind } from '@inkly-org/interactive-demo/schema';
+import type { AssetKind } from '@inkly-org/interactive-demo/schema';
 import { ASSETS_DIR } from '../assets.js';
 import { LocalFsWorkspace, type WorkspaceProvider } from '../workspace.js';
-import { MAX_ASSET_BYTES, assertSafeAssetPath, nextGeneratedAssetId } from './asset-helpers.js';
+import { MAX_ASSET_BYTES, assertSafeAssetPath } from './asset-helpers.js';
 import { buildInlineIframe, buildPopupButton, buildPopupLoader } from '../publish/embed-snippets.js';
 
 export { MAX_ASSET_BYTES, generatedAssetId } from './asset-helpers.js';
@@ -41,7 +40,6 @@ export { MAX_ASSET_BYTES, generatedAssetId } from './asset-helpers.js';
 export const EDITOR_API_PREFIX = '/__demo/editor/';
 export const EDITOR_API_DEMOS_PREFIX = `${EDITOR_API_PREFIX}demos/`;
 
-const MANIFEST_PATH = 'assets.json';
 const TEXT_EXTENSIONS = new Set(['.json', '.md', '.txt', '.svg', '.css', '.html', '.js']);
 const MAX_JSON_BODY = 20_000_000;
 
@@ -97,12 +95,16 @@ export interface EditorApiDeps {
   assetUrl?: (slug: string, file: string) => string;
 }
 
-/** The manifest entry as the editor consumes it. */
-export interface EditorAssetMeta extends AssetEntry {
+/** A file under the demo's `assets/` as the editor consumes it. */
+export interface EditorAssetMeta {
+  /** Demo-relative path, `assets/<file>`: what a step references. */
   path: string;
-  uri: string;
+  file: string;
+  /** URL this server serves the bytes at. */
+  publicUrl: string;
   contentType: string;
   size: number;
+  kind: AssetKind;
 }
 
 function sendJson(res: ServerResponse, status: number, body: unknown): void {
@@ -172,57 +174,9 @@ function kindForContentType(contentType: string): AssetKind {
   return 'other';
 }
 
-interface Manifest {
-  version: 1;
-  assets: AssetEntry[];
-  [key: string]: unknown;
-}
 
-async function readManifest(workspace: WorkspaceProvider, demoDir: string): Promise<Manifest> {
-  const raw = await workspace.readFile(demoDir, MANIFEST_PATH);
-  if (!raw) return { version: 1, assets: [] };
-  try {
-    const parsed = JSON.parse(raw) as Partial<Manifest>;
-    const assets = Array.isArray(parsed.assets)
-      ? parsed.assets.filter(
-          (entry): entry is AssetEntry =>
-            !!entry && typeof entry === 'object' && typeof (entry as AssetEntry).id === 'string',
-        )
-      : [];
-    return { ...parsed, version: 1, assets };
-  } catch {
-    return { version: 1, assets: [] };
-  }
-}
 
-async function writeManifest(workspace: WorkspaceProvider, demoDir: string, manifest: Manifest): Promise<void> {
-  const sorted = [...manifest.assets].sort((a, b) =>
-    String(a.path ?? a.file ?? '').localeCompare(String(b.path ?? b.file ?? '')),
-  );
-  await workspace.writeFile(
-    demoDir,
-    MANIFEST_PATH,
-    JSON.stringify({ ...manifest, version: 1, assets: sorted }, null, 2) + '\n',
-  );
-}
 
-function toEditorAsset(
-  entry: AssetEntry,
-  slug: string,
-  assetUrl: (slug: string, file: string) => string,
-): EditorAssetMeta {
-  const file = entry.file ?? entry.path?.split('/').pop();
-  const path = entry.path ?? (file ? `${ASSETS_DIR}/${file}` : '');
-  const remote = typeof entry.publicUrl === 'string' && /^(https?:)?\/\//i.test(entry.publicUrl);
-  return {
-    ...entry,
-    path,
-    uri: entry.uri ?? `asset:${entry.id}`,
-    publicUrl: remote ? entry.publicUrl : file ? assetUrl(slug, file) : entry.publicUrl,
-    contentType: entry.contentType ?? contentTypeForFile(file ?? path),
-    size: entry.size ?? 0,
-  };
-}
 
 /**
  * Handle one request. Returns `false` when the URL is not an editor API
@@ -260,6 +214,26 @@ export function embedSnippetsFor(slug: string): EmbedSnippets {
       },
     },
   };
+}
+
+/** Every file directly under `assets/`, as the editor's picker lists them. */
+async function listFolderAssets(
+  workspace: WorkspaceProvider,
+  demoDir: string,
+  slug: string,
+  assetUrl: (slug: string, file: string) => string,
+): Promise<EditorAssetMeta[]> {
+  const out: EditorAssetMeta[] = [];
+  for (const path of await workspace.listFiles(demoDir)) {
+    if (!path.startsWith(`${ASSETS_DIR}/`)) continue;
+    const file = path.slice(ASSETS_DIR.length + 1);
+    if (file.includes('/')) continue;
+    const size = await workspace.fileSize(demoDir, path);
+    if (size == null) continue;
+    const contentType = contentTypeForFile(file);
+    out.push({ path, file, publicUrl: assetUrl(slug, file), contentType, size, kind: kindForContentType(contentType) });
+  }
+  return out;
 }
 
 export async function handleEditorApi(
@@ -337,10 +311,7 @@ export async function handleEditorApi(
       return true;
     }
     if (resource === 'assets' && req.method === 'GET') {
-      const manifest = await readManifest(workspace, demoDir);
-      sendJson(res, 200, {
-        assets: manifest.assets.map((entry) => toEditorAsset(entry, slug, assetUrl)),
-      });
+      sendJson(res, 200, { assets: await listFolderAssets(workspace, demoDir, slug, assetUrl) });
       return true;
     }
     if (resource === 'assets' && req.method === 'POST') {
@@ -350,27 +321,19 @@ export async function handleEditorApi(
         return true;
       }
       const bytes = await readBody(req, MAX_ASSET_BYTES);
-      const sha256 = createHash('sha256').update(bytes).digest('hex');
-      const manifest = await readManifest(workspace, demoDir);
-      const sameName = manifest.assets.find(
-        (entry) => entry.file === requested || entry.path === `${ASSETS_DIR}/${requested}`,
-      );
-      // Re-uploading identical bytes under the same name is a no-op for the
-      // manifest. Different bytes under an existing name get a fresh file name
-      // and a fresh id, so steps that reference the old asset keep showing it.
+      // Re-uploading identical bytes under the same name is a no-op.
+      // Different bytes under an existing name get a fresh file name, so
+      // steps that reference the old file keep showing it.
+      const existing = await workspace.readBytes(demoDir, `${ASSETS_DIR}/${requested}`);
       const name =
-        sameName && sameName.sha256 !== sha256
+        existing && !existing.equals(bytes)
           ? dedupeAssetName(
               requested,
-              [
-                ...manifest.assets.map((entry) => entry.file ?? entry.path?.split('/').pop() ?? ''),
-                ...(await workspace.listFiles(demoDir))
-                  .filter((path) => path.startsWith(`${ASSETS_DIR}/`))
-                  .map((path) => path.slice(ASSETS_DIR.length + 1)),
-              ].filter(Boolean),
+              (await workspace.listFiles(demoDir))
+                .filter((path) => path.startsWith(`${ASSETS_DIR}/`))
+                .map((path) => path.slice(ASSETS_DIR.length + 1)),
             )
           : requested;
-      const previous = name === requested ? sameName : undefined;
       const relPath = `${ASSETS_DIR}/${name}`;
       assertSafeAssetPath(relPath);
       await workspace.writeFile(demoDir, relPath, bytes);
@@ -382,31 +345,19 @@ export async function handleEditorApi(
         requestedKind === 'image' || requestedKind === 'video' || requestedKind === 'audio' || requestedKind === 'font'
           ? requestedKind
           : kindForContentType(contentType);
-      const now = new Date().toISOString();
-      const entry: AssetEntry = {
-        id: previous?.id ?? nextGeneratedAssetId(manifest.assets, relPath, sha256),
-        path: relPath,
-        file: name,
-        uri: undefined,
-        sha256,
-        kind,
-        contentType,
-        size: bytes.byteLength,
-        createdAt: previous?.createdAt ?? now,
-        updatedAt: now,
-      };
-      entry.uri = `asset:${entry.id}`;
-      manifest.assets = [
-        ...manifest.assets.filter((existing) => existing !== previous && existing.id !== entry.id),
-        entry,
-      ];
-      await writeManifest(workspace, demoDir, manifest);
       deps.onChanged?.();
       sendJson(res, 200, {
         ok: true,
         file: name,
         renamedFrom: name === requested ? undefined : requested,
-        asset: toEditorAsset(entry, slug, assetUrl),
+        asset: {
+          path: relPath,
+          file: name,
+          publicUrl: assetUrl(slug, name),
+          contentType,
+          size: bytes.byteLength,
+          kind,
+        } satisfies EditorAssetMeta,
       });
       return true;
     }
@@ -419,12 +370,6 @@ export async function handleEditorApi(
       const relPath = `${ASSETS_DIR}/${name}`;
       assertSafeAssetPath(relPath);
       await workspace.deleteFile(demoDir, relPath);
-      const manifest = await readManifest(workspace, demoDir);
-      const next = manifest.assets.filter((entry) => entry.file !== name && entry.path !== relPath);
-      if (next.length !== manifest.assets.length) {
-        manifest.assets = next;
-        await writeManifest(workspace, demoDir, manifest);
-      }
       deps.onChanged?.();
       sendJson(res, 200, { ok: true });
       return true;

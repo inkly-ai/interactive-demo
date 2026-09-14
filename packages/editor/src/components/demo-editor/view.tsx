@@ -1404,7 +1404,7 @@ export function DemoEditorView({
             return {
                 asset: commit.asset,
                 path,
-                src: `asset:${commit.assetId}`,
+                src: commit.path,
                 width: dims.width,
                 height: dims.height,
             };

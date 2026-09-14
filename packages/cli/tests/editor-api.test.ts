@@ -1,3 +1,4 @@
+import { existsSync } from 'node:fs';
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -111,33 +112,18 @@ describe('dev server editor API', () => {
     expect(unknown.status).toBe(404);
   });
 
-  it('lists assets with a URL the dev server serves', async () => {
-    await writeFile(
-      join(root, 'demos', 'tour', 'assets.json'),
-      JSON.stringify({
-        version: 1,
-        assets: [
-          { id: 'shot-1', file: 'shot.png', path: 'assets/shot.png', sha256: 'a'.repeat(64), kind: 'image' },
-        ],
-      }),
-      'utf8',
-    );
+  it('lists the files under assets/ with a URL the dev server serves', async () => {
     const res = await fetch(`${handle!.url}__demo/editor/demos/tour/assets`);
     expect(res.status).toBe(200);
     const body = (await res.json()) as { assets: Array<Record<string, unknown>> };
-    expect(body.assets).toHaveLength(1);
-    expect(body.assets[0]).toMatchObject({
-      id: 'shot-1',
-      path: 'assets/shot.png',
-      uri: 'asset:shot-1',
-      publicUrl: '/tour/assets/shot.png',
-      contentType: 'image/png',
-    });
+    expect(body.assets).toEqual([
+      { path: 'assets/shot.png', file: 'shot.png', publicUrl: '/tour/assets/shot.png', contentType: 'image/png', size: 3, kind: 'image' },
+    ]);
     const served = await fetch(`${handle!.url}tour/assets/shot.png`);
     expect(served.status).toBe(200);
   });
 
-  it('uploads an asset, registers it in assets.json and serves it', async () => {
+  it('uploads a file into assets/ and serves it', async () => {
     const bytes = Buffer.from('fake-png-bytes');
     const res = await fetch(`${handle!.url}__demo/editor/demos/tour/assets?name=hero.png&kind=image`, {
       method: 'POST',
@@ -147,7 +133,7 @@ describe('dev server editor API', () => {
     expect(res.status).toBe(200);
     const body = (await res.json()) as { ok: boolean; asset: Record<string, unknown> };
     expect(body.ok).toBe(true);
-    expect(body.asset).toMatchObject({
+    expect(body.asset).toEqual({
       file: 'hero.png',
       path: 'assets/hero.png',
       kind: 'image',
@@ -155,16 +141,7 @@ describe('dev server editor API', () => {
       size: bytes.byteLength,
       publicUrl: '/tour/assets/hero.png',
     });
-    expect(String(body.asset.id)).toMatch(/^hero-[0-9a-f]{16}-[a-z0-9]{6}$/);
-    expect(body.asset.uri).toBe(`asset:${body.asset.id}`);
-
-    const manifest = JSON.parse(await readFile(join(root, 'demos', 'tour', 'assets.json'), 'utf8')) as {
-      version: number;
-      assets: Array<{ id: string; file: string; sha256: string }>;
-    };
-    expect(manifest.version).toBe(1);
-    expect(manifest.assets.map((a) => a.file)).toEqual(['hero.png']);
-    expect(manifest.assets[0]!.sha256).toMatch(/^[0-9a-f]{64}$/);
+    expect(existsSync(join(root, 'demos', 'tour', 'assets.json'))).toBe(false);
 
     const served = await fetch(`${handle!.url}tour/assets/hero.png`);
     expect(served.status).toBe(200);
@@ -177,23 +154,17 @@ describe('dev server editor API', () => {
       body: bytes,
     });
     expect(same.status).toBe(200);
-    const sameBody = (await same.json()) as { file: string; renamedFrom?: string; asset: { id: string } };
+    const sameBody = (await same.json()) as { file: string; renamedFrom?: string };
     expect(sameBody.file).toBe('hero.png');
     expect(sameBody.renamedFrom).toBeUndefined();
-    expect(sameBody.asset.id).toBe(body.asset.id);
-    const manifest2 = JSON.parse(await readFile(join(root, 'demos', 'tour', 'assets.json'), 'utf8')) as {
-      assets: Array<{ id: string; file: string }>;
-    };
-    expect(manifest2.assets).toHaveLength(1);
   });
 
-  it('gives different bytes under an existing name a new file name and id', async () => {
-    const first = await fetch(`${handle!.url}__demo/editor/demos/tour/assets?name=hero.png`, {
+  it('gives different bytes under an existing name a new file name', async () => {
+    await fetch(`${handle!.url}__demo/editor/demos/tour/assets?name=hero.png`, {
       method: 'POST',
       headers: { 'content-type': 'image/png' },
       body: Buffer.from('v1'),
     });
-    const firstBody = (await first.json()) as { asset: { id: string } };
     const second = await fetch(`${handle!.url}__demo/editor/demos/tour/assets?name=hero.png`, {
       method: 'POST',
       headers: { 'content-type': 'image/png' },
@@ -203,19 +174,14 @@ describe('dev server editor API', () => {
     const secondBody = (await second.json()) as {
       file: string;
       renamedFrom?: string;
-      asset: { id: string; file: string; path: string; publicUrl: string };
+      asset: { file: string; path: string; publicUrl: string };
     };
     expect(secondBody.file).toBe('hero-2.png');
     expect(secondBody.renamedFrom).toBe('hero.png');
-    expect(secondBody.asset.id).not.toBe(firstBody.asset.id);
     expect(secondBody.asset).toMatchObject({ file: 'hero-2.png', path: 'assets/hero-2.png', publicUrl: '/tour/assets/hero-2.png' });
-    // The original file and its manifest entry are untouched.
+    // The original file is untouched.
     expect(await (await fetch(`${handle!.url}tour/assets/hero.png`)).text()).toBe('v1');
     expect(await (await fetch(`${handle!.url}tour/assets/hero-2.png`)).text()).toBe('v2');
-    const manifest = JSON.parse(await readFile(join(root, 'demos', 'tour', 'assets.json'), 'utf8')) as {
-      assets: Array<{ id: string; file: string }>;
-    };
-    expect(manifest.assets.map((a) => a.file).sort()).toEqual(['hero-2.png', 'hero.png']);
     // A third upload with yet other bytes takes the next free name.
     const third = await fetch(`${handle!.url}__demo/editor/demos/tour/assets?name=hero.png`, {
       method: 'POST',
@@ -250,7 +216,7 @@ describe('dev server editor API', () => {
     expect(res.status).toBe(400);
   });
 
-  it('deletes an asset and its manifest entry', async () => {
+  it('deletes a file under assets/', async () => {
     await fetch(`${handle!.url}__demo/editor/demos/tour/assets?name=gone.png`, {
       method: 'POST',
       headers: { 'content-type': 'image/png' },
@@ -260,10 +226,7 @@ describe('dev server editor API', () => {
       method: 'DELETE',
     });
     expect(res.status).toBe(200);
-    const manifest = JSON.parse(await readFile(join(root, 'demos', 'tour', 'assets.json'), 'utf8')) as {
-      assets: unknown[];
-    };
-    expect(manifest.assets).toEqual([]);
+    expect(existsSync(join(root, 'demos', 'tour', 'assets', 'gone.png'))).toBe(false);
     const served = await fetch(`${handle!.url}tour/assets/gone.png`);
     expect(served.status).toBe(404);
   });

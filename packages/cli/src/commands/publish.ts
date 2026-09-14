@@ -1,11 +1,11 @@
 import { readFile } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
-import type { AssetsManifest } from '@inkly-org/interactive-demo/schema';
+import type { AssetsManifest, Demo } from '@inkly-org/interactive-demo/schema';
+import { collectMediaPaths, mapMediaRefs } from '../media.js';
 import { normalizeApiBase, readConfig } from '../publish/config.js';
 import { fetchDeploymentStatus } from '../publish/previews-api.js';
 import {
-  contentTypeForFile,
-  planDemoAssets,
+  planDemoMedia,
   uploadSyncAssets,
   type SyncAssetPlan,
   type SyncFinalizedUpload,
@@ -92,30 +92,46 @@ export function selectDemo(
   );
 }
 
-function applyPreviewUploadsToAssets(
-  manifest: AssetsManifest | null,
+/**
+ * Freeze a demo for the hosting service: every relative media path in the
+ * config becomes the absolute URL its bytes were uploaded to, and the
+ * manifest the API expects is generated from the same uploads. Nothing on
+ * disk changes.
+ */
+function freezeDemo(
+  config: Demo,
   plans: SyncAssetPlan[],
   uploads: SyncFinalizedUpload[],
-): AssetsManifest {
-  const base = manifest ?? { version: 1 as const, assets: [] };
+): { config: Demo; assets: AssetsManifest } {
   const uploadBySha = new Map(uploads.map((upload) => [upload.sha256, upload]));
-  const planBySha = new Map(plans.map((plan) => [plan.sha256, plan]));
-  return {
-    ...base,
-    assets: base.assets.map((asset) => {
-      const upload = uploadBySha.get(asset.sha256);
-      if (!upload) return asset;
-      const plan = planBySha.get(asset.sha256);
+  // Several paths can share one hash; map every referenced path to its upload.
+  const shaByPath = new Map<string, string>();
+  for (const path of collectMediaPaths(config)) {
+    const plan = plans.find((p) => p.id === path) ?? null;
+    if (plan) shaByPath.set(path, plan.sha256);
+  }
+  const frozen = mapMediaRefs(config, (value) => {
+    const key = value.replace(/^\.\//, '');
+    const sha = shaByPath.get(key);
+    const upload = sha ? uploadBySha.get(sha) : undefined;
+    return upload ? upload.publicUrl : value;
+  });
+  const assets: AssetsManifest = {
+    version: 1,
+    assets: plans.map((plan) => {
+      const upload = uploadBySha.get(plan.sha256);
       return {
-        ...asset,
-        contentType:
-          asset.contentType ??
-          plan?.contentType ??
-          contentTypeForFile(`${asset.sha256}${upload.ext}`, asset.kind),
-        publicUrl: upload.publicUrl,
+        id: plan.id,
+        sha256: plan.sha256,
+        kind: plan.contentType.startsWith('video/') ? 'video' : plan.contentType.startsWith('audio/') ? 'audio' : 'image',
+        contentType: plan.contentType,
+        size: plan.size,
+        file: plan.file,
+        ...(upload ? { publicUrl: upload.publicUrl } : {}),
       };
     }),
   };
+  return { config: frozen, assets };
 }
 
 /**
@@ -218,19 +234,19 @@ async function publishResolvedDemo(args: {
     }
   }
 
-  // Ensure every asset is on the server's storage before freezing — the hosted
-  // demo is served from there, which has no access to the local assets folder.
-  const plan = await planDemoAssets(demo);
+  // Ensure every referenced file is on the server's storage before freezing —
+  // the hosted demo is served from there, which cannot see the demo folder.
+  const plan = await planDemoMedia(demo);
   if (plan.unresolved.length > 0) {
     throw new Error(
-      `${plan.unresolved.length} asset(s) have no local bytes and are not on ` +
-        `the server, so the demo cannot be published:\n` +
-        plan.unresolved.map((a) => `  - ${a.id} (${a.sha256})`).join('\n'),
+      `${plan.unresolved.length} media file(s) the config references have no local bytes, ` +
+        `so the demo cannot be published:\n` +
+        plan.unresolved.map((a) => `  - ${a.id}`).join('\n'),
     );
   }
   let uploads: SyncFinalizedUpload[] = [];
   if (plan.assets.length > 0) {
-    out(options.silent, `Uploading ${plan.assets.length} asset(s)...\n`);
+    out(options.silent, `Uploading ${plan.assets.length} media file(s)...\n`);
     uploads = (await uploadSyncAssets({
       apiBase,
       token,
@@ -238,7 +254,7 @@ async function publishResolvedDemo(args: {
     })).uploads;
   }
 
-  const frozenAssets = applyPreviewUploadsToAssets(demo.assets, plan.assets, uploads);
+  const frozen = freezeDemo(demo.config, plan.assets, uploads);
 
   const res = await fetch(`${apiBase}/api/previews`, {
     method: 'POST',
@@ -249,8 +265,8 @@ async function publishResolvedDemo(args: {
     body: JSON.stringify({
       demoSlug: demo.slug,
       title: demo.config.title ?? null,
-      config: demo.config,
-      assets: frozenAssets,
+      config: frozen.config,
+      assets: frozen.assets,
       hub: await projectContext(project, options.cwd, options.silent),
       replace,
     }),

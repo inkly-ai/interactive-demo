@@ -14,6 +14,17 @@ vi.mock('../src/publish/config.js', async (importOriginal) => {
 import { runInit } from '../src/commands/init';
 import { runPublish, runPublishList } from '../src/commands/publish';
 
+
+/** Point the starter demo's content step at a file under assets/. */
+async function pointStepAt(projectDir: string, path: string): Promise<string> {
+  const configPath = join(projectDir, 'demos', 'getting-started', 'demo.config.json');
+  const config = JSON.parse(await readFile(configPath, 'utf8'));
+  config.steps[1].background.src = path;
+  const text = JSON.stringify(config, null, 2) + '\n';
+  await writeFile(configPath, text, 'utf8');
+  return text;
+}
+
 describe('interactive-demo publish', () => {
   let workdir: string;
   const originalFetch = globalThis.fetch;
@@ -128,14 +139,7 @@ describe('interactive-demo publish', () => {
     const sha256 = createHash('sha256').update(bytes).digest('hex');
     await mkdir(join(demoDir, 'assets'), { recursive: true });
     await writeFile(join(demoDir, 'assets', `${sha256}.png`), bytes);
-    const assetsPath = join(demoDir, 'assets.json');
-    const localAssetsJson = JSON.stringify({
-      version: 1,
-      assets: [
-        { id: 'cap-001', sha256, kind: 'image', contentType: 'image/png', file: `${sha256}.png`, size: bytes.byteLength },
-      ],
-    }, null, 2) + '\n';
-    await writeFile(assetsPath, localAssetsJson, 'utf8');
+    const localConfigJson = await pointStepAt(init.dir, `assets/${sha256}.png`);
 
     const cdnFor = (sha: string, ext: string) => `assets/sha256/${sha.slice(0, 2)}/${sha}${ext}`;
     const imageCdnPath = cdnFor(sha256, '.png');
@@ -197,10 +201,12 @@ describe('interactive-demo publish', () => {
     expect(result.url).toBe('https://example.test/p/abc123');
     const previewCall = fetchMock.mock.calls.find(([url]) => url === 'https://example.test/api/previews');
     const body = JSON.parse(previewCall![1]?.body as string);
-    expect(body.assets.assets[0]).toMatchObject({ id: 'cap-001', publicUrl: imagePublicUrl });
+    expect(body.assets.assets[0]).toMatchObject({ id: `assets/${sha256}.png`, sha256, publicUrl: imagePublicUrl });
+    // The frozen config points at the uploaded bytes, not the local path.
+    expect(body.config.steps[1].background.src).toBe(imagePublicUrl);
     expect(body.snapshots).toBeUndefined();
     // Local files are untouched — publish never rewrites the working tree.
-    expect(await readFile(assetsPath, 'utf8')).toBe(localAssetsJson);
+    expect(await readFile(join(demoDir, 'demo.config.json'), 'utf8')).toBe(localConfigJson);
   });
 
   it('--new mints a fresh deployment and warns when one already existed', async () => {
@@ -255,24 +261,15 @@ describe('interactive-demo publish', () => {
     expect(writes.join('')).toContain('<iframe src="https://example.test/p/fresh"');
   });
 
-  it('fails when an asset is neither local nor already hosted', async () => {
+  it('fails when the config references a file that is not there', async () => {
     const init = await runInit({ name: 'missing-asset-site', cwd: workdir, silent: true });
-    await writeFile(
-      join(init.dir, 'demos', 'getting-started', 'assets.json'),
-      JSON.stringify({
-        version: 1,
-        assets: [
-          { id: 'cap-001', sha256: 'a'.repeat(64), kind: 'image', contentType: 'image/png', size: 11 },
-        ],
-      }, null, 2) + '\n',
-      'utf8',
-    );
+    await pointStepAt(init.dir, 'assets/missing.png');
 
     const fetchMock = vi.fn();
     globalThis.fetch = fetchMock as unknown as typeof fetch;
 
     await expect(runPublish({ cwd: init.dir, silent: true })).rejects.toThrow(
-      /no local bytes/i,
+      /assets\/missing\.png/,
     );
     expect(fetchMock).not.toHaveBeenCalled();
   });

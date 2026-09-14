@@ -207,13 +207,9 @@ describe('publish against a fake hosting server', () => {
     const sha256 = createHash('sha256').update(bytes).digest('hex');
     await mkdir(join(demoDir, 'assets'), { recursive: true });
     await writeFile(join(demoDir, 'assets', `${sha256}.png`), bytes);
-    await writeFile(
-      join(demoDir, 'assets.json'),
-      JSON.stringify({
-        version: 1,
-        assets: [{ id: 'shot-1', sha256, kind: 'image', contentType: 'image/png', file: `${sha256}.png`, size: bytes.byteLength }],
-      }),
-    );
+    const config = JSON.parse(await readFile(join(demoDir, 'demo.config.json'), 'utf8'));
+    config.steps[1].background.src = `assets/${sha256}.png`;
+    await writeFile(join(demoDir, 'demo.config.json'), JSON.stringify(config, null, 2) + '\n');
 
     const result = await runPublish({ cwd: init.dir, silent: true });
     expect(result).toMatchObject({ slug: 'getting-started', id: 'srv123', url: `${base}/p/srv123` });
@@ -253,10 +249,11 @@ describe('publish against a fake hosting server', () => {
     });
     expect(typeof body.hub.runtime).toBe('string');
     expect(body.assets.assets[0]).toMatchObject({
-      id: 'shot-1',
+      id: `assets/${sha256}.png`,
       sha256,
       publicUrl: `${base}/cdn/${cdnFor(sha256, '.png')}`,
     });
+    expect(body.config.steps[1].background.src).toBe(`${base}/cdn/${cdnFor(sha256, '.png')}`);
     expect(body.config.steps.length).toBeGreaterThan(0);
   });
 
@@ -345,13 +342,9 @@ describe('publish against a fake hosting server', () => {
     const sha256 = createHash('sha256').update(bytes).digest('hex');
     await mkdir(join(demoDir, 'assets'), { recursive: true });
     await writeFile(join(demoDir, 'assets', 'Shot.PNG'), bytes);
-    await writeFile(
-      join(demoDir, 'assets.json'),
-      JSON.stringify({
-        version: 1,
-        assets: [{ id: 'shot-1', sha256, kind: 'image', contentType: 'image/png', file: 'Shot.PNG', size: bytes.byteLength }],
-      }),
-    );
+    const config = JSON.parse(await readFile(join(demoDir, 'demo.config.json'), 'utf8'));
+    config.steps[1].background.src = 'assets/Shot.PNG';
+    await writeFile(join(demoDir, 'demo.config.json'), JSON.stringify(config, null, 2) + '\n');
 
     await runPublish({ cwd: init.dir, silent: true });
 

@@ -1,21 +1,23 @@
+import { createHash } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
-import { extname } from 'node:path';
+import { basename, extname, resolve, sep } from 'node:path';
 import type { AssetEntry } from '@inkly-org/interactive-demo/schema';
-import { hasRemoteAsset, localAssetPath } from '../assets.js';
-import { fileSize, pathExists, type LoadedDemoConfig } from '../project.js';
+import { collectMediaPaths } from '../media.js';
+import { pathExists, type LoadedDemoConfig } from '../project.js';
 
 /**
- * Content-addressed asset upload client. `publish` plans which of a demo's
- * assets still need bytes on the hosting service's storage, uploads each
- * unique content hash once through presigned PUTs, and confirms the uploads so
- * the frozen manifest can carry absolute `publicUrl`s.
+ * Content-addressed media upload client. `publish` hashes every file the
+ * config references, uploads each unique content hash once through
+ * presigned PUTs, and confirms the uploads so the frozen config can carry
+ * absolute URLs.
  */
 
 export interface SyncAssetPlan {
   demo: string;
+  /** The path as the config references it, relative to the demo folder. */
   id: string;
   sha256: string;
-  /** Folder-relative file name under the demo's assets dir. */
+  /** The file's name, for its extension. */
   file: string;
   /** Absolute path to the local bytes to upload. Omit when `bytes` is set. */
   localPath?: string;
@@ -31,8 +33,8 @@ export interface SyncAssetPlan {
 
 export interface SyncUnresolvedAsset {
   demo: string;
+  /** The referenced path that has no file behind it. */
   id: string;
-  sha256: string;
 }
 
 export interface SyncPlan {
@@ -57,40 +59,37 @@ export interface SyncFinalizedUpload {
 }
 
 /**
- * Decide which of a demo's assets need uploading. An asset that is neither on
- * disk nor already served from an absolute URL is recorded as unresolved
- * instead of aborting — the caller decides whether that blocks publishing.
+ * Decide which of a demo's media files need uploading: every relative path
+ * the config references, hashed from disk. A path with no file behind it
+ * (or one that escapes the demo folder) is recorded as unresolved instead
+ * of aborting — the caller decides whether that blocks publishing.
  */
-export async function planDemoAssets(demo: LoadedDemoConfig): Promise<SyncPlan> {
+export async function planDemoMedia(demo: LoadedDemoConfig): Promise<SyncPlan> {
   const assets: SyncAssetPlan[] = [];
   const unresolved: SyncUnresolvedAsset[] = [];
-  for (const asset of demo.assets?.assets ?? []) {
-    // Local bytes live next to the demo at `demos/<slug>/assets/<file>`, the
-    // same file the dev server delivers (resolved via the shared
-    // `localAssetPath`).
-    const localPath = localAssetPath(demo.dir, asset);
-    const hasLocal = localPath ? await pathExists(localPath) : false;
-    const alreadyRemote = hasRemoteAsset(asset);
-    if (!hasLocal && !alreadyRemote) {
-      unresolved.push({ demo: demo.slug, id: asset.id, sha256: asset.sha256 });
+  const root = resolve(demo.dir);
+  for (const path of collectMediaPaths(demo.config)) {
+    const localPath = resolve(root, path);
+    const inside = localPath === root || localPath.startsWith(root + sep);
+    if (!inside || !(await pathExists(localPath))) {
+      unresolved.push({ demo: demo.slug, id: path });
       continue;
     }
-    if (!hasLocal || alreadyRemote || !asset.file || !localPath) continue;
-    const size = await fileSize(localPath);
+    const bytes = await readFile(localPath);
     assets.push({
       demo: demo.slug,
-      id: asset.id,
-      sha256: asset.sha256,
-      file: asset.file,
+      id: path,
+      sha256: createHash('sha256').update(bytes).digest('hex'),
+      file: basename(path),
       localPath,
-      contentType: asset.contentType ?? contentTypeForFile(asset.file, asset.kind),
-      size: asset.size ?? size ?? 0,
-      alreadyRemote,
+      contentType: contentTypeForFile(path, undefined),
+      size: bytes.byteLength,
+      alreadyRemote: false,
     });
   }
 
   // Upload each unique content hash once — identical bytes referenced by
-  // several entries upload a single time; every entry still gets the
+  // several paths upload a single time; every path still gets the
   // resulting URL (keyed by sha).
   const uploadPlan = Array.from(new Map(assets.map((a) => [a.sha256, a])).values());
   return { assets: uploadPlan, unresolved };

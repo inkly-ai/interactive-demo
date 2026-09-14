@@ -329,6 +329,10 @@ const defaultCss = `
 }
 [data-demo-theme="default"] .demo-intro-cta{
     font-family: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    /* Shadow tint: the button's colour pulled toward black, the same rule the
+       page header uses, so a light button casts a grey shadow instead of an
+       invisible white one. */
+    --demo-cta-ink: color-mix(in oklab, var(--demo-cta-bg, var(--demo-primary)) 55%, black);
     height: 42px;
     padding: 0 18px;
     font-size: 14px;
@@ -343,9 +347,9 @@ const defaultCss = `
     border: 1px solid color-mix(in oklab, var(--demo-cta-bg, var(--demo-primary)) 78%, black);
     box-shadow:
         inset 0 1px 0 rgb(255 255 255 / 28%),
-        inset 0 -1px 0 color-mix(in oklab, var(--demo-cta-bg, var(--demo-primary)) 50%, transparent),
-        0 1px 2px color-mix(in oklab, var(--demo-cta-bg, var(--demo-primary)) 18%, transparent),
-        0 4px 10px color-mix(in oklab, var(--demo-cta-bg, var(--demo-primary)) 22%, transparent);
+        inset 0 -1px 0 color-mix(in oklab, var(--demo-cta-ink) 50%, transparent),
+        0 1px 2px color-mix(in oklab, var(--demo-cta-ink) 18%, transparent),
+        0 4px 10px color-mix(in oklab, var(--demo-cta-ink) 22%, transparent);
     transition: filter 120ms ease, box-shadow 120ms ease, transform 80ms ease;
 }
 [data-demo-theme="default"] .demo-intro-cta .demo-button-label{
@@ -356,14 +360,14 @@ const defaultCss = `
 [data-demo-theme="default"] .demo-intro-cta:hover{
     box-shadow:
         inset 0 1px 0 rgb(255 255 255 / 32%),
-        inset 0 -1px 0 color-mix(in oklab, var(--demo-cta-bg, var(--demo-primary)) 55%, transparent),
-        0 2px 4px color-mix(in oklab, var(--demo-cta-bg, var(--demo-primary)) 20%, transparent),
-        0 10px 18px color-mix(in oklab, var(--demo-cta-bg, var(--demo-primary)) 26%, transparent);
+        inset 0 -1px 0 color-mix(in oklab, var(--demo-cta-ink) 55%, transparent),
+        0 2px 4px color-mix(in oklab, var(--demo-cta-ink) 20%, transparent),
+        0 10px 18px color-mix(in oklab, var(--demo-cta-ink) 26%, transparent);
 }
 [data-demo-theme="default"] .demo-intro-cta:active{
     box-shadow:
-        inset 0 1px 2px color-mix(in oklab, var(--demo-cta-bg, var(--demo-primary)) 30%, transparent),
-        0 1px 1px color-mix(in oklab, var(--demo-cta-bg, var(--demo-primary)) 14%, transparent);
+        inset 0 1px 2px color-mix(in oklab, var(--demo-cta-ink) 30%, transparent),
+        0 1px 1px color-mix(in oklab, var(--demo-cta-ink) 14%, transparent);
 }
 
 /* Brand mark — lifted 3D card. */

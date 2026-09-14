@@ -148,6 +148,10 @@ const monoCss = `
 
 /* Primary CTA — flat token-colored card with a hairline edge. */
 [data-demo-theme="mono"] .demo-intro-cta{
+    /* Shadow tint: the button's colour pulled toward black, the same rule the
+       page header uses, so a light button casts a grey shadow instead of an
+       invisible white one. */
+    --demo-cta-ink: color-mix(in oklab, var(--demo-cta-bg, var(--demo-primary)) 55%, black);
     height: 40px;
     padding: 0 18px;
     font-size: 13.5px;
@@ -157,7 +161,7 @@ const monoCss = `
     background: var(--demo-cta-bg, var(--demo-primary));
     color: var(--demo-cta-fg, var(--demo-primary-fg));
     border: 1px solid var(--demo-cta-bg, var(--demo-primary));
-    box-shadow: 0 8px 18px -14px color-mix(in oklab, var(--demo-cta-bg, var(--demo-primary)) 58%, transparent);
+    box-shadow: 0 8px 18px -14px color-mix(in oklab, var(--demo-cta-ink) 58%, transparent);
     transition:
         background-color 140ms ease,
         border-color 140ms ease,
@@ -167,7 +171,7 @@ const monoCss = `
 [data-demo-theme="mono"] .demo-intro-cta:hover{
     background: color-mix(in oklab, var(--demo-cta-bg, var(--demo-primary)) 90%, white);
     border-color: color-mix(in oklab, var(--demo-cta-bg, var(--demo-primary)) 86%, black);
-    box-shadow: 0 12px 24px -16px color-mix(in oklab, var(--demo-cta-bg, var(--demo-primary)) 68%, transparent);
+    box-shadow: 0 12px 24px -16px color-mix(in oklab, var(--demo-cta-ink) 68%, transparent);
 }
 [data-demo-theme="mono"] .demo-intro-cta:active{
     transform: translateY(1px);

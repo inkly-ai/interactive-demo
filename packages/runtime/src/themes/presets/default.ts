@@ -337,15 +337,15 @@ const defaultCss = `
     border-radius: 11px;
     margin-top: 4px;
     background: linear-gradient(180deg,
-        color-mix(in oklab, var(--demo-primary) 86%, white),
-        var(--demo-primary));
-    color: var(--demo-primary-fg);
-    border: 1px solid color-mix(in oklab, var(--demo-primary) 78%, black);
+        color-mix(in oklab, var(--demo-cta-bg, var(--demo-primary)) 86%, white),
+        var(--demo-cta-bg, var(--demo-primary)));
+    color: var(--demo-cta-fg, var(--demo-primary-fg));
+    border: 1px solid color-mix(in oklab, var(--demo-cta-bg, var(--demo-primary)) 78%, black);
     box-shadow:
         inset 0 1px 0 rgb(255 255 255 / 28%),
-        inset 0 -1px 0 color-mix(in oklab, var(--demo-primary) 50%, transparent),
-        0 1px 2px color-mix(in oklab, var(--demo-primary) 18%, transparent),
-        0 4px 10px color-mix(in oklab, var(--demo-primary) 22%, transparent);
+        inset 0 -1px 0 color-mix(in oklab, var(--demo-cta-bg, var(--demo-primary)) 50%, transparent),
+        0 1px 2px color-mix(in oklab, var(--demo-cta-bg, var(--demo-primary)) 18%, transparent),
+        0 4px 10px color-mix(in oklab, var(--demo-cta-bg, var(--demo-primary)) 22%, transparent);
     transition: filter 120ms ease, box-shadow 120ms ease, transform 80ms ease;
 }
 [data-demo-theme="default"] .demo-intro-cta .demo-button-label{
@@ -356,14 +356,14 @@ const defaultCss = `
 [data-demo-theme="default"] .demo-intro-cta:hover{
     box-shadow:
         inset 0 1px 0 rgb(255 255 255 / 32%),
-        inset 0 -1px 0 color-mix(in oklab, var(--demo-primary) 55%, transparent),
-        0 2px 4px color-mix(in oklab, var(--demo-primary) 20%, transparent),
-        0 10px 18px color-mix(in oklab, var(--demo-primary) 26%, transparent);
+        inset 0 -1px 0 color-mix(in oklab, var(--demo-cta-bg, var(--demo-primary)) 55%, transparent),
+        0 2px 4px color-mix(in oklab, var(--demo-cta-bg, var(--demo-primary)) 20%, transparent),
+        0 10px 18px color-mix(in oklab, var(--demo-cta-bg, var(--demo-primary)) 26%, transparent);
 }
 [data-demo-theme="default"] .demo-intro-cta:active{
     box-shadow:
-        inset 0 1px 2px color-mix(in oklab, var(--demo-primary) 30%, transparent),
-        0 1px 1px color-mix(in oklab, var(--demo-primary) 14%, transparent);
+        inset 0 1px 2px color-mix(in oklab, var(--demo-cta-bg, var(--demo-primary)) 30%, transparent),
+        0 1px 1px color-mix(in oklab, var(--demo-cta-bg, var(--demo-primary)) 14%, transparent);
 }
 
 /* Brand mark — lifted 3D card. */

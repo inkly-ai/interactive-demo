@@ -154,10 +154,10 @@ const monoCss = `
     font-weight: 500;
     border-radius: 10px;
     margin-top: 4px;
-    background: var(--demo-primary);
-    color: var(--demo-primary-fg);
-    border: 1px solid var(--demo-primary);
-    box-shadow: 0 8px 18px -14px color-mix(in oklab, var(--demo-primary) 58%, transparent);
+    background: var(--demo-cta-bg, var(--demo-primary));
+    color: var(--demo-cta-fg, var(--demo-primary-fg));
+    border: 1px solid var(--demo-cta-bg, var(--demo-primary));
+    box-shadow: 0 8px 18px -14px color-mix(in oklab, var(--demo-cta-bg, var(--demo-primary)) 58%, transparent);
     transition:
         background-color 140ms ease,
         border-color 140ms ease,
@@ -165,16 +165,16 @@ const monoCss = `
         transform 80ms ease;
 }
 [data-demo-theme="mono"] .demo-intro-cta:hover{
-    background: color-mix(in oklab, var(--demo-primary) 90%, white);
-    border-color: color-mix(in oklab, var(--demo-primary) 86%, black);
-    box-shadow: 0 12px 24px -16px color-mix(in oklab, var(--demo-primary) 68%, transparent);
+    background: color-mix(in oklab, var(--demo-cta-bg, var(--demo-primary)) 90%, white);
+    border-color: color-mix(in oklab, var(--demo-cta-bg, var(--demo-primary)) 86%, black);
+    box-shadow: 0 12px 24px -16px color-mix(in oklab, var(--demo-cta-bg, var(--demo-primary)) 68%, transparent);
 }
 [data-demo-theme="mono"] .demo-intro-cta:active{
     transform: translateY(1px);
     box-shadow: inset 0 1px 2px rgba(0,0,0,0.18);
 }
 [data-demo-theme="mono"] .demo-intro-cta:focus-visible{
-    outline: 2px solid color-mix(in oklab, var(--demo-primary) 72%, white);
+    outline: 2px solid color-mix(in oklab, var(--demo-cta-bg, var(--demo-primary)) 72%, white);
     outline-offset: 2px;
 }
 /* Preview card — white surface with hairline edge, no transform. */

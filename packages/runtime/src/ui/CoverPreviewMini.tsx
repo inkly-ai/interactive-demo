@@ -26,10 +26,10 @@
  */
 
 import type { CSSProperties, ReactNode } from 'react';
+import { ctaStyle } from '../primitives/Widgets';
 import type {
   CoverBackground,
   CoverStep,
-  Cta,
   CustomWidget,
   EmbedWidget,
   FormWidget,
@@ -236,14 +236,6 @@ function headlineAlignmentStyle(
     return { textAlign: 'right', alignItems: 'flex-end' };
   }
   return { textAlign: 'left', alignItems: 'flex-start' };
-}
-
-function ctaStyle(cta: Cta): CSSProperties | undefined {
-  if (!cta.background && !cta.textColor) return undefined;
-  return {
-    background: cta.background,
-    color: cta.textColor,
-  };
 }
 
 function coverBackgroundStyle(

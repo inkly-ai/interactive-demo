@@ -73,12 +73,20 @@ function headlineAlignmentStyle(
   return { textAlign: 'left', alignItems: 'flex-start' };
 }
 
-function ctaStyle(cta: Cta): CSSProperties | undefined {
+/**
+ * An authored button colour is also handed to the theme as CSS variables,
+ * so its border, glow and hover derive from that colour rather than from
+ * the demo's primary: a white secondary button gets a grey edge, not a
+ * blue one.
+ */
+export function ctaStyle(cta: Cta): CSSProperties | undefined {
   if (!cta.background && !cta.textColor) return undefined;
   return {
     background: cta.background,
     color: cta.textColor,
-  };
+    ...(cta.background ? { '--demo-cta-bg': cta.background } : {}),
+    ...(cta.textColor ? { '--demo-cta-fg': cta.textColor } : {}),
+  } as CSSProperties;
 }
 
 export type HeadlineWidgetProps = {

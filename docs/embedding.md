@@ -37,11 +37,11 @@ Two things to keep:
 Add `?embed=inline` to the page URL and the page renders the player alone:
 no bar, no canvas, transparent background, the player filling the frame
 edge to edge. Size the frame to the demo, which is its screen ratio plus the
-player's header (52px in the default theme, 48px in `mono`):
+player's header (52px in the default theme, 48px in `mono`) and 2px for the card's border:
 
 ```html
-<div style="container-type: inline-size; width: 100%; max-width: calc(max(0px, 80vh - 52px) * 1440 / 900); margin: 0 auto;">
-  <div style="position: relative; width: 100%; height: calc(100cqw * 900 / 1440 + 52px);">
+<div style="container-type: inline-size; width: 100%; max-width: calc(max(0px, 80vh - 54px) * 1440 / 900); margin: 0 auto;">
+  <div style="position: relative; width: 100%; height: calc(100cqw * 900 / 1440 + 52px + 2px);">
     <iframe
       src="https://your-site.com/demos/onboarding/?embed=inline"
       title="Onboarding demo"

@@ -107,11 +107,14 @@
         --demo-vertical-chrome-h: 0px !important;
         box-sizing: border-box;
       }
-      /* Flush to the host rectangle; the host owns rounding, border and
-         shadow. Both the outer card and the inner shell carry them in the
-         themes, and a rounded transparent card shows the host's background
-         at its corners. */
-      html[data-embed="inline"] .demo-player,
+      /* The card keeps its own border and corners, the demo's window frame,
+         but drops the drop shadow: an iframe clips anything outside its box,
+         so a shadow only ever shows as a cut-off band. The inner shell is
+         squared; the card's rounded overflow clips it. The host box is the
+         ratio plus header plus the card's 2px of border. */
+      html[data-embed="inline"] .demo-player {
+        box-shadow: none !important;
+      }
       html[data-embed="inline"] .demo-player-shell {
         border-radius: 0 !important;
         border: 0 !important;

@@ -46,19 +46,41 @@
           "type": "headline",
           "id": "headline-intro",
           "title": "A tour of interactive-demo",
-          "description": "See how a project looks in the dev server, in the player, and in the editor.",
-          "textAlign": "middle",
+          "description": "Capture a click-through of your product, add hotspots in a local editor, and ship it as a static page or a hosted link.",
           "cta": {
-            "label": "Start",
+            "label": "Start the tour",
             "action": {
               "type": "next"
             },
             "animation": "shimmer"
+          },
+          "image": {
+            "src": "asset:shot-editor",
+            "alt": "The local editor with the slide strip open",
+            "naturalWidth": 1440,
+            "naturalHeight": 900,
+            "position": "right",
+            "layout": "hero"
+          },
+          "secondaryCta": {
+            "label": "Get the CLI",
+            "action": {
+              "type": "url",
+              "href": "https://github.com/inkly-ai/interactive-demo"
+            },
+            "animation": "none",
+            "background": "#f8f8f8",
+            "textColor": "#1f1f1f"
           }
         }
       ],
       "advance": {
         "trigger": "click"
+      },
+      "background": {
+        "type": "color",
+        "from": "#fdfcfc",
+        "to": "#eee9de"
       }
     },
     {
@@ -98,7 +120,7 @@
         "naturalHeight": 900,
         "alt": "The player showing a cover step"
       },
-      "script": "This is what viewers see: a cover, then your screens with hotspots. The made-with badge sits in the corner and can be turned off.",
+      "script": "This is what viewers see: a cover, then your screens with hotspots. The Built with Inkly badge sits in the corner and can be turned off.",
       "advance": {
         "trigger": "click"
       },
@@ -147,19 +169,41 @@
           "type": "headline",
           "id": "headline-outro",
           "title": "That's the whole loop",
-          "description": "Capture, annotate, build, embed.",
-          "textAlign": "middle",
+          "description": "Capture, annotate, build, embed. Publish once with a single command to get a shareable link.",
           "cta": {
             "label": "Replay",
             "action": {
               "type": "restart"
             },
             "animation": "shimmer"
+          },
+          "image": {
+            "src": "asset:shot-player",
+            "alt": "The player showing the finished demo",
+            "naturalWidth": 1440,
+            "naturalHeight": 900,
+            "position": "left",
+            "layout": "hero"
+          },
+          "secondaryCta": {
+            "label": "Try Inkly",
+            "action": {
+              "type": "url",
+              "href": "https://app.inklyai.dev"
+            },
+            "animation": "none",
+            "background": "#f8f8f8",
+            "textColor": "#1f1f1f"
           }
         }
       ],
       "advance": {
         "trigger": "click"
+      },
+      "background": {
+        "type": "color",
+        "from": "#fdfcfc",
+        "to": "#eee9de"
       }
     }
   ]

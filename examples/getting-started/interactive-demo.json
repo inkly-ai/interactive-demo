@@ -1,5 +1,20 @@
 {
   "name": "getting-started",
   "theme": "default",
-  "demos": ["tour"]
+  "demos": [
+    "tour"
+  ],
+  "brand": {
+    "logo": "brand/inkly-dot.svg",
+    "name": "Inkly",
+    "logoHref": "https://inklyai.dev",
+    "cta": {
+      "label": "Get started",
+      "href": "https://app.inklyai.dev"
+    },
+    "secondaryCta": {
+      "label": "GitHub",
+      "href": "https://github.com/inkly-ai/interactive-demo"
+    }
+  }
 }

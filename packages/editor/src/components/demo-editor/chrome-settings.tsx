@@ -280,19 +280,19 @@ export function DemoSettingsInspector({
                 }}
             />
             <ChromeSegmentRow
-                label="Made-with badge"
+                label="Built-with badge"
                 value={!resolved.branding}
                 onChange={(hidden) => setField({ branding: !hidden })}
                 visibleIcon={<TagIcon className="size-4" />}
                 hiddenIcon={<XIcon className="size-4" />}
-                infoTooltip="Show or hide the small made-with link in the player's corner."
+                infoTooltip={'Show or hide the small "Built with Inkly" link in the player\'s corner.'}
                 visibleTooltip={{
                     title: "Show badge",
-                    subtitle: "Show the made-with link in the player.",
+                    subtitle: "Show the Built with Inkly link in the player.",
                 }}
                 hiddenTooltip={{
                     title: "Hide badge",
-                    subtitle: "Hide the made-with link.",
+                    subtitle: "Hide the Built with Inkly link.",
                 }}
             />
             <PlayerControlsSegmentRow

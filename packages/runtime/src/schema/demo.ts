@@ -82,7 +82,7 @@ export const ChromeSchema = z.object({
    */
   autoplay: z.boolean().default(false),
   /**
-   * Shows the small "Made with interactive-demo" link in the player's
+   * Shows the small "Built with Inkly" link in the player's
    * bottom-right corner. Default ON; set to `false` to hide it.
    */
   branding: z.boolean().default(true),

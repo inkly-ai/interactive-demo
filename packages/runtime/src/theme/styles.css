@@ -1302,7 +1302,7 @@
   }
 }
 
-/* "Made with" badge - sits inside the player shell at bottom-right.
+/* "Built with Inkly" badge - sits inside the player shell at bottom-right.
    The shell already controls the rounded clip + container query, so the
    badge moves with the player and never escapes the frame. The badge is
    surface-free and shadow-free so it does not create a glow or card-like
@@ -1343,6 +1343,17 @@
 .demo-builtwith-badge:hover,
 .demo-builtwith-badge:focus-visible {
   outline: none;
+}
+
+/* The wordmark's dot: a circle sized against the text (0.66em, the
+   Familjen preset's ratio) sitting on the baseline before the name. */
+.demo-builtwith-badge-dot {
+  display: inline-block;
+  flex: 0 0 auto;
+  width: 0.66em;
+  height: 0.66em;
+  border-radius: 50%;
+  background: currentColor;
 }
 
 .demo-builtwith-badge::before {

@@ -110,9 +110,9 @@ Docs:
 - [`examples/getting-started`](examples/getting-started) — a complete project
   that CI validates and builds.
 
-## Made-with badge
+## Built-with badge
 
-The player shows a small "Made with interactive-demo" link in its corner. It is
+The player shows a small "Built with Inkly" link in its corner. It is
 on by default; turn it off per demo with
 
 ```json

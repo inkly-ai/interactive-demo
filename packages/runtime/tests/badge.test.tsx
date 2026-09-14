@@ -19,12 +19,14 @@ const demo = {
   ],
 };
 
-describe('made-with badge', () => {
+describe('built-with badge', () => {
   it('renders by default', () => {
     const { container } = render(<Demo config={demo} />);
     const badge = container.querySelector('a.demo-builtwith-badge');
     expect(badge).not.toBeNull();
-    expect(badge?.textContent).toBe('Made with interactive-demo');
+    expect(badge?.textContent).toBe('Built with Inkly');
+    expect(badge?.getAttribute('href')).toBe('https://inklyai.dev');
+    expect(badge?.querySelector('.demo-builtwith-badge-dot')).not.toBeNull();
     expect(badge?.getAttribute('rel')).toContain('noopener');
   });
 

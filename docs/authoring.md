@@ -157,7 +157,7 @@ demo.
 `chapters` group step ids under titles for the chapter menu. `chrome`
 controls the frame around the screen: `hideHeader`, `controls`
 (`full` | `minimal` | `hidden`), `mobileFooterMessage`, `autoplay`, and
-`branding` (the made-with badge, default `true`).
+`branding` (the "Built with Inkly" badge, default `true`).
 
 ## Assets
 

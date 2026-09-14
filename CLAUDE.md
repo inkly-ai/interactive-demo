@@ -31,5 +31,5 @@ then the four commands) is the bar before calling anything done.
   the player exposes `window.__demo` and honours `?autoplay=1`.
 - Assets live at `demos/<slug>/assets/<file>` with an `assets.json` manifest; `asset:<id>` URIs
   resolve to `publicUrl` or `./assets/<file>`.
-- The made-with badge is on by default (`chrome.branding: false` hides it).
+- The "Built with Inkly" badge is on by default (`chrome.branding: false` hides it); it links to inklyai.dev.
 - `capture` is headed by default; `--headless` opts in; video needs `ffmpeg` on PATH.

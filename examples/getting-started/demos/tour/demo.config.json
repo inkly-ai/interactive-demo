@@ -76,11 +76,6 @@
       ],
       "advance": {
         "trigger": "click"
-      },
-      "background": {
-        "type": "color",
-        "from": "#fdfcfc",
-        "to": "#eee9de"
       }
     },
     {
@@ -199,11 +194,6 @@
       ],
       "advance": {
         "trigger": "click"
-      },
-      "background": {
-        "type": "color",
-        "from": "#fdfcfc",
-        "to": "#eee9de"
       }
     }
   ]

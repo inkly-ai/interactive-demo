@@ -1,0 +1,241 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Testbed host — embedding a built demo</title>
+    <style>
+      :root {
+        --bg: #fbfbfd;
+        --panel: #fff;
+        --ink: #16181d;
+        --muted: #6b7280;
+        --line: #e6e7eb;
+        --accent: #5b6cff;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--ink);
+        font: 15px/1.55 -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      }
+      header {
+        border-bottom: 1px solid var(--line);
+        background: #fff;
+        padding: 18px 24px;
+        display: flex;
+        align-items: center;
+        gap: 14px;
+      }
+      header b { font-size: 16px; }
+      header span { color: var(--muted); font-size: 13px; }
+      main { max-width: 1120px; margin: 0 auto; padding: 32px 24px 80px; }
+      section { margin-bottom: 48px; }
+      h2 { font-size: 18px; margin: 0 0 4px; }
+      h2 + p { margin: 0 0 18px; color: var(--muted); font-size: 14px; }
+      .panel {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 18px;
+      }
+      button.cta {
+        appearance: none;
+        border: 0;
+        border-radius: 10px;
+        background: var(--accent);
+        color: #fff;
+        font: 600 15px/1 inherit;
+        padding: 14px 22px;
+        cursor: pointer;
+      }
+      button.cta:hover { filter: brightness(1.06); }
+      select, .ghost {
+        font: inherit;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 8px 10px;
+        background: #fff;
+        color: inherit;
+        cursor: pointer;
+      }
+      .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+      .log {
+        font: 12px/1.6 ui-monospace, SFMono-Regular, Menlo, monospace;
+        background: #0f1117;
+        color: #d7dae3;
+        border-radius: 10px;
+        padding: 14px;
+        max-height: 260px;
+        overflow: auto;
+        white-space: pre-wrap;
+        word-break: break-word;
+      }
+      .log:empty::after { content: 'waiting for events…'; color: #6b7280; }
+      .log .t { color: #7dd3fc; }
+      .grid { display: grid; gap: 20px; grid-template-columns: 1fr 1fr; }
+      @media (max-width: 860px) { .grid { grid-template-columns: 1fr; } }
+      ul.checks { margin: 0; padding-left: 18px; color: var(--muted); font-size: 14px; }
+      ul.checks li { margin-bottom: 6px; }
+      code { background: #f2f3f7; padding: 1px 5px; border-radius: 5px; font-size: 12.5px; }
+    </style>
+    <script>
+      /* __TESTBED_DEMOS__ */
+      window.InteractiveDemo = window.InteractiveDemo || {
+        q: [],
+        open: function () {
+          (this.q = this.q || []).push(arguments);
+        },
+      };
+    </script>
+    <script src="/embed.js" async></script>
+  </head>
+  <body>
+    <header>
+      <b>Acme Analytics</b>
+      <span>a stand-in host page — everything below is the real built demo, served from <code id="dist"></code></span>
+    </header>
+
+    <main>
+      <section>
+        <div class="row" style="margin-bottom: 18px">
+          <label for="pick"><b>Demo</b></label>
+          <select id="pick"></select>
+          <a class="ghost" id="standalone" href="#" target="_blank" rel="noreferrer">Open standalone ↗</a>
+          <a class="ghost" id="inline-direct" href="#" target="_blank" rel="noreferrer">Open ?embed=inline ↗</a>
+        </div>
+      </section>
+
+      <section>
+        <h2>1 — Inline embed</h2>
+        <p>
+          The iframe snippet <code>interactive-demo embed --mode inline</code> prints. The frame
+          should show the player alone: no page bar, no canvas, transparent background, and no
+          letterboxing at any window width.
+        </p>
+        <div id="inline-host"></div>
+      </section>
+
+      <section>
+        <h2>2 — Pop-up embed</h2>
+        <p>
+          The loader snippet: <code>embed.js</code> plus a button that calls
+          <code>InteractiveDemo.open()</code>. The overlay should take the demo's own aspect ratio,
+          close on Escape, and close on a click outside the frame.
+        </p>
+        <div class="panel row">
+          <button class="cta" id="popup">Try the demo</button>
+          <span style="color: var(--muted); font-size: 13px">then press Escape</span>
+        </div>
+      </section>
+
+      <section class="grid">
+        <div>
+          <h2>3 — Relayed events</h2>
+          <p>Every runtime event the framed player posts to this page.</p>
+          <div class="log" id="events"></div>
+          <div class="row" style="margin-top: 10px">
+            <button class="ghost" id="clear-events">Clear</button>
+          </div>
+        </div>
+        <div>
+          <h2>4 — Form submissions</h2>
+          <p>
+            What this server received at <code>/api/form</code>. Point a form widget's
+            <code>submitTo</code> at it to test the round trip.
+          </p>
+          <div class="log" id="subs"></div>
+          <div class="row" style="margin-top: 10px">
+            <button class="ghost" id="refresh-subs">Refresh</button>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <h2>What to look for</h2>
+        <div class="panel">
+          <ul class="checks">
+            <li>The inline frame fills its box edge to edge — no scrollbars, no grey bands.</li>
+            <li>Resize the window: the frame keeps the demo's ratio and stays under 80% of the viewport height.</li>
+            <li>The pop-up overlay traps the scroll behind it and restores it on close.</li>
+            <li>Clicking through the demo logs <code>step</code> / <code>complete</code> events on the left.</li>
+            <li>Submitting a form widget with <code>submitTo</code> set to this server appears on the right.</li>
+          </ul>
+        </div>
+      </section>
+    </main>
+
+    <script>
+      const demos = (window.__testbed && window.__testbed.demos) || [];
+      document.getElementById('dist').textContent = (window.__testbed && window.__testbed.dist) || '?';
+
+      const pick = document.getElementById('pick');
+      for (const demo of demos) {
+        const option = document.createElement('option');
+        option.value = demo.slug;
+        option.textContent = `${demo.title} (${demo.slug})`;
+        pick.append(option);
+      }
+
+      // The same sizing the CLI's snippet uses: the screen ratio plus the
+      // player header (52px in the default theme) and 2px for the border.
+      const HEADER = 52;
+      function renderInline(demo) {
+        const url = `/demo/${demo.slug}/?embed=inline`;
+        document.getElementById('inline-host').innerHTML = `
+          <div style="container-type: inline-size; width: 100%; max-width: calc(max(0px, 80vh - ${HEADER + 2}px) * ${demo.width} / ${demo.height}); margin: 0 auto;">
+            <div style="position: relative; width: 100%; height: calc(100cqw * ${demo.height} / ${demo.width} + ${HEADER}px + 2px);">
+              <iframe src="${url}" title="${demo.title}" loading="lazy"
+                allow="clipboard-read; clipboard-write; fullscreen" allowfullscreen
+                style="position: absolute; inset: 0; width: 100%; height: 100%; border: 0;"></iframe>
+            </div>
+          </div>`;
+        document.getElementById('standalone').href = `/demo/${demo.slug}/`;
+        document.getElementById('inline-direct').href = url;
+      }
+
+      function current() {
+        return demos.find((d) => d.slug === pick.value) || demos[0];
+      }
+
+      if (demos.length > 0) renderInline(current());
+      pick.addEventListener('change', () => renderInline(current()));
+
+      document.getElementById('popup').addEventListener('click', () => {
+        const demo = current();
+        if (demo) window.InteractiveDemo.open(`/demo/${demo.slug}/`);
+      });
+
+      const events = document.getElementById('events');
+      window.addEventListener('message', (e) => {
+        if (!e.data || e.data.type !== 'interactive-demo:event') return;
+        const line = document.createElement('div');
+        line.innerHTML =
+          `<span class="t">${new Date().toLocaleTimeString()}</span> ` +
+          JSON.stringify(e.data.event);
+        events.prepend(line);
+        if (e.data.event && e.data.event.type === 'formSubmit') refreshSubs();
+      });
+      document.getElementById('clear-events').addEventListener('click', () => {
+        events.textContent = '';
+      });
+
+      const subs = document.getElementById('subs');
+      async function refreshSubs() {
+        try {
+          const res = await fetch('/api/submissions');
+          const data = await res.json();
+          subs.textContent = data.submissions.length
+            ? data.submissions.map((s) => `${s.at}\n${JSON.stringify(s.payload, null, 2)}`).join('\n\n')
+            : '';
+        } catch {
+          subs.textContent = 'could not reach /api/submissions';
+        }
+      }
+      document.getElementById('refresh-subs').addEventListener('click', refreshSubs);
+      refreshSubs();
+      setInterval(refreshSubs, 4000);
+    </script>
+  </body>
+</html>

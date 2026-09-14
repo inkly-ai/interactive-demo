@@ -3178,3 +3178,35 @@ a.demo-header-title-pill {
   white-space: pre-wrap;
   font: 12px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
 }
+
+/* ── Pop-up (React hosts) ─────────────────────────────────────────────
+   <DemoModal> draws the same overlay the embed.js loader draws around an
+   iframe: a scrim, a 16:9 frame capped to the viewport, the player inside. */
+.demo-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483646;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(2px);
+}
+.demo-modal-frame {
+  position: relative;
+  width: min(1100px, 92vw, calc(88vh * 16 / 9));
+  aspect-ratio: 16 / 9;
+  max-height: 88vh;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.4);
+  container-type: size;
+}
+.demo-modal-frame > * {
+  width: 100%;
+  height: 100%;
+}
+html.demo-modal-no-scroll,
+html.demo-modal-no-scroll body {
+  overflow: hidden !important;
+}

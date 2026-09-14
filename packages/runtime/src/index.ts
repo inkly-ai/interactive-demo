@@ -5,6 +5,7 @@ export * from './primitives';
 export * from './theme/tokens';
 export * from './ui/CoverPreviewMini';
 export * from './ui/Demo';
+export * from './ui/DemoModal';
 export * from './ui/layouts';
 export * from './utils/timing';
 

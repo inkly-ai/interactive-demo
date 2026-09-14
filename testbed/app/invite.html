@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Invite — Acme Analytics</title>
+    <link rel="stylesheet" href="app.css" />
+  </head>
+  <body>
+    <aside>
+      <div class="brand"><span class="mark">A</span><b>Acme Analytics</b></div>
+      <nav>
+        <span class="nav-label">Workspace</span>
+        <a href="index.html" class=""><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2 13V7M6 13V3M10 13V9M14 13V5"/></svg> Overview</a>
+        <a href="funnels.html" class=""><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2 3h12l-4.5 5.5V13L6.5 11.5V8.5z"/></svg> Funnels</a>
+        <a href="segments.html" class=""><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="6" cy="6" r="2.5"/><path d="M2 13c0-2.2 1.8-3.5 4-3.5s4 1.3 4 3.5"/><path d="M11 5.5a2.2 2.2 0 010 4.4M12 13c0-1.6-.6-2.6-1.6-3.2"/></svg> Segments</a>
+        <span class="nav-label" style="margin-top:10px">Account</span>
+        <a href="settings.html" class="on"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="8" cy="8" r="2.3"/><path d="M8 1.8v1.6M8 12.6v1.6M14.2 8h-1.6M3.4 8H1.8M12.4 3.6l-1.1 1.1M4.7 11.3l-1.1 1.1M12.4 12.4l-1.1-1.1M4.7 4.7L3.6 3.6"/></svg> Settings</a>
+      </nav>
+      <footer>
+        <div class="plan">
+          <b>Growth plan</b>
+          <div class="bar"><i></i></div>
+          <span>620k of 1M events</span>
+        </div>
+      </footer>
+    </aside>
+    <main>
+      <header>
+        <h1>Workspace settings</h1>
+        <div class="search"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="7" cy="7" r="4.2"/><path d="M10.2 10.2L14 14"/></svg> Search events, users…</div>
+        
+        <div class="avatar">JR</div>
+      </header>
+      <div class="content">
+        <div class="rowline">
+          <div>
+            <h2>Workspace settings</h2>
+            <p>acme.io · 24 seats</p>
+          </div>
+          <div class="spacer"></div>
+          <a class="btn primary" href="invite.html">Invite teammates</a>
+        </div>
+        <div class="split">
+          <div class="panel">
+            <div class="head"><b>General</b></div>
+            <div class="body">
+              <div class="field"><label>Workspace name</label><input value="Acme Analytics" /></div>
+              <div class="field"><label>Default timezone</label><select><option>UTC+00:00 — London</option><option>UTC−05:00 — New York</option></select></div>
+              <div class="field"><label>Week starts on</label><select><option>Monday</option><option>Sunday</option></select></div>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="head"><b>Members</b><span>24 seats</span></div>
+            <div class="body" style="padding-top:6px">
+              <table>
+                <tr><th>Person</th><th class="num">Role</th></tr>
+                <tr><td>Jules Rivera</td><td class="num">Owner</td></tr>
+                <tr><td>Mo Adeyemi</td><td class="num">Admin</td></tr>
+                <tr><td>Priya Nair</td><td class="num">Editor</td></tr>
+                <tr><td>Sam Cole</td><td class="num">Viewer</td></tr>
+              </table>
+            </div>
+          </div>
+        </div>
+        <div class="panel" style="margin-top:14px">
+          <div class="head"><b>Connected sources</b><div class="spacer"></div><span>3 active</span></div>
+          <div class="body" style="padding-top:6px">
+            <table>
+              <tr><th>Source</th><th>Kind</th><th>Status</th><th class="num">Last sync</th></tr>
+              <tr><td><b>Production Postgres</b></td><td>Warehouse</td><td><span class="pill live">Healthy</span></td><td class="num">4 min ago</td></tr>
+              <tr><td><b>Web SDK</b></td><td>Events</td><td><span class="pill live">Healthy</span></td><td class="num">live</td></tr>
+              <tr><td><b>Billing export</b></td><td>CSV</td><td><span class="pill draft">Paused</span></td><td class="num">6d ago</td></tr>
+            </table>
+          </div>
+        </div>
+      </div>
+    </main>
+    <div class="overlay">
+      <div class="modal">
+        <div class="head">
+          <b>Invite your team</b>
+          <p>They will land on the workspace you are looking at now.</p>
+        </div>
+        <div class="body">
+          <div class="field">
+            <label>Email address</label>
+            <input value="dana@acme.io" />
+            <div class="hint">Separate several addresses with a comma.</div>
+          </div>
+          <div class="field">
+            <label>Role</label>
+            <select><option>Editor — can build reports</option><option>Viewer</option><option>Admin</option></select>
+          </div>
+        </div>
+        <div class="foot">
+          <a class="btn" href="settings.html">Cancel</a>
+          <a class="btn primary" href="index.html">Send invite</a>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Funnels — Acme Analytics</title>
+    <link rel="stylesheet" href="app.css" />
+  </head>
+  <body>
+    <aside>
+      <div class="brand"><span class="mark">A</span><b>Acme Analytics</b></div>
+      <nav>
+        <span class="nav-label">Workspace</span>
+        <a href="index.html" class=""><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2 13V7M6 13V3M10 13V9M14 13V5"/></svg> Overview</a>
+        <a href="funnels.html" class="on"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2 3h12l-4.5 5.5V13L6.5 11.5V8.5z"/></svg> Funnels</a>
+        <a href="segments.html" class=""><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="6" cy="6" r="2.5"/><path d="M2 13c0-2.2 1.8-3.5 4-3.5s4 1.3 4 3.5"/><path d="M11 5.5a2.2 2.2 0 010 4.4M12 13c0-1.6-.6-2.6-1.6-3.2"/></svg> Segments</a>
+        <span class="nav-label" style="margin-top:10px">Account</span>
+        <a href="settings.html" class=""><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="8" cy="8" r="2.3"/><path d="M8 1.8v1.6M8 12.6v1.6M14.2 8h-1.6M3.4 8H1.8M12.4 3.6l-1.1 1.1M4.7 11.3l-1.1 1.1M12.4 12.4l-1.1-1.1M4.7 4.7L3.6 3.6"/></svg> Settings</a>
+      </nav>
+      <footer>
+        <div class="plan">
+          <b>Growth plan</b>
+          <div class="bar"><i></i></div>
+          <span>620k of 1M events</span>
+        </div>
+      </footer>
+    </aside>
+    <main>
+      <header>
+        <h1>Activation funnel</h1>
+        <div class="search"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="7" cy="7" r="4.2"/><path d="M10.2 10.2L14 14"/></svg> Search events, users…</div>
+        
+        <div class="avatar">JR</div>
+      </header>
+      <div class="content">
+        <div class="rowline">
+          <div>
+            <h2>Activation funnel</h2>
+            <p>Five steps · last 30 days</p>
+          </div>
+          <div class="spacer"></div>
+          <a class="btn" href="index.html">Duplicate</a>
+          <a class="btn primary" href="segments.html">Save funnel</a>
+        </div>
+        <div class="panel">
+          <div class="head"><b>Steps</b><span>24,840 entered</span></div>
+          <div class="body">
+          <div class="funnel-row"><span class="name">Visited site</span><span class="track"><i style="width:100%"></i></span><span class="pct">24,840 · 100%</span></div>
+          <div class="funnel-row"><span class="name">Signed up</span><span class="track"><i style="width:46%"></i></span><span class="pct">11,426 · 46%</span></div>
+          <div class="funnel-row"><span class="name">Connected data</span><span class="track"><i style="width:28%"></i></span><span class="pct">6,955 · 28%</span></div>
+          <div class="funnel-row"><span class="name">Created a report</span><span class="track"><i style="width:19%"></i></span><span class="pct">4,719 · 19%</span></div>
+          <div class="funnel-row"><span class="name">Invited a teammate</span><span class="track"><i style="width:11%"></i></span><span class="pct">2,732 · 11%</span></div>
+          </div>
+        </div>
+        <div class="panel" style="margin-top:14px">
+          <div class="head"><b>Biggest drop-off</b></div>
+          <div class="body" style="display:flex;gap:18px;align-items:center">
+            <div style="font-size:30px;font-weight:680;letter-spacing:-.03em">54%</div>
+            <div style="color:var(--muted);font-size:13px;max-width:520px">of visitors leave between <b style="color:var(--ink)">Visited site</b> and <b style="color:var(--ink)">Signed up</b>. Teams that show a product walkthrough on the landing page recover about a fifth of them.</div>
+          </div>
+        </div>
+        <div class="panel" style="margin-top:14px">
+          <div class="head"><b>By segment</b><div class="spacer"></div><span>conversion to step 5</span></div>
+          <div class="body" style="padding-top:6px">
+            <table>
+              <tr><th>Segment</th><th>Entered</th><th>Converted</th><th class="num">Rate</th></tr>
+              <tr><td><b>Self-serve</b></td><td>18,402</td><td>1,472</td><td class="num">8.0%</td></tr>
+              <tr><td><b>Sales-assisted</b></td><td>4,118</td><td>907</td><td class="num">22.0%</td></tr>
+              <tr><td><b>Referral</b></td><td>2,320</td><td>353</td><td class="num">15.2%</td></tr>
+            </table>
+          </div>
+        </div>
+      </div>
+    </main>
+
+  </body>
+</html>

@@ -137,6 +137,14 @@ const server = createServer(async (req, res) => {
 
   if (path === '/embed.js') return sendFile(res, join(distDir, 'embed.js'));
 
+  // The stand-in product: the thing you point `capture` at when you want a
+  // realistic click-through without leaving the repo.
+  if (path === '/app' || path === '/app/') return sendFile(res, join(here, '../app/index.html'));
+  if (path.startsWith('/app/')) {
+    const rel = normalize(path.slice('/app/'.length)).replace(/^(\.\.[/\\])+/, '');
+    return sendFile(res, join(here, '../app', rel));
+  }
+
   res.writeHead(404, { 'content-type': 'text/plain' });
   res.end('not found');
 });
@@ -146,6 +154,7 @@ server.listen(port, () => {
     `\n  testbed host running at http://localhost:${port}/\n` +
       `  serving: ${distDir}\n` +
       `  demos:   ${demos.map((d) => d.slug).join(', ') || '(none)'}\n` +
-      `  form endpoint: http://localhost:${port}/api/form\n\n`,
+      `  form endpoint: http://localhost:${port}/api/form\n` +
+      `  stand-in product to capture: http://localhost:${port}/app/\n\n`,
   );
 });

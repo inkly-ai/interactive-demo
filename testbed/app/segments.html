@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Segments — Acme Analytics</title>
+    <link rel="stylesheet" href="app.css" />
+  </head>
+  <body>
+    <aside>
+      <div class="brand"><span class="mark">A</span><b>Acme Analytics</b></div>
+      <nav>
+        <span class="nav-label">Workspace</span>
+        <a href="index.html" class=""><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2 13V7M6 13V3M10 13V9M14 13V5"/></svg> Overview</a>
+        <a href="funnels.html" class=""><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2 3h12l-4.5 5.5V13L6.5 11.5V8.5z"/></svg> Funnels</a>
+        <a href="segments.html" class="on"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="6" cy="6" r="2.5"/><path d="M2 13c0-2.2 1.8-3.5 4-3.5s4 1.3 4 3.5"/><path d="M11 5.5a2.2 2.2 0 010 4.4M12 13c0-1.6-.6-2.6-1.6-3.2"/></svg> Segments</a>
+        <span class="nav-label" style="margin-top:10px">Account</span>
+        <a href="settings.html" class=""><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="8" cy="8" r="2.3"/><path d="M8 1.8v1.6M8 12.6v1.6M14.2 8h-1.6M3.4 8H1.8M12.4 3.6l-1.1 1.1M4.7 11.3l-1.1 1.1M12.4 12.4l-1.1-1.1M4.7 4.7L3.6 3.6"/></svg> Settings</a>
+      </nav>
+      <footer>
+        <div class="plan">
+          <b>Growth plan</b>
+          <div class="bar"><i></i></div>
+          <span>620k of 1M events</span>
+        </div>
+      </footer>
+    </aside>
+    <main>
+      <header>
+        <h1>Segments</h1>
+        <div class="search"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="7" cy="7" r="4.2"/><path d="M10.2 10.2L14 14"/></svg> Search events, users…</div>
+        
+        <div class="avatar">JR</div>
+      </header>
+      <div class="content">
+        <div class="rowline">
+          <div>
+            <h2>Segments</h2>
+            <p>Saved audiences your whole team can use</p>
+          </div>
+          <div class="spacer"></div>
+          <a class="btn primary" href="settings.html">New segment</a>
+        </div>
+        <div class="panel">
+          <div class="body" style="padding-top:14px">
+            <table>
+              <tr><th>Name</th><th>Definition</th><th>Members</th><th>Status</th><th class="num">Updated</th></tr>
+              <tr><td><b>Power users</b></td><td>7+ sessions / week</td><td>3,104</td><td><span class="pill live">Live</span></td><td class="num">2h ago</td></tr>
+              <tr><td><b>Trial, day 3</b></td><td>signup 3d ago, no report</td><td>867</td><td><span class="pill live">Live</span></td><td class="num">yesterday</td></tr>
+              <tr><td><b>Churn risk</b></td><td>no session in 21d</td><td>1,942</td><td><span class="pill draft">Draft</span></td><td class="num">3d ago</td></tr>
+              <tr><td><b>Enterprise admins</b></td><td>role = admin, seats &gt; 25</td><td>218</td><td><span class="pill live">Live</span></td><td class="num">last week</td></tr>
+              <tr><td><b>Weekend usage</b></td><td>sessions on Sat/Sun</td><td>1,371</td><td><span class="pill live">Live</span></td><td class="num">last week</td></tr>
+              <tr><td><b>Invited, never active</b></td><td>invite accepted, 0 sessions</td><td>604</td><td><span class="pill draft">Draft</span></td><td class="num">2w ago</td></tr>
+            </table>
+          </div>
+        </div>
+        <div class="split" style="margin-top:14px">
+          <div class="panel">
+            <div class="head"><b>Suggested by Acme</b></div>
+            <div class="body" style="color:var(--muted);font-size:13px">
+              <p style="margin:0 0 10px"><b style="color:var(--ink)">Activated in week one</b> — signed up and created a report within 7 days. 2,238 people match today.</p>
+              <p style="margin:0"><b style="color:var(--ink)">Stalled after connecting data</b> — connected a source but never built a report. 1,104 people match.</p>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="head"><b>Usage</b></div>
+            <div class="body">
+              <div class="funnel-row"><span class="name">Segments used</span><span class="track"><i style="width:72%"></i></span><span class="pct">18 / 25</span></div>
+              <div class="funnel-row"><span class="name">Shared with team</span><span class="track"><i style="width:44%"></i></span><span class="pct">11 / 25</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+  </body>
+</html>

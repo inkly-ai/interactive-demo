@@ -23,7 +23,7 @@ function minimalDemoConfig(_label: string, title: string): unknown {
         kind: 'content',
         background: {
           type: 'image',
-          src: 'asset:shot-1',
+          src: `assets/${SHA}.png`,
           naturalWidth: 1440,
           naturalHeight: 900,
           alt: 'screen',
@@ -40,14 +40,6 @@ async function writeDemo(root: string, slug: string, title: string): Promise<voi
   const dir = join(root, 'demos', ...slug.split('/'));
   await mkdir(join(dir, 'assets'), { recursive: true });
   await writeFile(join(dir, 'demo.config.json'), JSON.stringify(minimalDemoConfig(slug, title), null, 2), 'utf8');
-  await writeFile(
-    join(dir, 'assets.json'),
-    JSON.stringify({
-      version: 1,
-      assets: [{ id: 'shot-1', sha256: SHA, kind: 'image', contentType: 'image/png', file: `${SHA}.png` }],
-    }),
-    'utf8',
-  );
   await writeFile(join(dir, 'assets', `${SHA}.png`), 'png-bytes', 'utf8');
 }
 
@@ -136,13 +128,14 @@ describe('runDev project endpoints', () => {
     expect(body.map((d) => d.slug).sort()).toEqual(['getting-started', 'pricing-tour']);
   });
 
-  it('returns a specific demo config at /__demo/demo/:slug with page-resolvable assets', async () => {
+  it('returns a specific demo config at /__demo/demo/:slug', async () => {
     handle = await runDev({ cwd: root, port: 0, silent: true });
     const res = await fetch(`${handle.url}__demo/demo/getting-started`);
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { demo: { title: string }; assets: Array<{ id: string; publicUrl?: string }> };
+    const body = (await res.json()) as { demo: { title: string; steps: Array<{ background: { src: string } }> }; assets?: unknown };
     expect(body.demo.title).toBe('Getting Started');
-    expect(body.assets[0]?.publicUrl).toBe(`./assets/${SHA}.png`);
+    expect(body.demo.steps[0]?.background.src).toBe(`assets/${SHA}.png`);
+    expect(body.assets).toBeUndefined();
   });
 
   it('returns 404 for an unknown demo slug', async () => {
@@ -153,7 +146,7 @@ describe('runDev project endpoints', () => {
     expect(page.status).toBe(404);
   });
 
-  it('renders the demo page with the config and assets embedded per the page contract', async () => {
+  it('renders the demo page with the config embedded per the page contract', async () => {
     handle = await runDev({ cwd: root, port: 0, silent: true });
     const res = await fetch(`${handle.url}getting-started/`);
     expect(res.status).toBe(200);
@@ -168,9 +161,8 @@ describe('runDev project endpoints', () => {
     // Project theme + tokens folded into the embedded config.
     expect(config.theme.preset).toBe('mono');
     expect(config.theme.tokens.primary).toBe('#5b3df5');
-    const assets = readJsonScript(body, 'demo-assets') as Array<{ id: string; publicUrl: string }>;
-    expect(assets[0]?.id).toBe('shot-1');
-    expect(assets[0]?.publicUrl).toBe(`./assets/${SHA}.png`);
+    expect((config as unknown as { steps: Array<{ background: { src: string } }> }).steps[0]?.background.src).toBe(`assets/${SHA}.png`);
+    expect(body).not.toContain('demo-assets');
     // Nothing internal leaks into the page.
     expect(body).not.toContain('importmap');
     expect(body).not.toContain('/__editor');

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { readFile } from 'node:fs/promises';
 import { parseDemo } from '@inkly-org/interactive-demo/schema';
 import { applyProjectTheme, brandLogoPageUrl, injectJsonScript, renderDemoPage, renderPageHeader, resolveTemplate } from '../src/page';
-import { assetDeliveryUrl, assetsForPage } from '../src/assets';
+import { assetDeliveryUrl } from '../src/assets';
 import { starterDemoConfig } from '../src/starter';
 
 describe('player page template', () => {
@@ -11,7 +11,6 @@ describe('player page template', () => {
     expect(html).toContain('<link rel="stylesheet" href="./player.css" />');
     expect(html).toContain('<link rel="stylesheet" href="./player-fonts.css" />');
     expect(html).toContain('<script id="demo-config" type="application/json">null</script>');
-    expect(html).toContain('<script id="demo-assets" type="application/json">[]</script>');
     expect(html).toContain('<div id="root">');
     expect(html).toContain('<script src="./player.js"></script>');
     for (const banned of ['importmap', 'vendor/', '/__']) {
@@ -23,22 +22,16 @@ describe('player page template', () => {
 describe('renderDemoPage', () => {
   const template = `<!doctype html><html><head><title>demo</title>
 <script id="demo-config" type="application/json">null</script>
-<script id="demo-assets" type="application/json">[]</script>
 </head><body><div id="root"></div></body></html>`;
 
-  it('embeds the config, the assets and the title', () => {
+  it('embeds the config and the title, with media paths left relative to the page', () => {
     const config = parseDemo({ ...(starterDemoConfig('tour', 'My </script> Tour') as object) });
-    const html = renderDemoPage({
-      template,
-      config,
-      assets: assetsForPage([
-        { id: 'a', sha256: 'c'.repeat(64), kind: 'image', file: 'a.png' },
-      ]),
-    });
+    const html = renderDemoPage({ template, config });
     expect(html).toContain('<title>My &lt;/script&gt; Tour</title>');
     // A `</script>` inside the JSON must not close the tag.
     expect(html).toContain('My <\\/script> Tour');
-    expect(html).toContain('"publicUrl":"./assets/a.png"');
+    expect(html).toContain('"src":"assets/placeholder.svg"');
+    expect(html).not.toContain('demo-assets');
     expect(html).not.toContain('type="application/json">null</script>');
   });
 
@@ -84,13 +77,12 @@ describe('assetDeliveryUrl', () => {
 describe('page header', () => {
   const template = `<!doctype html><html><head><title>demo</title>
 <script id="demo-config" type="application/json">null</script>
-<script id="demo-assets" type="application/json">[]</script>
 </head><body><!-- demo-page-header --><div id="root"></div></body></html>`;
   // The starter pins its own theme; drop it so the project-level theme is what the header sees.
   const config = parseDemo({ ...(starterDemoConfig('tour', 'My Tour') as object), theme: undefined });
 
   it('renders the demo title with no crumb and no buttons by default', () => {
-    const html = renderDemoPage({ template, config, assets: [], project: { name: 'Acme Demos' } });
+    const html = renderDemoPage({ template, config, project: { name: 'Acme Demos' } });
     expect(html).toContain('<header class="demo-page-bar">');
     expect(html).not.toContain('demo-page-hub-name');
     expect(html).not.toContain('demo-page-slash');
@@ -106,7 +98,6 @@ describe('page header', () => {
     const html = renderDemoPage({
       template,
       config,
-      assets: [],
       project: {
         name: 'Acme Demos',
         brand: {
@@ -149,7 +140,6 @@ describe('page header', () => {
     const html = renderDemoPage({
       template,
       config,
-      assets: [],
       themeId: 'mono',
       themeTokens: { primary: '#ff0000' },
       project: { name: 'Acme Demos', brand: { cta: { label: 'Go', href: 'https://acme.example' } } },
@@ -174,7 +164,7 @@ describe('page header', () => {
 
   it('falls back to inserting the header before #root when the template has no placeholder', () => {
     const bare = template.replace('<!-- demo-page-header -->', '');
-    const html = renderDemoPage({ template: bare, config, assets: [], project: { name: 'P' } });
+    const html = renderDemoPage({ template: bare, config, project: { name: 'P' } });
     expect(html).toMatch(/<header class="demo-page-bar">[\s\S]*<\/header>\n\s*<div id="root">/);
   });
 });

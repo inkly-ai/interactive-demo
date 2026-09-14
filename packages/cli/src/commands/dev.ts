@@ -16,7 +16,7 @@ import {
   type SlugValidation,
 } from '@inkly-org/interactive-demo/schema';
 import { runDemoIdMaintenance, relForLog } from '../demo-id-maintenance.js';
-import { ASSETS_DIR, assetsForPage } from '../assets.js';
+import { ASSETS_DIR } from '../assets.js';
 import { orderDemos, PROJECT_FILE, ProjectSchema, type ProjectConfig, brandLogoSourcePath } from '../project.js';
 import {
   PLAYER_FILES,
@@ -693,7 +693,7 @@ export async function runDev(options: DevOptions): Promise<DevHandle> {
                 res,
                 200,
                 'application/json; charset=utf-8',
-                JSON.stringify({ demo: demo.config, assets: assetsForPage(demo.assets) }),
+                JSON.stringify({ demo: demo.config }),
               );
               return;
             }
@@ -785,7 +785,6 @@ export async function runDev(options: DevOptions): Promise<DevHandle> {
                 const html = renderDemoPage({
                   template: demoTemplate,
                   config: demo.config,
-                  assets: assetsForPage(demo.assets),
                   themeId: state.project.theme,
                   themeTokens: state.project.tokens ?? null,
                   project: state.project,

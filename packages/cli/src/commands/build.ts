@@ -1,7 +1,7 @@
 import { copyFile, cp, mkdir, rm, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { basename, join, resolve } from 'node:path';
-import { ASSETS_DIR, assetsForPage } from '../assets.js';
+import { ASSETS_DIR } from '../assets.js';
 import { brandLogoSourcePath, loadProject, orderDemos } from '../project.js';
 import {
   EMBED_LOADER_FILE,
@@ -63,7 +63,6 @@ export async function runBuild(options: BuildOptions): Promise<BuildResult> {
     const html = renderDemoPage({
       template,
       config: demo.config,
-      assets: assetsForPage(demo.assets?.assets ?? []),
       themeId: loaded.project.theme,
       themeTokens: loaded.project.tokens ?? null,
       project: loaded.project,

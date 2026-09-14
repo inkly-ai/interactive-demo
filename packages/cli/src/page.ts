@@ -3,7 +3,7 @@ import { readFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import { basename, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import type { AssetEntry, Demo, ThemeTokens } from '@inkly-org/interactive-demo/schema';
+import type { Demo, ThemeTokens } from '@inkly-org/interactive-demo/schema';
 import { isAbsoluteBrandRef, type ProjectBrand } from './project.js';
 
 /**
@@ -14,12 +14,11 @@ import { isAbsoluteBrandRef, type ProjectBrand } from './project.js';
  *   <link rel="stylesheet" href="./player.css">
  *   <link rel="stylesheet" href="./player-fonts.css">   (optional; ./fonts/*.woff2 next to it)
  *   <script id="demo-config" type="application/json">…demo config…</script>
- *   <script id="demo-assets" type="application/json">…assets manifest array…</script>
  *   <div id="root"></div>
  *   <script src="./player.js"></script>
  *
- * `asset:<id>` URIs in the config resolve through the embedded manifest to
- * `./assets/<file>` relative to the page.
+ * Media paths in the config (`assets/<file>`) resolve relative to the page,
+ * which sits in the demo folder next to them.
  */
 
 const __filename = fileURLToPath(import.meta.url);
@@ -155,8 +154,6 @@ function escapeHtml(text: string): string {
 export interface DemoPageInput {
   template: string;
   config: Demo;
-  /** Manifest entries, already mapped to page-resolvable URLs. */
-  assets: readonly AssetEntry[];
   /** Theme preset id inherited from the project, when the demo sets none. */
   themeId?: string;
   /** Project-level token overrides. */
@@ -271,7 +268,6 @@ export function renderDemoPage(input: DemoPageInput): string {
     `<title>${escapeHtml(title)}</title>`,
   );
   html = injectJsonScript(html, 'demo-config', config);
-  html = injectJsonScript(html, 'demo-assets', input.assets);
   const header = renderPageHeader({
     project: input.project,
     demoTitle: title,

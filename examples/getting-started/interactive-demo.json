@@ -5,8 +5,7 @@
     "tour"
   ],
   "brand": {
-    "logo": "brand/inkly-dot.svg",
-    "name": "Inkly",
+    "logo": "brand/inkly-wordmark.svg",
     "logoHref": "https://inklyai.dev",
     "cta": {
       "label": "Get started",

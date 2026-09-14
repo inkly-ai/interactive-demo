@@ -43,10 +43,25 @@ export const PLAYER_FONT_FILES = [
   'geist-mono-latin-wght-normal.woff2',
 ] as const;
 
+/**
+ * The default theme's cover backdrop `player-fonts.css` refers to
+ * (`url(./backgrounds/…)`). Lives in the runtime package's `dist/backgrounds/`.
+ */
+export const PLAYER_BACKGROUND_FILES = ['watercolor-background.jpg'] as const;
+
 /** Directory holding the font files, derived from where `fonts.css` resolved. */
 export function resolveRuntimeFontsDir(cwd: string): string | null {
+  return resolveRuntimeAssetDir(cwd, 'fonts');
+}
+
+/** Directory holding the cover backdrops, next to the fonts. */
+export function resolveRuntimeBackgroundsDir(cwd: string): string | null {
+  return resolveRuntimeAssetDir(cwd, 'backgrounds');
+}
+
+function resolveRuntimeAssetDir(cwd: string, folder: 'fonts' | 'backgrounds'): string | null {
   const css = resolveRuntimeFile(PLAYER_FILES['player-fonts.css'], cwd);
-  return css ? join(dirname(css), 'fonts') : null;
+  return css ? join(dirname(css), folder) : null;
 }
 
 export type PlayerFileName = keyof typeof PLAYER_FILES;

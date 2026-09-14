@@ -20,7 +20,9 @@ import { ASSETS_DIR, assetsForPage } from '../assets.js';
 import { orderDemos, PROJECT_FILE, ProjectSchema, type ProjectConfig, brandLogoSourcePath } from '../project.js';
 import {
   PLAYER_FILES,
+  PLAYER_BACKGROUND_FILES,
   PLAYER_FONT_FILES,
+  resolveRuntimeBackgroundsDir,
   RUNTIME_MISSING_MSG,
   readTemplate,
   renderDemoPage,
@@ -575,6 +577,7 @@ export async function runDev(options: DevOptions): Promise<DevHandle> {
     'player-fonts.css': resolveRuntimeFile(PLAYER_FILES['player-fonts.css'], projectRoot),
   };
   const fontsDir = resolveRuntimeFontsDir(projectRoot);
+  const backgroundsDir = resolveRuntimeBackgroundsDir(projectRoot);
   const demoTemplate = await readTemplate();
   // ── local editor (packages/editor build) ──────────────────────────────
   const editorDir = resolveEditorDir();
@@ -645,6 +648,10 @@ export async function runDev(options: DevOptions): Promise<DevHandle> {
             }
             if (pathname.startsWith('/__demo/fonts/')) {
               serveFontFile(res, fontsDir, pathname.slice('/__demo/fonts/'.length));
+              return;
+            }
+            if (pathname.startsWith('/__demo/backgrounds/')) {
+              serveBackgroundFile(res, backgroundsDir, pathname.slice('/__demo/backgrounds/'.length));
               return;
             }
             if (pathname === '/__demo/demos') {
@@ -720,6 +727,10 @@ export async function runDev(options: DevOptions): Promise<DevHandle> {
               }
               if (rel.startsWith('fonts/')) {
                 serveFontFile(res, fontsDir, rel.slice('fonts/'.length));
+                return;
+              }
+              if (rel.startsWith('backgrounds/')) {
+                serveBackgroundFile(res, backgroundsDir, rel.slice('backgrounds/'.length));
                 return;
               }
               if (rel.startsWith(`${BRAND_DIR}/`)) {
@@ -930,6 +941,15 @@ function serveFontFile(res: ServerResponse, fontsDir: string | null, name: strin
     return;
   }
   servePlayerFile(res, fontsDir ? join(fontsDir, name) : null, `fonts/${name}`);
+}
+
+/** Cover backdrops sit under `backgrounds/` next to the page, as `build` lays them out. */
+function serveBackgroundFile(res: ServerResponse, dir: string | null, name: string): void {
+  if (!(PLAYER_BACKGROUND_FILES as readonly string[]).includes(name)) {
+    send(res, 404, 'text/plain; charset=utf-8', 'Not found');
+    return;
+  }
+  servePlayerFile(res, dir ? join(dir, name) : null, `backgrounds/${name}`);
 }
 
 function servePlayerFile(res: ServerResponse, path: string | null, name: string): void {

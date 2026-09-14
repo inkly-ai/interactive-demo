@@ -30,7 +30,8 @@ describe('runBuild', () => {
 
     const dir = join(result.outDir, 'getting-started');
     expect(existsSync(join(result.outDir, 'embed.js'))).toBe(true);
-    expect((await readdir(dir)).sort()).toEqual(['assets', 'fonts', 'index.html', 'player-fonts.css', 'player.css', 'player.js']);
+    expect(existsSync(join(dir, 'backgrounds', 'watercolor-background.jpg'))).toBe(true);
+    expect((await readdir(dir)).sort()).toEqual(['assets', 'backgrounds', 'fonts', 'index.html', 'player-fonts.css', 'player.css', 'player.js']);
     expect((await readdir(join(dir, 'fonts'))).sort()).toEqual([
       'geist-mono-latin-wght-normal.woff2',
       'inter-latin-wght-normal.woff2',

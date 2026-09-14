@@ -5,8 +5,10 @@ import { ASSETS_DIR, assetsForPage } from '../assets.js';
 import { brandLogoSourcePath, loadProject, orderDemos } from '../project.js';
 import {
   EMBED_LOADER_FILE,
+  PLAYER_BACKGROUND_FILES,
   PLAYER_FONT_FILES,
   readTemplate,
+  resolveRuntimeBackgroundsDir,
   resolveRuntimeFile,
   renderDemoPage,
   resolvePlayerFiles,
@@ -47,6 +49,7 @@ export async function runBuild(options: BuildOptions): Promise<BuildResult> {
   const outDir = resolve(loaded.root, options.out ?? 'dist');
   const playerFiles = resolvePlayerFiles(loaded.root);
   const fontsDir = resolveRuntimeFontsDir(loaded.root);
+  const backgroundsDir = resolveRuntimeBackgroundsDir(loaded.root);
   const template = await readTemplate();
 
   await rm(outDir, { recursive: true, force: true });
@@ -81,6 +84,12 @@ export async function runBuild(options: BuildOptions): Promise<BuildResult> {
       await mkdir(join(dir, 'fonts'), { recursive: true });
       for (const file of PLAYER_FONT_FILES) {
         await copyFile(join(fontsDir, file), join(dir, 'fonts', file));
+      }
+    }
+    if (backgroundsDir) {
+      await mkdir(join(dir, 'backgrounds'), { recursive: true });
+      for (const file of PLAYER_BACKGROUND_FILES) {
+        await copyFile(join(backgroundsDir, file), join(dir, 'backgrounds', file));
       }
     }
 

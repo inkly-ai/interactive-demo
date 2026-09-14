@@ -34,23 +34,37 @@ Two things to keep:
 
 ## The iframe
 
+Add `?embed=inline` to the page URL and the page renders the player alone:
+no bar, no canvas, transparent background, the player filling the frame
+edge to edge. Size the frame to the demo, which is its screen ratio plus the
+player's header (52px in the default theme, 48px in `mono`):
+
 ```html
-<iframe
-  src="https://your-site.com/demos/onboarding/"
-  title="Onboarding demo"
-  width="960" height="600"
-  loading="lazy"
-  allow="fullscreen"
-  style="border:0; max-width:100%; aspect-ratio: 16 / 10;">
-</iframe>
+<div style="container-type: inline-size; width: 100%; max-width: calc(max(0px, 80vh - 54px) * 1440 / 900); margin: 0 auto;">
+  <div style="position: relative; width: 100%; height: calc(100cqw * 900 / 1440 + 52px + 2px);">
+    <iframe
+      src="https://your-site.com/demos/onboarding/?embed=inline"
+      title="Onboarding demo"
+      loading="lazy"
+      allow="clipboard-read; clipboard-write; fullscreen"
+      allowfullscreen
+      style="position: absolute; inset: 0; width: 100%; height: 100%; border: 0;">
+    </iframe>
+  </div>
+</div>
 ```
+
+`interactive-demo embed` prints this with the numbers filled in from the
+demo, and so does the editor's Share dialog. The outer `max-width` keeps the
+frame under 80% of the viewport height; the inner box is the exact ratio
+plus header, so the player never letterboxes.
 
 - `allow="fullscreen"` lets the player's fullscreen button work inside the
   frame.
 - `loading="lazy"` keeps the player off the critical path of the host page.
-- Sizing: give the frame the demo's aspect ratio (a 1440×900 capture is
-  16:10; a 1920×1080 one is 16:9) and let `max-width: 100%` handle narrow
-  layouts. Below about 640px wide the player switches to its mobile layout.
+- Below about 640px wide the player switches to its mobile layout.
+- Without `?embed=inline` the page keeps its own bar and canvas, which is
+  what you want for a link, not an embed.
 - The player never reads or writes anything outside its own document. It
   makes no network requests beyond loading its own files and assets.
 

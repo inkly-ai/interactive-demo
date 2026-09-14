@@ -1,0 +1,58 @@
+{
+  "takenAt": "2026-09-14T06:27:50.315Z",
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "images": {
+    "02-player.webp": {
+      "width": 2880,
+      "height": 1800,
+      "bytes": 76072
+    },
+    "03-editor.webp": {
+      "width": 2880,
+      "height": 1800,
+      "bytes": 122078
+    },
+    "04-share.webp": {
+      "width": 2880,
+      "height": 1800,
+      "bytes": 63384
+    },
+    "06-embed-inline.webp": {
+      "width": 2880,
+      "height": 1800,
+      "bytes": 76756
+    },
+    "07-embed-popup.webp": {
+      "width": 2880,
+      "height": 1800,
+      "bytes": 68558
+    },
+    "01-capture.webp": {
+      "width": 2880,
+      "height": 1800,
+      "bytes": 71686
+    },
+    "05-build.webp": {
+      "width": 2880,
+      "height": 1800,
+      "bytes": 68402
+    }
+  },
+  "anchors": {
+    "hostInline": {
+      "x": 0.5,
+      "y": 0.4897,
+      "w": 1064,
+      "h": 719
+    },
+    "popupFrame": {
+      "x": 0.5,
+      "y": 0.5,
+      "w": 1100,
+      "h": 740
+    }
+  }
+}

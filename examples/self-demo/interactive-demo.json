@@ -1,0 +1,13 @@
+{
+  "name": "self-demo",
+  "theme": "default",
+  "demos": [
+    "product-tour"
+  ],
+  "brand": {
+    "cta": {
+      "label": "GitHub",
+      "href": "https://github.com/inkly-ai/interactive-demo"
+    }
+  }
+}

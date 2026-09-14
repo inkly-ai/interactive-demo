@@ -1,0 +1,323 @@
+{
+  "$schema": "https://cdn.jsdelivr.net/npm/@inkly-org/interactive-demo/dist/schema/demo.config.json",
+  "id": "selfDemoTour",
+  "version": 1,
+  "title": "How interactive-demo works",
+  "subtitle": "Record your product, write it up, ship it on your own page.",
+  "chrome": {
+    "controls": "full",
+    "branding": true
+  },
+  "chapters": [
+    {
+      "id": "intro",
+      "title": "Start",
+      "stepIds": [
+        "cover-intro"
+      ]
+    },
+    {
+      "id": "record",
+      "title": "Record",
+      "stepIds": [
+        "capture",
+        "player"
+      ]
+    },
+    {
+      "id": "edit",
+      "title": "Edit",
+      "stepIds": [
+        "editor",
+        "share"
+      ]
+    },
+    {
+      "id": "ship",
+      "title": "Ship",
+      "stepIds": [
+        "build",
+        "embed-inline",
+        "embed-popup"
+      ]
+    },
+    {
+      "id": "outro",
+      "title": "Wrap up",
+      "stepIds": [
+        "cover-outro"
+      ]
+    }
+  ],
+  "steps": [
+    {
+      "kind": "cover",
+      "id": "cover-intro",
+      "widgets": [
+        {
+          "type": "headline",
+          "id": "headline-intro",
+          "title": "A demo of your product, made from your product",
+          "description": "Click through your app once. The CLI records every click as a step, a local editor lets you write it up, and the result is a folder you can drop on any page — or one link you can send.",
+          "cta": {
+            "label": "Show me",
+            "action": {
+              "type": "next"
+            },
+            "animation": "shimmer"
+          },
+          "secondaryCta": {
+            "label": "Read the docs",
+            "action": {
+              "type": "url",
+              "href": "https://github.com/inkly-ai/interactive-demo#readme"
+            },
+            "animation": "none",
+            "background": "#f8f8f8",
+            "textColor": "#1f1f1f"
+          },
+          "image": {
+            "src": "assets/01-capture.webp",
+            "alt": "A terminal running the capture command",
+            "naturalWidth": 2880,
+            "naturalHeight": 1800,
+            "position": "right",
+            "layout": "hero"
+          }
+        }
+      ],
+      "advance": {
+        "trigger": "click"
+      }
+    },
+    {
+      "kind": "content",
+      "id": "capture",
+      "label": "Record a click-through",
+      "background": {
+        "type": "image",
+        "src": "assets/01-capture.webp",
+        "alt": "A terminal running interactive-demo capture start and capture stop",
+        "naturalWidth": 2880,
+        "naturalHeight": 1800
+      },
+      "script": "capture start opens Chrome and arms a recorder. You click through your product the way you would show it to a customer, then capture stop writes the demo into your project.",
+      "advance": {
+        "trigger": "click"
+      },
+      "annotations": [
+        {
+          "id": "capture-start",
+          "type": "message",
+          "variant": "pointer",
+          "anchor": "top",
+          "x": 0.335,
+          "y": 0.29,
+          "text": "One command opens Chrome and starts watching your clicks. `capture stop` writes the steps to disk."
+        }
+      ]
+    },
+    {
+      "kind": "content",
+      "id": "player",
+      "label": "See what you got",
+      "background": {
+        "type": "image",
+        "src": "assets/02-player.webp",
+        "alt": "The local preview playing the captured demo",
+        "naturalWidth": 2880,
+        "naturalHeight": 1800
+      },
+      "script": "interactive-demo dev serves the demo straight away. Nothing was mocked: this is the product, screen by screen, with a pointer wherever you clicked.",
+      "advance": {
+        "trigger": "click"
+      },
+      "annotations": [
+        {
+          "id": "player-pointer",
+          "type": "message",
+          "variant": "pointer",
+          "anchor": "top",
+          "x": 0.802,
+          "y": 0.315,
+          "text": "The pointer lands where you clicked, so a viewer follows the path you took."
+        }
+      ]
+    },
+    {
+      "kind": "content",
+      "id": "editor",
+      "label": "Write it up",
+      "background": {
+        "type": "image",
+        "src": "assets/03-editor.webp",
+        "alt": "The editor with the demo open, the step strip on the right and the annotation toolbar below",
+        "naturalWidth": 2880,
+        "naturalHeight": 1800
+      },
+      "script": "The editor runs on your machine and saves to demo.config.json as you work. Add a message, move a hotspot, cut a step you did not need.",
+      "advance": {
+        "trigger": "click"
+      },
+      "annotations": [
+        {
+          "id": "editor-strip",
+          "type": "message",
+          "variant": "pointer",
+          "anchor": "left",
+          "x": 0.888,
+          "y": 0.34,
+          "text": "Every captured screen is a step. Reorder them, retitle them, drop the ones you did not need."
+        }
+      ]
+    },
+    {
+      "kind": "content",
+      "id": "share",
+      "label": "Get the snippet",
+      "background": {
+        "type": "image",
+        "src": "assets/04-share.webp",
+        "alt": "The editor's Share dialog showing the publish commands and a field for the link",
+        "naturalWidth": 2880,
+        "naturalHeight": 1800
+      },
+      "script": "Share hands you the exact commands to publish, then fills the embed snippets in with your link. No account is needed to build and host the folder yourself.",
+      "advance": {
+        "trigger": "click"
+      },
+      "annotations": [
+        {
+          "id": "share-link",
+          "type": "message",
+          "variant": "pointer",
+          "anchor": "bottom",
+          "x": 0.47,
+          "y": 0.606,
+          "text": "Paste your published link here and the Inline, Popup and React panes fill their snippets in with it."
+        }
+      ]
+    },
+    {
+      "kind": "content",
+      "id": "build",
+      "label": "Build it",
+      "background": {
+        "type": "image",
+        "src": "assets/05-build.webp",
+        "alt": "A terminal running interactive-demo validate and build, listing the output folder",
+        "naturalWidth": 2880,
+        "naturalHeight": 1800
+      },
+      "script": "build writes one self-contained folder per demo: the page, the player, your screens. Nothing in it depends on where you serve it from.",
+      "advance": {
+        "trigger": "click"
+      },
+      "annotations": [
+        {
+          "id": "build-output",
+          "type": "message",
+          "variant": "pointer",
+          "anchor": "right",
+          "x": 0.33,
+          "y": 0.47,
+          "text": "One self-contained folder per demo — or one command to a hosted link."
+        }
+      ]
+    },
+    {
+      "kind": "content",
+      "id": "embed-inline",
+      "label": "Put it on the page",
+      "background": {
+        "type": "image",
+        "src": "assets/06-embed-inline.webp",
+        "alt": "The demo running inline on a marketing page",
+        "naturalWidth": 2880,
+        "naturalHeight": 1800
+      },
+      "script": "The inline snippet is an iframe sized to the demo's own ratio, so it never letterboxes. The framed player relays its events to the page around it.",
+      "advance": {
+        "trigger": "click"
+      },
+      "annotations": [
+        {
+          "id": "inline-frame",
+          "type": "message",
+          "variant": "pointer",
+          "anchor": "top",
+          "x": 0.5,
+          "y": 0.3,
+          "text": "The same folder, sitting in a page: no bar, no chrome, just the demo."
+        }
+      ]
+    },
+    {
+      "kind": "content",
+      "id": "embed-popup",
+      "label": "Or open it over the page",
+      "background": {
+        "type": "image",
+        "src": "assets/07-embed-popup.webp",
+        "alt": "The demo opened in a pop-up over the site's hero",
+        "naturalWidth": 2880,
+        "naturalHeight": 1800
+      },
+      "script": "The pop-up is one script tag and a button. It takes the demo's aspect ratio, locks the page behind it, and closes on Escape.",
+      "advance": {
+        "trigger": "click"
+      },
+      "annotations": [
+        {
+          "id": "popup-overlay",
+          "type": "message",
+          "variant": "pointer",
+          "anchor": "bottom",
+          "x": 0.5,
+          "y": 0.22,
+          "text": "Any button on your site can open it: InteractiveDemo.open(url)."
+        }
+      ]
+    },
+    {
+      "kind": "cover",
+      "id": "cover-outro",
+      "widgets": [
+        {
+          "type": "headline",
+          "id": "headline-outro",
+          "title": "Record, write up, ship",
+          "description": "Everything you just saw was recorded from a running app by the capture command in this repo, written up in the editor, and built into a folder. The tour you are watching is that folder.",
+          "cta": {
+            "label": "Play it again",
+            "action": {
+              "type": "restart"
+            },
+            "animation": "shimmer"
+          },
+          "secondaryCta": {
+            "label": "Get the CLI",
+            "action": {
+              "type": "url",
+              "href": "https://github.com/inkly-ai/interactive-demo"
+            },
+            "animation": "none",
+            "background": "#f8f8f8",
+            "textColor": "#1f1f1f"
+          },
+          "image": {
+            "src": "assets/07-embed-popup.webp",
+            "alt": "The finished demo opened over a marketing page",
+            "naturalWidth": 2880,
+            "naturalHeight": 1800,
+            "position": "left",
+            "layout": "hero"
+          }
+        }
+      ],
+      "advance": {
+        "trigger": "click"
+      }
+    }
+  ]
+}

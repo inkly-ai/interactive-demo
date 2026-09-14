@@ -7,7 +7,9 @@ dist/<slug>/
   index.html      the page (five lines: stylesheet, two JSON script tags, root, player.js)
   player.js       the player with React bundled in
   player.css      the stylesheet
-player-fonts.css   optional self-hosted fonts (with fonts/*.woff2); drop both to fall back to system fonts
+  player-fonts.css  optional self-hosted files: fonts/*.woff2 and backgrounds/ (the
+                    default theme's watercolor cover); drop them to fall back to
+                    system fonts and a flat cover
   assets/…        screenshots, recordings, audio
 dist/embed.js     the pop-up loader, once for the whole folder (see below)
 ```

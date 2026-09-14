@@ -19,6 +19,8 @@ my-demos/
 that fixes the order `dev` lists demos in; demos are discovered by walking
 `demos/`, so a folder is enough. `theme` names the preset (`default` or `mono`
 ships) and `tokens` overrides its colours, font and radius for every demo.
+The default preset paints its watercolor behind cover steps; give a cover its
+own `background` to replace it.
 `brand` fills the page header (below).
 
 Add a demo with `interactive-demo init --demo <slug>`, import a folder with

@@ -153,6 +153,28 @@ player). Button actions are `next`, `prev`, `restart`, `step`, `chapter`
 and `url`. A closing cover with a `restart` CTA is the usual way to end a
 demo.
 
+### Form submissions
+
+A form's values go two places. The player always emits a `form_submit`
+runtime event, which a React host receives through `onEvent` and an
+embedding page receives as a message (see the embedding guide). To store
+them without writing any code, give the widget a `submitTo` URL: the player
+POSTs the fields as JSON to it, then follows the submit button's action.
+
+```json
+{
+  "type": "form",
+  "id": "lead",
+  "fields": [{ "id": "email", "label": "Email", "required": true }],
+  "submitTo": "https://hooks.zapier.com/hooks/catch/…"
+}
+```
+
+The body is `{ demoId, stepId, widgetId, fields: [{ id, label, value }],
+timestamp }`. The endpoint must accept a cross-origin POST; webhook
+services and form backends do. Nothing is sent unless `submitTo` is set,
+and the editor's Submissions section fills it in for you.
+
 ### Chapters and chrome
 
 `chapters` group step ids under titles for the chapter menu. `chrome`

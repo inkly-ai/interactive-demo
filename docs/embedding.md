@@ -90,6 +90,31 @@ resolved against the host page. Hosted demos work the same way:
 `interactive-demo embed --mode popup` prints the loader and a button for
 HTML, React, Next.js, Vue and Svelte.
 
+## Listening for events from an embedded demo
+
+A framed demo, inline or in the pop-up, relays every runtime event to the
+page that embeds it as a `message` of type `interactive-demo:event`. Form
+submissions, step views, completion and CTA clicks all arrive this way, so
+the host page can react without touching the demo:
+
+```html
+<script>
+  window.addEventListener('message', (e) => {
+    if (e.data?.type !== 'interactive-demo:event') return;
+    const event = e.data.event;
+    if (event.type === 'form_submit') {
+      // event.fields is [{ id, label, value }]
+    }
+  });
+</script>
+```
+
+Check `e.origin` against the host you embed from before trusting the
+payload. A demo that stands on its own page sends nothing. The React
+component gets the same events directly through its `onEvent` prop, and a
+form can also POST its values to a URL of your choosing with `submitTo`
+(see the authoring guide).
+
 ## Using the React component instead
 
 If the host page is React, skip the iframe and render the player inline.

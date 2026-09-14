@@ -333,6 +333,7 @@ Per-demo configuration. One per demo, lives at demos/<slug>/demo.config.json.
 | `description` | string |  |  |
 | `fields` | [fields](#fields)[] | yes |  |
 | `submit` | [submit](#submit) |  | Default `{"label":"Submit","action":{"type":"next"},"animation":"shimmer"}`. |
+| `submitTo` | string |  |  |
 
 ##### fields
 

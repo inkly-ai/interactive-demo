@@ -1345,13 +1345,21 @@
   outline: none;
 }
 
-/* The wordmark's dot: a circle sized against the text (0.66em, the
-   Familjen preset's ratio) sitting on the baseline before the name. */
+/* The Inkly wordmark inside the badge: dot 0.66em tall (the cap height of
+   the I), on the baseline, 0.08em before the name — the landing page's
+   Familjen preset, minus the hover orb. */
+.demo-builtwith-badge-wordmark {
+  display: inline-flex;
+  align-items: baseline;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
 .demo-builtwith-badge-dot {
   display: inline-block;
   flex: 0 0 auto;
   width: 0.66em;
   height: 0.66em;
+  margin-right: 0.08em;
   border-radius: 50%;
   background: currentColor;
 }

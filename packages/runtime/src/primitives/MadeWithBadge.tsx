@@ -7,13 +7,15 @@ export type MadeWithBadgeProps = {
 /**
  * Small "Built with Inkly" link parked at the player's bottom-right corner.
  * On by default; authors turn it off with `chrome.branding: false` in the
- * demo config. The dot before the text is the Inkly wordmark's dot, drawn
- * in the badge's own colour so it stays a quiet watermark and never reads
- * as a logo over the author's product.
+ * demo config. "Inkly" is set as the wordmark: the dot sits on the baseline
+ * right before the I, 0.66em tall with a 0.08em gap (the landing page's
+ * Familjen preset), in the badge's own colour so it stays a quiet mark.
  */
+const DEFAULT_LABEL = 'Built with Inkly';
+
 export function MadeWithBadge({
   href = 'https://inklyai.dev',
-  label = 'Built with Inkly',
+  label = DEFAULT_LABEL,
   className,
 }: MadeWithBadgeProps = {}) {
   return (
@@ -24,8 +26,17 @@ export function MadeWithBadge({
       rel="noreferrer noopener"
       aria-label={label}
     >
-      <span className="demo-builtwith-badge-dot" aria-hidden="true" />
-      <span className="demo-builtwith-badge-text">{label}</span>
+      {label === DEFAULT_LABEL ? (
+        <span className="demo-builtwith-badge-text">
+          Built with{' '}
+          <span className="demo-builtwith-badge-wordmark">
+            <span className="demo-builtwith-badge-dot" aria-hidden="true" />
+            Inkly
+          </span>
+        </span>
+      ) : (
+        <span className="demo-builtwith-badge-text">{label}</span>
+      )}
     </a>
   );
 }

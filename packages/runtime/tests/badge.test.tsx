@@ -26,7 +26,9 @@ describe('built-with badge', () => {
     expect(badge).not.toBeNull();
     expect(badge?.textContent).toBe('Built with Inkly');
     expect(badge?.getAttribute('href')).toBe('https://inklyai.dev');
-    expect(badge?.querySelector('.demo-builtwith-badge-dot')).not.toBeNull();
+    const wordmark = badge?.querySelector('.demo-builtwith-badge-wordmark');
+    expect(wordmark?.textContent).toBe('Inkly');
+    expect(wordmark?.firstElementChild?.className).toBe('demo-builtwith-badge-dot');
     expect(badge?.getAttribute('rel')).toContain('noopener');
   });
 

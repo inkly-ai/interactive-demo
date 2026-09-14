@@ -7,6 +7,7 @@ import { runVersion } from './commands/version.js';
 import { CAPTURE_USAGE, runCapture } from './commands/capture.js';
 import { runLogin, runLogout, runStatus } from './commands/login.js';
 import { runPublish, runPublishList } from './commands/publish.js';
+import { runEmbed } from './commands/embed.js';
 import { PROJECT_FILE } from './project.js';
 
 const BIN = 'interactive-demo';
@@ -24,6 +25,7 @@ Usage:
   ${BIN} login [--token <token>]     Log in to the hosting service.
   ${BIN} logout                      Remove the saved credentials.
   ${BIN} publish [<demo>] [--new]    Publish a demo to the hosting service.
+  ${BIN} embed [<demo>] [--mode <m>] Print the embed snippet for a hosted demo.
   ${BIN} version                     Print the CLI version.
   ${BIN} help [command]              Show CLI help.
 
@@ -115,6 +117,25 @@ Options:
 Credentials are written to ~/.interactive-demo/credentials.json (owner-only).
 `;
 
+const EMBED_USAGE = `${BIN} embed — print the embed snippet for a hosted demo
+
+Usage:
+  ${BIN} embed [<path>|--demo <slug>] [--mode inline|popup] [--label <text>] [--json]
+
+Arguments:
+  <path>          A demo folder (e.g. demos/intro) or a slug. Optional when the
+                  project has exactly one demo.
+
+Options:
+  --demo <slug>   Select the demo by slug.
+  --mode <mode>   inline (an iframe, the default) or popup (a loader script
+                  plus a button that opens the demo in a modal).
+  --label <text>  Button text for popup mode. Default "Try the demo".
+  --json          Print the snippets as JSON.
+
+Publishes the demo first when it has never been deployed.
+`;
+
 const PUBLISH_USAGE = `${BIN} publish — publish a demo to the hosting service
 
 Usage:
@@ -162,6 +183,7 @@ const HELP_BY_COMMAND: Record<string, string> = {
   login: LOGIN_USAGE,
   logout: LOGIN_USAGE,
   publish: PUBLISH_USAGE,
+  embed: EMBED_USAGE,
   validate: VALIDATE_USAGE,
   version: VERSION_USAGE,
 };
@@ -412,6 +434,31 @@ export async function main(argv: string[], io: MainIo = defaultIo): Promise<numb
         return 0;
       } catch (err) {
         io.stderr(`${BIN} publish failed: ${(err as Error).message}\n`);
+        return 1;
+      }
+    }
+    case 'embed': {
+      if (args.help) {
+        io.stdout(EMBED_USAGE);
+        return 0;
+      }
+      const mode = readOptionalStringOption(args, 'mode') || 'inline';
+      if (mode !== 'inline' && mode !== 'popup') {
+        io.stderr(`${BIN} embed: --mode must be inline or popup\n`);
+        return 1;
+      }
+      try {
+        await runEmbed({
+          cwd: io.cwd,
+          path: rest[0],
+          demo: readOptionalStringOption(args, 'demo') || undefined,
+          mode,
+          label: readOptionalStringOption(args, 'label') || undefined,
+          json: Boolean(args.json),
+        });
+        return 0;
+      } catch (err) {
+        io.stderr(`${BIN} embed failed: ${(err as Error).message}\n`);
         return 1;
       }
     }

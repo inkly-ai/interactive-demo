@@ -61,9 +61,9 @@ function out(silent: boolean | undefined, message: string): void {
   if (!silent) process.stdout.write(message);
 }
 
-function selectDemo(
+export function selectDemo(
   project: LoadedProject,
-  options: PublishOptions,
+  options: Pick<PublishOptions, 'cwd' | 'path' | 'demo'>,
 ): LoadedDemoConfig {
   if (options.demo) {
     const demo = project.demos.find((d) => d.slug === options.demo);
@@ -286,7 +286,7 @@ async function publishResolvedDemo(args: {
           `  without --new to update the existing deployment in place instead.\n`,
       );
     }
-    out(options.silent, `\nEmbed it with\n${formatIframeSnippet(url)}\n`);
+    out(options.silent, `\nEmbed it with\n${formatIframeSnippet(url)}\n\nFor a pop-up button instead: interactive-demo embed --mode popup\n`);
   }
   return result;
 }

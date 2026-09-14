@@ -99,4 +99,21 @@ describe('standalone player entry', () => {
     expect(document.querySelector('.demo-error pre')?.textContent).toContain('steps.0');
     expect(window.__demo).toBeUndefined();
   });
+
+  it('relays runtime events to a parent window when framed', async () => {
+    const parentPost = vi.fn();
+    const fakeParent = { postMessage: parentPost } as unknown as Window;
+    const spy = vi.spyOn(window, 'parent', 'get').mockReturnValue(fakeParent);
+    try {
+      await mountEntry(demo);
+      await act(async () => {
+        window.__demo!.controls.next();
+      });
+      const relayed = parentPost.mock.calls.map(([msg]) => (msg as { type: string; event: { type: string } }));
+      expect(relayed.every((m) => m.type === 'interactive-demo:event')).toBe(true);
+      expect(relayed.some((m) => m.event.type === 'step_view' || m.event.type === 'step_change' || m.event.type === 'ready')).toBe(true);
+    } finally {
+      spy.mockRestore();
+    }
+  });
 });

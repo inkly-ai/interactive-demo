@@ -196,6 +196,17 @@ function mount() {
             if (event && event.type === 'complete' && window.__demo) {
               window.__demo.complete = true;
             }
+            // Framed by a host page (inline iframe or the pop-up loader):
+            // relay every runtime event so the host can react to a form
+            // submission, completion or a CTA click. The host decides what
+            // to do; nothing is sent when the page stands on its own.
+            if (window.parent !== window) {
+              try {
+                window.parent.postMessage({ type: 'interactive-demo:event', event }, '*');
+              } catch {
+                /* a hostile parent is not our problem */
+              }
+            }
           },
         }),
       ),

@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
 import { changeMessageVariant } from "./factories";
@@ -116,7 +118,24 @@ function withAnnotation(
     return { ...config, steps: [{ ...step, annotations: [annotation] }] };
 }
 
+/** The demo configs shipped in the repo, as bytes on disk. */
+const EXAMPLES = [
+    "../../../../../examples/getting-started/demos/tour/demo.config.json",
+    "../../../../../examples/self-demo/demos/product-tour/demo.config.json",
+] as const;
+
 describe("serializeDemoConfig", () => {
+    it.each(EXAMPLES)("writes %s back byte-for-byte", (relative) => {
+        // The inline fixtures are small and tidy. These are the real thing:
+        // `chrome`, `chapters`, nine steps, hand-ordered keys. Opening one in
+        // the editor and saving it must leave the file alone.
+        const path = fileURLToPath(new URL(relative, import.meta.url));
+        const src = readFileSync(path, "utf8");
+        const p = parsed(src);
+        expect(serializeDemoConfig(p.config, p)).toBe(src);
+    });
+
+
     it("writes an untouched config back byte-for-byte", () => {
         const p = parsed();
         expect(serializeDemoConfig(p.config, p)).toBe(AUTHORED);

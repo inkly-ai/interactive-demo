@@ -240,15 +240,15 @@ describe("EditorShell header", () => {
         expect(screen.getByLabelText("Share options")).toBeTruthy();
         expect(screen.getByText("npx interactive-demo publish onboarding")).toBeTruthy();
 
-        fireEvent.click(screen.getByText("Inline embed"));
-        expect(screen.getByText("Paste the link publish printed to fill this in.")).toBeTruthy();
-        fireEvent.change(screen.getByPlaceholderText("https://interactive-demo.inklyai.dev/p/…"), {
-            target: { value: "https://demos.example/p/abc123" },
+        fireEvent.click(screen.getByText("Inline"));
+        expect(screen.getByText("Paste your demo's link to fill this in.")).toBeTruthy();
+        fireEvent.change(screen.getByPlaceholderText("https://your-host.com/onboarding/"), {
+            target: { value: "https://demos.example/onboarding/" },
         });
-        expect(screen.getByText(/demos\.example\/p\/abc123\?embed=inline/)).toBeTruthy();
+        expect(screen.getByText(/demos\.example\/onboarding\/\?embed=inline/)).toBeTruthy();
 
-        fireEvent.click(screen.getByText("Popup embed"));
+        fireEvent.click(screen.getByText("Pop-up"));
         expect(screen.getByText(/https:\/\/demos\.example\/embed\.js/)).toBeTruthy();
-        expect(screen.getByText(/InteractiveDemo\.open\('https:\/\/demos\.example\/p\/abc123/)).toBeTruthy();
+        expect(screen.getByText(/InteractiveDemo\.open\('https:\/\/demos\.example\/onboarding\//)).toBeTruthy();
     });
 });

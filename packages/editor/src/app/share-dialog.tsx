@@ -14,6 +14,15 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 
+/** A non-interactive heading between groups of nav items. */
+function ShareNavGroupLabel({ children }: { children: React.ReactNode }) {
+    return (
+        <span className="px-2 pb-1 pt-3 text-[11px] font-medium uppercase tracking-wide text-[color:var(--ink-2)]/70">
+            {children}
+        </span>
+    );
+}
+
 export type ShareSection = "publish" | "inline" | "popup" | "react";
 
 type PopupFramework = keyof EmbedSnippets["popup"]["triggers"];
@@ -95,12 +104,13 @@ function LinkField({ value, onChange }: { value: string; onChange: (next: string
     return (
         <label className="flex flex-col gap-1.5">
             <span className="text-[12px] font-medium text-muted-foreground">
-                Your demo link — the one <code className="font-mono">publish</code> printed
+                Your demo&apos;s link — from <code className="font-mono">publish</code>, or wherever you
+                deployed <code className="font-mono">dist/</code>
             </span>
             <Input
                 value={value}
                 onChange={(e) => onChange(e.target.value)}
-                placeholder="https://interactive-demo.inklyai.dev/p/…"
+                placeholder="https://your-host.com/onboarding/"
                 spellCheck={false}
                 className="font-mono text-[12px]"
             />
@@ -164,7 +174,7 @@ export function ShareDialog({
     }, [open, slug]);
 
     const link = useMemo(() => parseLink(linkText), [linkText]);
-    const lockedMessage = "Paste the link publish printed to fill this in.";
+    const lockedMessage = "Paste your demo's link to fill this in.";
 
     const inlineSnippet = snippets && link ? fillSnippet(snippets.inline, snippets.pageUrl, link, label) : null;
     const loaderSnippet = snippets && link ? fillSnippet(snippets.popup.loader, snippets.pageUrl, link, label) : null;
@@ -184,11 +194,19 @@ export function ShareDialog({
                         className="flex w-[220px] shrink-0 flex-col gap-3.5 border-r border-[color:var(--line-soft)] bg-[color:var(--canvas)] px-3 pb-3 pt-3.5"
                     >
                         <ShareRailHeader />
+                        {/* Grouped by the decision that actually matters: does
+                            the demo run in its own document, or inside your
+                            app's? Inline and Pop-up are the same built page in
+                            two shapes, so they belong together; the React
+                            component is the other answer, not a third shape.
+                            See docs/embedding.md. */}
                         <nav className="flex flex-col gap-px">
-                            <ShareNavItem active={section === "publish"} onClick={() => setSection("publish")} label="Share" />
-                            <ShareNavItem active={section === "inline"} onClick={() => setSection("inline")} label="Inline embed" />
-                            <ShareNavItem active={section === "popup"} onClick={() => setSection("popup")} label="Popup embed" />
-                            <ShareNavItem active={section === "react"} onClick={() => setSection("react")} label="React component" />
+                            <ShareNavItem active={section === "publish"} onClick={() => setSection("publish")} label="Send the link" />
+                            <ShareNavGroupLabel>Frame the page</ShareNavGroupLabel>
+                            <ShareNavItem active={section === "inline"} onClick={() => setSection("inline")} label="Inline" />
+                            <ShareNavItem active={section === "popup"} onClick={() => setSection("popup")} label="Pop-up" />
+                            <ShareNavGroupLabel>In your React app</ShareNavGroupLabel>
+                            <ShareNavItem active={section === "react"} onClick={() => setSection("react")} label="Component" />
                         </nav>
                     </aside>
 
@@ -199,8 +217,8 @@ export function ShareDialog({
                                 <DialogHeader className="contents">
                                     <DialogTitle className="sr-only">Share</DialogTitle>
                                     <PaneHead
-                                        title="Share"
-                                        description="Publish from your terminal to get a link anyone can open. Publishing again updates the same link, so embeds keep working."
+                                        title="Send the link"
+                                        description="The simplest way to show a demo: give someone its URL. Publish from your terminal to get one, or deploy dist/ to your own host — the embed panes work with either."
                                     />
                                 </DialogHeader>
                                 <StepRow n={1} title="Log in once" />
@@ -215,7 +233,7 @@ export function ShareDialog({
                                 <InputWithAction
                                     value={linkText}
                                     onChange={setLinkText}
-                                    placeholder="https://interactive-demo.inklyai.dev/p/…"
+                                    placeholder="https://your-host.com/onboarding/"
                                     copied={copiedKey === "link"}
                                     onCopy={() => link && copy("link", link.url)}
                                 />

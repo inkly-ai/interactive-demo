@@ -202,7 +202,7 @@ the file into `assets/` and reference it.
 `capture stop` writes `demos/<slug>/` with the config and readable file
 names: `screen-001.png`, `screen-002.webm` plus
 `screen-002-poster.png` for a video step. Each click becomes a content step
-with a `pointer` annotation on the clicked element and a zoom towards it;
+with a `cursor` annotation on the clicked element and a zoom towards it;
 the element's label becomes the step label. Scrolling or typing right
 before a click is recorded as a short video step; without `ffmpeg` it is a
 still instead.

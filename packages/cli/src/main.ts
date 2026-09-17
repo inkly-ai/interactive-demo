@@ -50,7 +50,7 @@ Options:
                          placeholder screenshot, an outro cover).
   --from <dir>           With --demo: import an existing demo folder (one with
                          a demo.config.json) instead of scaffolding. Copies the
-                         config, assets.json and assets/ bytes.
+                         folder as-is, minus node_modules/ and .git/.
 `;
 
 const DEV_USAGE = `${BIN} dev — start the local preview server

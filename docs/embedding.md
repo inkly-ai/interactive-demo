@@ -1,4 +1,4 @@
-# Embedding a demo
+# Sharing and embedding a demo
 
 `interactive-demo build` writes one self-contained folder per demo:
 
@@ -18,6 +18,40 @@ Nothing in the folder depends on where it is served from: every URL inside
 it is relative to the page. Move the folder, rename it, nest it under any
 path, and it still works.
 
+## Which of these do you want?
+
+A built demo is a page. There are three ways to put it in front of someone,
+and the first thing to decide is whether the demo runs in its own document or
+inside your app's:
+
+|  | on its own | inline in a page | as a pop-up |
+|---|---|---|---|
+| **the built page** | send the link | `<iframe>` | `embed.js` |
+| **your React app** | — | `<Demo>` | `<DemoModal>` |
+
+The top row is the same page used three ways. Send someone the URL and they
+get the demo full-screen; frame that same URL and it sits in your page;
+point the loader script at it and it opens over your page. Nothing is
+installed, and the page doing the embedding can be React, Vue, Rails or plain
+HTML — the loader is only DOM.
+
+The bottom row skips the page. You install the runtime package and render the
+player inside your own React tree, so there is no iframe and no second
+document.
+
+Pick the top row if you want isolation, or if the demo lives on a different
+host from the site showing it. Pick the bottom row if you want the demo to
+behave like part of your app — your router, your state, your styling around
+it. The trade is real either way: an iframe costs you a second document and
+cross-document messaging for size and events, while the component costs you
+the player in your bundle.
+
+They also need different things deployed. The top row serves `dist/` from
+`build`. The bottom row does not use `dist/` at all — it wants the demo
+*folder* (its `demo.config.json` and `assets/`) reachable as static files,
+plus `@inkly-org/interactive-demo` installed. That catches people out, so it
+is worth saying twice.
+
 ## Hosting
 
 Any static host works: GitHub Pages, Netlify, Vercel, Cloudflare Pages, an S3
@@ -32,7 +66,16 @@ Two things to keep:
 - Recordings can be large. If your host has a file-size limit, keep video
   steps short (the capture tool already trims them to the motion burst).
 
-## The iframe
+## On its own: send the link
+
+`dist/<slug>/index.html` is a complete page, so the simplest thing you can do
+with a demo is send someone its URL. No snippet, nothing to install, and it
+is the same URL the iframe and the pop-up point at — the two sections below
+are that page used in a frame rather than a different build of it.
+
+Add `?autoplay=1` if you want it to start playing as soon as it loads.
+
+## Inline: the iframe
 
 Add `?embed=inline` to the page URL and the page renders the player alone:
 no bar, no canvas, transparent background, the player filling the frame
@@ -68,7 +111,7 @@ plus header, so the player never letterboxes.
 - The player never reads or writes anything outside its own document. It
   makes no network requests beyond loading its own files and assets.
 
-## Pop-up
+## Pop-up: the loader script
 
 To open a demo from a button instead of holding space for it, include the
 loader once and call `InteractiveDemo.open` with the demo's URL. The loader
@@ -115,7 +158,7 @@ component gets the same events directly through its `onEvent` prop, and a
 form can also POST its values to a URL of your choosing with `submitTo`
 (see the authoring guide).
 
-## Using the React component instead
+## In your own React app
 
 If the host page is React, skip the iframe and render the player inline.
 Copy the demo folder into your app's static files (Next.js: `public/`,

@@ -55,8 +55,11 @@ Or open it from a button in a pop-up with the loader `build` puts next to the de
 <button onclick="InteractiveDemo.open('https://your-site.com/demos/onboarding/')">Try the demo</button>
 ```
 
-See [docs/embedding.md](docs/embedding.md) for hosting, sizing, the pop-up
-loader, and the `DemoModal` component for React apps.
+There are three ways to put a demo in front of someone: send the link, frame
+the page (inline or as a pop-up), or render it inside your own React app with
+`<Demo>` / `<DemoModal>`. The first two use the built page; the third skips it.
+[docs/embedding.md](docs/embedding.md) walks the choice, then hosting, sizing
+and events.
 
 ## Use the player as a React component
 
@@ -124,7 +127,8 @@ Docs ([index](docs/README.md)):
   events, themes.
 - [`demo.config.json` reference](docs/schema.md) — every field, generated from
   the schema.
-- [Embedding](docs/embedding.md) — hosting, iframe sizing, the React route.
+- [Sharing and embedding](docs/embedding.md) — send the link, frame the page,
+  or render it in your React app; hosting, sizing and events.
 - [Architecture](docs/architecture.md) — how the packages fit together, the
   build graph, the testbed, CI.
 - [`examples/getting-started`](examples/getting-started) — a minimal project

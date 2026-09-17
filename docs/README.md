@@ -16,8 +16,10 @@ Start with whichever matches what you are doing.
 
 ## Shipping it
 
-- [Embedding](embedding.md) — hosting the built folder, iframe sizing, the
-  pop-up loader, listening for events, and the React route.
+- [Sharing and embedding](embedding.md) — the three ways to put a demo in
+  front of someone (send the link, frame the page, or render it in your own
+  React app), plus hosting, sizing and events. Start here if you are not sure
+  which one you want.
 - [Runtime and React API](runtime.md) — `<Demo>` and its props, `<DemoModal>`,
   the static page contract, the events a host page can listen for, themes and
   fonts.

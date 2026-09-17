@@ -113,7 +113,9 @@ export async function runBuild(options: BuildOptions): Promise<BuildResult> {
         `or open it from a button in a pop-up:\n` +
         `  <script src="https://<your-host>/embed.js" async></script>\n` +
         `  <button onclick="InteractiveDemo.open('https://<your-host>/<slug>/')">Try the demo</button>\n` +
-        `  (replace <your-host> with wherever you deploy the dist/ folder)\n`,
+        `  (replace <your-host> with wherever you deploy the dist/ folder)\n\n` +
+        `Don't want to host it? \`interactive-demo publish\` puts the demo online\n` +
+        `and prints its URL; the snippets above are the same apart from the host.\n`,
     );
   }
 

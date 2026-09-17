@@ -93,8 +93,8 @@ export async function runInit(options: InitOptions): Promise<InitResult> {
 
   if (!silent) {
     const next = options.noStarterDemo
-      ? `Next steps:\n  cd ${name}\n  npm install\n  npx interactive-demo init --demo <slug>\n  npm run dev`
-      : `Next steps:\n  cd ${name}\n  npm install\n  npm run dev\n  open http://localhost:3000`;
+      ? `Next steps:\n  cd ${name}\n  npm install\n  npx interactive-demo init --demo <slug>\n  npm run dev\n\nWhen it is ready, \`npx interactive-demo publish\` prints a link you can share.\nPrefer to host it yourself? \`npm run build\` writes a folder for any static host.`
+      : `Next steps:\n  cd ${name}\n  npm install\n  npm run dev\n  open http://localhost:3000\n\nWhen it is ready, \`npx interactive-demo publish\` prints a link you can share.\nPrefer to host it yourself? \`npm run build\` writes a folder for any static host.`;
     process.stdout.write(
       `Scaffolded ${options.noStarterDemo ? 'empty project' : 'project'} ${name} at ${dir}\n\n${next}\n`,
     );

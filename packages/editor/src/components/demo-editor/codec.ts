@@ -155,6 +155,7 @@ function reshape(
     baseline: unknown,
     next: unknown,
     isRoot = false,
+    dropDefaults = true,
 ): unknown {
     if (Array.isArray(next)) {
         return next.map((item, i) =>
@@ -162,6 +163,8 @@ function reshape(
                 counterpart(authored, item, i),
                 counterpart(baseline, item, i),
                 item,
+                false,
+                dropDefaults,
             ),
         );
     }
@@ -172,14 +175,25 @@ function reshape(
     const out: JsonObject = {};
     for (const key of Object.keys(authoredObj)) {
         if (!(key in next)) continue;
-        out[key] = reshape(authoredObj[key], baselineObj[key], next[key]);
+        out[key] = reshape(
+            authoredObj[key],
+            baselineObj[key],
+            next[key],
+            false,
+            dropDefaults,
+        );
     }
     for (const key of Object.keys(next)) {
         if (key in authoredObj) continue;
         // The root `id` is never a default: when the config on disk had
         // none, heal minted one, and this write is what persists it.
         const minted = isRoot && key === "id";
-        if (!minted && key in baselineObj && deepEqual(next[key], baselineObj[key])) {
+        if (
+            !minted &&
+            dropDefaults &&
+            key in baselineObj &&
+            deepEqual(next[key], baselineObj[key])
+        ) {
             continue;
         }
         out[key] = next[key];
@@ -187,13 +201,126 @@ function reshape(
     return out;
 }
 
+/**
+ * Paths in `expected` that `actual` does not reproduce. Keys `actual` carries
+ * on top of `expected` are ignored: those are the author's own passthrough
+ * extras, not something the write lost.
+ */
+function divergentPaths(
+    expected: unknown,
+    actual: unknown,
+    path: (string | number)[] = [],
+    out: (string | number)[][] = [],
+): (string | number)[][] {
+    if (Array.isArray(expected)) {
+        if (!Array.isArray(actual) || actual.length !== expected.length) {
+            out.push(path);
+            return out;
+        }
+        expected.forEach((item, i) =>
+            divergentPaths(item, actual[i], [...path, i], out),
+        );
+        return out;
+    }
+    if (isPlainObject(expected)) {
+        if (!isPlainObject(actual)) {
+            out.push(path);
+            return out;
+        }
+        for (const key of Object.keys(expected)) {
+            if (!(key in actual)) {
+                out.push([...path, key]);
+                continue;
+            }
+            divergentPaths(expected[key], actual[key], [...path, key], out);
+        }
+        return out;
+    }
+    if (!deepEqual(expected, actual)) out.push(path);
+    return out;
+}
+
+function valueAt(root: unknown, path: readonly (string | number)[]): unknown {
+    let node: unknown = root;
+    for (const segment of path) {
+        if (Array.isArray(node) && typeof segment === "number") {
+            node = node[segment];
+        } else if (isPlainObject(node) && typeof segment === "string") {
+            node = node[segment];
+        } else {
+            return undefined;
+        }
+    }
+    return node;
+}
+
+/** Write `source`'s value at `path` into `target`. False if the path is gone. */
+function restoreAt(
+    target: unknown,
+    source: unknown,
+    path: readonly (string | number)[],
+): boolean {
+    if (path.length === 0) return false;
+    const parent = valueAt(target, path.slice(0, -1));
+    const last = path[path.length - 1]!;
+    const value = valueAt(source, path);
+    if (isPlainObject(parent) && typeof last === "string") {
+        parent[last] = value;
+        return true;
+    }
+    if (Array.isArray(parent) && typeof last === "number") {
+        parent[last] = value;
+        return true;
+    }
+    return false;
+}
+
+const MAX_REPAIR_PASSES = 4;
+
+/**
+ * Dropping a key the author left out is a guess: it assumes the schema will
+ * fill the same value back in. That holds for a static default, but not for
+ * one the schema DERIVES from a sibling — `showMessage` follows `variant` —
+ * where the baseline value belongs to the shape the config had BEFORE the
+ * edit. Switching a hotspot from cursor to pointer would drop a `showMessage:
+ * false` the schema then re-derives as `true`, quietly pinning a card the
+ * author had set to reveal on hover.
+ *
+ * So verify the guess instead of special-casing the fields behind it: parse
+ * what we are about to write and put back whatever did not survive the round
+ * trip. `null` means the guess can't be repaired and the caller should write
+ * every key instead.
+ */
+function withRoundTripRepairs(
+    candidate: JsonObject,
+    validated: unknown,
+): JsonObject | null {
+    for (let pass = 0; pass < MAX_REPAIR_PASSES; pass += 1) {
+        let reparsed: unknown;
+        try {
+            reparsed = DemoSchema.parse(candidate) as unknown;
+        } catch {
+            return null;
+        }
+        const paths = divergentPaths(validated, reparsed);
+        if (paths.length === 0) return candidate;
+        let repaired = false;
+        for (const path of paths) {
+            if (restoreAt(candidate, validated, path)) repaired = true;
+        }
+        if (!repaired) return null;
+    }
+    return null;
+}
+
 export function serializeDemoConfig(config: DemoConfig, parsed: ParsedConfig): string {
     const validated = DemoSchema.parse(config) as unknown;
-    return (
-        JSON.stringify(
-            reshape(parsed.authored, parsed.config, validated, true),
-            null,
-            2,
-        ) + "\n"
-    );
+    const shaped = (dropDefaults: boolean) =>
+        reshape(parsed.authored, parsed.config, validated, true, dropDefaults);
+    const trimmed = shaped(true);
+    const out =
+        (isPlainObject(trimmed)
+            ? withRoundTripRepairs(trimmed, validated)
+            : null) ?? shaped(false);
+    return JSON.stringify(out, null, 2) + "\n";
 }

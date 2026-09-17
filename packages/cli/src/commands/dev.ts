@@ -435,45 +435,178 @@ function escapeHtml(text: string): string {
     .replace(/"/g, '&quot;');
 }
 
-/** The `/` page: a plain list of links to every demo. */
+/**
+ * The `/` page: the demos in this project, each a link to the player with
+ * an Edit link beside it.
+ *
+ * Styled in the same Neutral language as the editor (canvas + dots, lifted
+ * cards, the indigo accent) and set in the runtime's own Inter, served from
+ * `/__demo/player-fonts.css`. Deliberately NOT the predecessor's hub index:
+ * that was a React page with brand chrome and tabs, and a hub is out of
+ * scope for v1. This stays a listing — it just no longer looks like one
+ * nobody finished.
+ */
 function renderIndexPage(state: ProjectState, editorAvailable: boolean): string {
   const items = state.demos
     .map((d) => {
       const slugPath = d.slug.split('/').map(encodeURIComponent).join('/');
       const href = `/${slugPath}/`;
       const title = d.config.title ?? d.slug;
+      const steps = d.config.steps.length;
       const edit = editorAvailable
-        ? ` <a class="edit" href="${EDITOR_STATIC_PREFIX}/#/${slugPath}">Edit</a>`
+        ? `        <a class="edit" href="${EDITOR_STATIC_PREFIX}/#/${slugPath}">Edit</a>\n`
         : '';
-      return `      <li><a href="${href}">${escapeHtml(title)}</a> <code>${escapeHtml(d.slug)}</code>${edit}</li>`;
+      return `      <li class="demo">
+        <a class="open" href="${href}">
+          <span class="title">${escapeHtml(title)}</span>
+          <span class="meta"><code>${escapeHtml(d.slug)}</code><span class="dot">·</span>${steps} ${steps === 1 ? 'step' : 'steps'}</span>
+        </a>
+${edit}      </li>`;
     })
     .concat(
       [...state.broken.values()].map((d) => {
         const slugPath = d.slug.split('/').map(encodeURIComponent).join('/');
-        return `      <li class="broken"><a href="/${slugPath}/">${escapeHtml(d.slug)}</a> <span class="error">${escapeHtml(d.error)}</span></li>`;
+        return `      <li class="demo broken">
+        <a class="open" href="/${slugPath}/">
+          <span class="title"><code>${escapeHtml(d.slug)}</code></span>
+          <span class="meta error">${escapeHtml(d.error)}</span>
+        </a>
+      </li>`;
       }),
     )
     .join('\n');
+  const empty = `      <li class="empty">
+        <p>No demos yet.</p>
+        <p><code>interactive-demo init --demo &lt;slug&gt;</code></p>
+      </li>`;
   return `<!doctype html>
 <html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>${escapeHtml(state.project.name)}</title>
+    <link rel="stylesheet" href="/__demo/player-fonts.css" />
     <style>
-      body { margin: 0; padding: 32px; font-family: ui-sans-serif, system-ui, sans-serif; color: #1f1f1f; background: #f5f5f5; }
-      h1 { font-size: 20px; margin: 0 0 16px; }
-      ul { padding-left: 20px; line-height: 1.8; }
-      code { color: #6b6b6b; font-size: 12px; }
-      a.edit { margin-left: 8px; font-size: 12px; color: #5b6cff; }
-      li.broken .error { margin-left: 8px; font-size: 12px; color: #b3261e; }
+      :root {
+        --canvas: #f5f5f5;
+        --dot: rgba(0, 0, 0, 0.08);
+        --surface: #fcfcfc;
+        --line: #dddddd;
+        --ink: #1f1f1f;
+        --ink-2: #6b6b6b;
+        --accent: #5b6cff;
+        --danger: #b3261e;
+        --lift:
+          inset 0 1px 0 rgb(255 255 255 / 85%),
+          0 1px 2px rgb(0 0 0 / 6%),
+          0 4px 10px -4px rgb(0 0 0 / 10%);
+        --lift-hover:
+          inset 0 1px 0 rgb(255 255 255 / 90%),
+          0 2px 4px rgb(0 0 0 / 7%),
+          0 8px 16px -6px rgb(0 0 0 / 14%);
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        padding: 64px 24px;
+        font-family: "Inter", ui-sans-serif, system-ui, sans-serif;
+        font-size: 14px;
+        color: var(--ink);
+        background-color: var(--canvas);
+        background-image: radial-gradient(var(--dot) 1px, transparent 1px);
+        background-size: 22px 22px;
+      }
+      main { width: 100%; max-width: 620px; margin: 0 auto; }
+      header { margin: 0 0 24px; }
+      h1 { margin: 0; font-size: 22px; font-weight: 600; letter-spacing: -0.01em; }
+      header p { margin: 6px 0 0; font-size: 13px; color: var(--ink-2); }
+      ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 10px; }
+      li.demo {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 14px 16px;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: var(--surface);
+        box-shadow: var(--lift);
+        transition: box-shadow 160ms ease, transform 160ms ease;
+      }
+      li.demo:hover { box-shadow: var(--lift-hover); transform: translateY(-1px); }
+      a.open {
+        flex: 1 1 auto;
+        min-width: 0;
+        display: grid;
+        gap: 3px;
+        color: inherit;
+        text-decoration: none;
+      }
+      .title { font-weight: 550; }
+      .meta {
+        display: flex;
+        align-items: baseline;
+        gap: 6px;
+        font-size: 12px;
+        color: var(--ink-2);
+      }
+      .dot { color: var(--line); }
+      code {
+        font-family: "Geist Mono", ui-monospace, SFMono-Regular, monospace;
+        font-size: 12px;
+      }
+      a.edit {
+        flex: 0 0 auto;
+        padding: 6px 12px;
+        border: 1px solid var(--line);
+        border-radius: 7px;
+        background: #ffffff;
+        box-shadow: var(--lift);
+        color: var(--accent);
+        font-size: 12px;
+        font-weight: 550;
+        text-decoration: none;
+      }
+      a.edit:hover { box-shadow: var(--lift-hover); }
+      li.broken { border-color: #f0c8c5; background: #fffafa; }
+      .error { color: var(--danger); }
+      li.empty {
+        padding: 28px 16px;
+        border: 1px dashed var(--line);
+        border-radius: 10px;
+        color: var(--ink-2);
+        text-align: center;
+      }
+      li.empty p { margin: 0; }
+      li.empty p + p { margin-top: 10px; }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --canvas: #1a1a1a;
+          --dot: rgb(255 255 255 / 7%);
+          --surface: #242424;
+          --line: #3a3a3a;
+          --ink: #f0f0f0;
+          --ink-2: #9a9a9a;
+          --accent: #8f9bff;
+          --danger: #f2837c;
+          --lift: 0 1px 2px rgb(0 0 0 / 30%), 0 4px 10px -4px rgb(0 0 0 / 40%);
+          --lift-hover: 0 2px 4px rgb(0 0 0 / 35%), 0 8px 16px -6px rgb(0 0 0 / 50%);
+        }
+        a.edit { background: #2c2c2c; }
+        li.broken { border-color: #6b3330; background: #2a1f1f; }
+      }
     </style>
   </head>
   <body>
-    <h1>${escapeHtml(state.project.name)}</h1>
-    <ul>
-${items || '      <li>No demos yet. Run <code>interactive-demo init --demo &lt;slug&gt;</code>.</li>'}
-    </ul>
+    <main>
+      <header>
+        <h1>${escapeHtml(state.project.name)}</h1>
+        <p>interactive-demo dev</p>
+      </header>
+      <ul>
+${items || empty}
+      </ul>
+    </main>
   </body>
 </html>
 `;

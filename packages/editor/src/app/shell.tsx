@@ -7,6 +7,8 @@ import { CONFIG_PATH, parseDemoConfig } from "@/components/demo-editor/codec";
 import { DemoEditorView } from "@/components/demo-editor/view";
 import { lineDiff } from "@/components/preview-client/helpers";
 import { SaveBadge } from "@/components/preview-client/sub-components";
+import { InklyLogo } from "@/components/inkly-logo";
+
 import { ShareDialog } from "./share-dialog";
 import { Button } from "@/components/ui/button";
 import { type AssetMeta } from "@/lib/assets";
@@ -303,6 +305,8 @@ export function EditorShell({ slug }: { slug: string }) {
     return (
         <div className="flex h-screen w-screen flex-col overflow-hidden bg-background text-foreground">
             <header className="flex h-12 shrink-0 items-center gap-3 border-b px-4">
+                <InklyLogo />
+                <span aria-hidden className="h-5 w-px shrink-0 bg-border" />
                 <span className="truncate text-sm font-semibold">{title}</span>
                 <div className="ml-auto flex items-center gap-2">
                     <span title={dirtyTitle || undefined} data-testid="save-badge">

@@ -242,6 +242,11 @@ function offsetForOverflow(overflow: OverflowResult): Pick<ResolvedAnchor, 'shif
  * it — and only the shift that pulls the card back inside the stage is
  * measured, so a card near an edge clamps instead of spilling out of the
  * player frame.
+ *
+ * The measurement is only valid for the stage and the card it was taken
+ * against, so it is retaken when either changes: `content` re-runs the probe
+ * when the copy changes under a pointer that stayed put, and a ResizeObserver
+ * on the stage re-runs it when the frame does.
  */
 function useResolvedAnchor(
   auto: boolean,
@@ -249,6 +254,7 @@ function useResolvedAnchor(
   x: number,
   y: number,
   initial: Anchor,
+  content: string | undefined,
 ): ResolvedAnchor {
   const [resolved, setResolved] = useState<Omit<ResolvedAnchor, 'ready'>>({
     anchor: initial,
@@ -267,6 +273,20 @@ function useResolvedAnchor(
       readyRef.current = true;
       setReady(true);
     }
+  }, []);
+
+  // The pointer wrapper is keyed by position (see `Stage`), so one instance
+  // carries across a step change. Anything that leaves the probe unable to
+  // measure has to clear the previous card's shift rather than keep it.
+  const resetResolved = useCallback((anchor: Anchor) => {
+    setResolved((current) =>
+      current.anchor === anchor &&
+      current.shiftX === 0 &&
+      current.shiftY === 0 &&
+      !current.settling
+        ? current
+        : { anchor, shiftX: 0, shiftY: 0, settling: false },
+    );
   }, []);
 
   const applyResolved = useCallback(
@@ -307,8 +327,12 @@ function useResolvedAnchor(
         stageRect.width === 0 ||
         stageRect.height === 0
       ) {
-        // Not measurable yet. On the final pass reveal anyway so the label
-        // can never stay hidden forever.
+        // Not measurable yet: a stage still sized 0×0, or a pop-up embed
+        // whose container is not displayed. Drop whatever was measured for
+        // the previous card — a stale clamp would offset one that never
+        // needed it. On the final pass reveal anyway so the label can never
+        // stay hidden forever.
+        resetResolved(initial);
         if (final) markReady();
         return;
       }
@@ -372,15 +396,49 @@ function useResolvedAnchor(
       POINTER_TRANSITION_MS + 80,
     );
 
+    // The shift is a measurement against the stage, so it is only right while
+    // the stage keeps its size: going fullscreen, or a responsive embed
+    // reflowing, would otherwise leave the card held at a clamp computed for
+    // a width that is gone — or spilling out of one that shrank. Coalesced
+    // through a frame, since a drag-resize fires this continuously.
+    const stageEl =
+      containerRef.current?.closest<HTMLElement>('.demo-stage') ?? null;
+    let resizeFrame: number | null = null;
+    const observer =
+      stageEl && typeof ResizeObserver !== 'undefined'
+        ? new ResizeObserver(() => {
+            if (resizeFrame !== null) return;
+            resizeFrame = window.requestAnimationFrame(() => {
+              resizeFrame = null;
+              resolvePlacement(true);
+            });
+          })
+        : null;
+    if (stageEl && observer) observer.observe(stageEl);
+
     return () => {
       window.cancelAnimationFrame(frame);
       window.clearTimeout(timer);
+      if (resizeFrame !== null) {
+        window.cancelAnimationFrame(resizeFrame);
+      }
+      observer?.disconnect();
       if (settleFrameRef.current !== null) {
         window.cancelAnimationFrame(settleFrameRef.current);
         settleFrameRef.current = null;
       }
     };
-  }, [auto, containerRef, x, y, initial, applyResolved, markReady]);
+  }, [
+    auto,
+    containerRef,
+    x,
+    y,
+    initial,
+    content,
+    applyResolved,
+    markReady,
+    resetResolved,
+  ]);
 
   return { ...resolved, ready };
 }
@@ -535,6 +593,7 @@ function PointerVariant({
     annotation.x,
     annotation.y,
     initialAnchor,
+    annotation.text,
   );
 
   const effectiveAnchor: Anchor = isAuto

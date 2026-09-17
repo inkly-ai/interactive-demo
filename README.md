@@ -108,16 +108,25 @@ demo folder.
 | package | npm | what it is |
 |---|---|---|
 | [`packages/runtime`](packages/runtime) | `@inkly-org/interactive-demo` | the React player, the demo schema and the self-contained `player.js` |
-| [`packages/cli`](packages/cli) | `@inkly-org/interactive-demo-cli` | `init`, `dev`, `capture`, `validate`, `build` |
+| [`packages/cli`](packages/cli) | `@inkly-org/interactive-demo-cli` | `init`, `dev`, `capture`, `validate`, `build`, `embed`, `login`, `publish` |
 | [`packages/editor`](packages/editor) | not published | the local editor, built into the CLI and served by `dev` |
 
-Docs:
+Docs ([index](docs/README.md)):
 
 - [Authoring demos](docs/authoring.md) — project layout, steps, hotspots,
   captions, chapters, voiceover, assets.
+- [Capturing from a live app](docs/capture.md) — the record-and-click loop,
+  video steps, recovering a session.
+- [The local editor](docs/editor.md) — what you can change, autosave, and how
+  edits are written back into your files.
+- [CLI reference](docs/cli.md) — every command, flag and default.
+- [Runtime and React API](docs/runtime.md) — `<Demo>`, the page contract,
+  events, themes.
 - [`demo.config.json` reference](docs/schema.md) — every field, generated from
   the schema.
 - [Embedding](docs/embedding.md) — hosting, iframe sizing, the React route.
+- [Architecture](docs/architecture.md) — how the packages fit together, the
+  build graph, the testbed, CI.
 - [`examples/getting-started`](examples/getting-started) — a minimal project
   that CI validates and builds.
 - [`examples/self-demo`](examples/self-demo) — a walkthrough of this tool whose

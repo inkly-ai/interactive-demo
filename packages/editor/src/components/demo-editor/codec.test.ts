@@ -73,6 +73,31 @@ function parsed(src = AUTHORED): ParsedConfig {
     return result;
 }
 
+/**
+ * A config carrying a key no schema knows: `note` sits inside an image
+ * background, which is a plain object schema and strips it on the way in.
+ */
+const AUTHORED_EXTRA = `{
+  "id": "tourExample0",
+  "version": 1,
+  "title": "A tour",
+  "steps": [
+    {
+      "kind": "content",
+      "id": "step-1",
+      "background": {
+        "type": "image",
+        "src": "assets/one.png",
+        "naturalWidth": 1440,
+        "naturalHeight": 900,
+        "note": "re-shoot at 2x"
+      },
+      "annotations": []
+    }
+  ]
+}
+`;
+
 /** The first annotation of the first step, narrowed to a message. */
 function messageAt(config: ParsedConfig["config"]) {
     const step = config.steps[0]!;
@@ -195,6 +220,31 @@ describe("serializeDemoConfig", () => {
             title: "A retitled tour",
         };
         expect(parsed(serializeDemoConfig(next, p)).config).toStrictEqual(next);
+    });
+
+    it("keeps an authored key the schema strips on the way in", () => {
+        const p = parsed(AUTHORED_EXTRA);
+        const step = p.config.steps[0]!;
+        if (step.kind !== "content") throw new Error("expected a content step");
+        // The editor never sees the key — the schema dropped it before the
+        // config reached it — so an unrelated edit must not delete it.
+        expect(step.background).not.toHaveProperty("note");
+        const out = serializeDemoConfig({ ...p.config, title: "Retitled" }, p);
+        expect(out).toBe(AUTHORED_EXTRA.replace('"A tour"', '"Retitled"'));
+    });
+
+    it("still drops a field the edit actually removed", () => {
+        const p = parsed();
+        const step = p.config.steps[0]!;
+        if (step.kind !== "content") throw new Error("expected a content step");
+        const background = { ...step.background } as Record<string, unknown>;
+        delete background.alt;
+        const next = {
+            ...p.config,
+            steps: [{ ...step, background: background as typeof step.background }],
+        };
+        const out = serializeDemoConfig(next, p);
+        expect(out).not.toContain("alt");
     });
 
     it("keeps each annotation's own shape when one is reordered", () => {

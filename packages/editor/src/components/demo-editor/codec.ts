@@ -148,7 +148,8 @@ function counterpart(source: unknown, item: unknown, index: number): unknown {
  * everywhere. So: keep the authored keys in the authored order, and drop a
  * key the author didn't write when it still equals what the schema filled
  * in (`baseline`). Anything the edit actually changed, or genuinely added,
- * is written out in full.
+ * is written out in full, and a key the schema stripped on the way in is
+ * carried across untouched.
  */
 function reshape(
     authored: unknown,
@@ -174,7 +175,17 @@ function reshape(
     const baselineObj = isPlainObject(baseline) ? baseline : {};
     const out: JsonObject = {};
     for (const key of Object.keys(authoredObj)) {
-        if (!(key in next)) continue;
+        if (!(key in next)) {
+            // Only the root and the step objects pass unknown keys through;
+            // every other schema strips them. So a key missing from both the
+            // edited config AND the baseline was never visible to the editor
+            // in the first place — an author's own note, not something the
+            // edit removed — and deleting it would lose content from a file
+            // the edit never touched. A key the baseline did carry is a real
+            // deletion, and still goes.
+            if (!(key in baselineObj)) out[key] = authoredObj[key];
+            continue;
+        }
         out[key] = reshape(
             authoredObj[key],
             baselineObj[key],

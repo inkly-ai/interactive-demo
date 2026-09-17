@@ -233,12 +233,18 @@ function offsetForOverflow(overflow: OverflowResult): Pick<ResolvedAnchor, 'shif
 
 /**
  * After first paint, measure the pointer container against the visible
- * iframe viewport and pick the anchor with the least overflow. Mutates
- * only via the setter so the explicit anchor → CSS rule keeps the dot
- * pinned to the click point.
+ * iframe viewport and resolve where the label sits. Mutates only via the
+ * setter so the explicit anchor → CSS rule keeps the dot pinned to the
+ * click point.
+ *
+ * With `auto`, every side is probed and the one with the least overflow
+ * wins. With an anchor the author chose, that side is kept — they picked
+ * it — and only the shift that pulls the card back inside the stage is
+ * measured, so a card near an edge clamps instead of spilling out of the
+ * player frame.
  */
-function useAutoAnchor(
-  enabled: boolean,
+function useResolvedAnchor(
+  auto: boolean,
   containerRef: React.RefObject<HTMLDivElement | null>,
   x: number,
   y: number,
@@ -250,9 +256,10 @@ function useAutoAnchor(
     shiftY: 0,
     settling: false,
   });
-  // Explicit (non-auto) anchors never re-resolve, so they're ready at once.
-  const [ready, setReady] = useState(!enabled);
-  const readyRef = useRef(!enabled);
+  // Only the auto probe hides the label while it picks a side; an anchor
+  // the author chose is already on its final side and shows at once.
+  const [ready, setReady] = useState(!auto);
+  const readyRef = useRef(!auto);
   const settleFrameRef = useRef<number | null>(null);
 
   const markReady = useCallback(() => {
@@ -277,15 +284,13 @@ function useAutoAnchor(
   );
 
   useLayoutEffect(() => {
-    if (!enabled) {
-      setResolved({ anchor: initial, shiftX: 0, shiftY: 0, settling: false });
+    if (auto) {
+      readyRef.current = false;
+      setReady(false);
+    } else {
       readyRef.current = true;
       setReady(true);
-      return;
     }
-
-    readyRef.current = false;
-    setReady(false);
 
     const resolvePlacement = (final: boolean) => {
       const el = containerRef.current;
@@ -309,7 +314,9 @@ function useAutoAnchor(
       }
       const bounds = visibleBoundsFor(el);
 
-      const ordered = rankAnchorsByHeadroom(x, y);
+      // Auto probes every side; an authored anchor only measures its own,
+      // so the loop below resolves the clamping shift without moving it.
+      const ordered = auto ? rankAnchorsByHeadroom(x, y) : [initial];
       const baseClass = el.className.replace(
         /demo-hotspot-anchor-\w+/g,
         '',
@@ -373,7 +380,7 @@ function useAutoAnchor(
         settleFrameRef.current = null;
       }
     };
-  }, [enabled, containerRef, x, y, initial, applyResolved, markReady]);
+  }, [auto, containerRef, x, y, initial, applyResolved, markReady]);
 
   return { ...resolved, ready };
 }
@@ -522,7 +529,7 @@ function PointerVariant({
     ? rankAnchorsByHeadroom(annotation.x, annotation.y)[0]!
     : (requestedAnchor as Anchor);
 
-  const resolvedAnchor = useAutoAnchor(
+  const resolvedAnchor = useResolvedAnchor(
     isAuto,
     containerRef,
     annotation.x,
@@ -537,8 +544,8 @@ function PointerVariant({
   const positionStyle: CSSProperties = {
     ['--x' as string]: annotation.x,
     ['--y' as string]: annotation.y,
-    ['--hotspot-label-shift-x' as string]: `${isAuto ? resolvedAnchor.shiftX : 0}px`,
-    ['--hotspot-label-shift-y' as string]: `${isAuto ? resolvedAnchor.shiftY : 0}px`,
+    ['--hotspot-label-shift-x' as string]: `${resolvedAnchor.shiftX}px`,
+    ['--hotspot-label-shift-y' as string]: `${resolvedAnchor.shiftY}px`,
   };
 
   // Cursor mode renders the moving glyph on a separate full-stage "track"

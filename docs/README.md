@@ -16,10 +16,10 @@ Start with whichever matches what you are doing.
 
 ## Shipping it
 
-- [Sharing and embedding](embedding.md) — the three ways to put a demo in
-  front of someone (send the link, frame the page, or render it in your own
-  React app), plus hosting, sizing and events. Start here if you are not sure
-  which one you want.
+- [Sharing and embedding](embedding.md) — the ways to put a demo in front of
+  someone: send the link, frame the page, or render it in your own React app.
+  Also covers the two ways to get the page online — `publish` it, or host the
+  built folder yourself. Start here if you are not sure which you want.
 - [Runtime and React API](runtime.md) — `<Demo>` and its props, `<DemoModal>`,
   the static page contract, the events a host page can listen for, themes and
   fonts.

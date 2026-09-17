@@ -52,7 +52,25 @@ They also need different things deployed. The top row serves `dist/` from
 plus `@inkly-org/interactive-demo` installed. That catches people out, so it
 is worth saying twice.
 
-## Hosting
+## Getting the page online
+
+Everything in the top row of that table needs the demo page to exist at a URL.
+There are two ways to get one, and the rest of this page is the same either
+way — only the URL changes.
+
+### Publish it
+
+```sh
+interactive-demo login      # once per machine
+interactive-demo publish    # prints the demo's URL
+```
+
+Nothing to deploy and nothing to configure. Publishing the same demo again
+updates that URL in place rather than minting a new one, so embeds you have
+already pasted keep working; `--new` opts into a fresh URL when you want the
+old one left alone.
+
+### Or host it yourself
 
 Any static host works: GitHub Pages, Netlify, Vercel, Cloudflare Pages, an S3
 bucket behind a CDN, or a folder on your existing web server. Upload `dist/`

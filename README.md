@@ -1,13 +1,17 @@
 # interactive-demo
 
 Open-source interactive product demos. Capture screenshots or a short screen
-recording of your product, add hotspots and captions in a local editor, and
-build a static demo you can host anywhere and embed with an iframe.
+recording of your product, add hotspots and captions in a local editor, then
+publish it with one command — or build a static folder and host it yourself.
 
 ![The editor, with a captured demo open](docs/images/editor.webp)
 
-- **No hosting on our side.** `build` writes a self-contained folder per demo.
-  Put it on any static host.
+- **One command to a shareable link.** `publish` puts the demo online and
+  prints its URL. Publishing again updates the same link, so embeds keep
+  working.
+- **Or host it yourself.** `build` writes a self-contained folder per demo
+  that runs on any static host. Nothing in it phones home, and the embed
+  snippets are identical either way — only the URL changes.
 - **A player you can also use as a React component**, if your site is React.
 - **A local editor** served by the dev command. Edits are saved straight to
   the demo's files in your repo.
@@ -31,13 +35,27 @@ npx interactive-demo capture stop     # writes demos/onboarding/
 npm run dev                           # open it, then click Edit to add captions
 ```
 
-Build and embed:
+Put it online:
+
+```sh
+npx interactive-demo login            # once per machine
+npx interactive-demo publish          # prints the demo's URL
+```
+
+That is the whole hosting step — there is nothing to deploy and nothing to
+configure. Publishing the same demo again updates the URL in place, so any
+embed of it keeps working.
+
+### Host it yourself instead
+
+If you would rather serve it, `build` writes a folder that runs anywhere:
 
 ```sh
 npm run build                         # dist/<slug>/index.html, player.js, player.css, player-fonts.css + fonts/, assets/ (+ brand/ for a local logo)
 ```
 
-Deploy `dist/` (or one `dist/<slug>/` folder) to any static host and embed:
+Deploy `dist/` (or one `dist/<slug>/` folder) to any static host. Everything
+below works the same with either URL:
 
 ```html
 <iframe

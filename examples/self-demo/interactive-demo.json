@@ -5,6 +5,8 @@
     "product-tour"
   ],
   "brand": {
+    "logo": "brand/inkly-wordmark.svg",
+    "logoHref": "https://inklyai.dev",
     "cta": {
       "label": "GitHub",
       "href": "https://github.com/inkly-ai/interactive-demo"

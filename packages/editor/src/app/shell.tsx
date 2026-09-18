@@ -304,7 +304,12 @@ export function EditorShell({ slug }: { slug: string }) {
 
     return (
         <div className="flex h-screen w-screen flex-col overflow-hidden bg-background text-foreground">
-            <header className="flex h-12 shrink-0 items-center gap-3 border-b px-4">
+            {/* 56px on a 20px gutter — the same bar the hosted demo page and the
+                CLI template draw (`header.demo-page-bar` in
+                packages/cli/src/template/demo.html). The editor is the
+                other half of the same product; an 8px-shorter header read
+                as a different app. */}
+            <header className="flex h-14 shrink-0 items-center gap-3 border-b px-5">
                 <InklyLogo />
                 <span aria-hidden className="h-5 w-px shrink-0 bg-border" />
                 <span className="truncate text-sm font-semibold">{title}</span>

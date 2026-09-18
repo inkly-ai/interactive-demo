@@ -2,6 +2,16 @@
   "name": "@inkly-org/interactive-demo",
   "version": "0.1.0",
   "description": "React player and schema for interactive product demos.",
+  "keywords": [
+    "interactive-demo",
+    "product-demo",
+    "product-tour",
+    "walkthrough",
+    "onboarding",
+    "react",
+    "player",
+    "demo"
+  ],
   "license": "MIT",
   "repository": {
     "type": "git",

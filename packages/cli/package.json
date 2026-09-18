@@ -2,6 +2,16 @@
   "name": "@inkly-org/interactive-demo-cli",
   "version": "0.1.0",
   "description": "Author, capture, preview and build interactive product demos.",
+  "keywords": [
+    "interactive-demo",
+    "product-demo",
+    "product-tour",
+    "walkthrough",
+    "onboarding",
+    "screenshot",
+    "cli",
+    "demo"
+  ],
   "license": "MIT",
   "repository": {
     "type": "git",

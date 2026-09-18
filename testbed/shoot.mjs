@@ -16,7 +16,7 @@
  */
 import { execFile, spawn } from 'node:child_process';
 import { once } from 'node:events';
-import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync, readdirSync, realpathSync, statSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync, readdirSync, realpathSync, statSync } from 'node:fs';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { createServer } from 'node:net';
 import { tmpdir } from 'node:os';
@@ -367,10 +367,6 @@ try {
   await snap(browser, '05-build');
 
   await browser.close();
-
-  // The README's hero is the same photograph, so it never drifts from the UI.
-  copyFileSync(join(OUT, '03-editor.webp'), join(repoRoot, 'docs/images/editor.webp'));
-  note('docs/images/editor.webp');
 
   // ── 8. the anchors ────────────────────────────────────────────────────────
   writeFileSync(

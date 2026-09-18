@@ -1,109 +1,115 @@
-# interactive-demo
+<h1 align="center">interactive-demo</h1>
 
-Open-source interactive product demos. Capture screenshots or a short screen
-recording of your product, add hotspots and captions in a local editor, then
-publish it with one command — or build a static folder and host it yourself.
+<p align="center">
+  <strong>Turn a click-through of your product into an interactive demo.</strong><br>
+  Record it from the real app, write it up in a local editor, ship it as a link or a folder.
+</p>
 
-![The editor, with a captured demo open](docs/images/editor.webp)
+<p align="center">
+  <a href="https://github.com/inkly-ai/interactive-demo/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/inkly-ai/interactive-demo/actions/workflows/ci.yml/badge.svg"></a>
+  <a href="LICENSE"><img alt="MIT" src="https://img.shields.io/badge/license-MIT-blue.svg"></a>
+  <img alt="Node 20+" src="https://img.shields.io/badge/node-%E2%89%A520-brightgreen.svg">
+</p>
 
-- **One command to a shareable link.** `publish` puts the demo online and
-  prints its URL. Publishing again updates the same link, so embeds keep
-  working.
-- **Or host it yourself.** `build` writes a self-contained folder per demo
-  that runs on any static host. Nothing in it phones home, and the embed
-  snippets are identical either way — only the URL changes.
-- **A player you can also use as a React component**, if your site is React.
-- **A local editor** served by the dev command. Edits are saved straight to
-  the demo's files in your repo.
-- **Capture from a live app**: click through your product in Chrome and every
-  click becomes a step.
+![A demo playing: the cover, a captured screen with the cursor on the control that was clicked, the editor, the share dialog, and both embeds](docs/images/demo.webp)
+
+<p align="center"><em>Every screen above is a real screenshot of this tool, captured by this tool.<br>
+It lives in <a href="examples/self-demo">examples/self-demo</a> and is re-shot by <code>node testbed/shoot.mjs</code>.</em></p>
+
+## What you get
+
+Screenshots or short clips of your real product, with hotspots and captions on
+top, playing as a click-through a viewer drives themselves.
+
+- **One command to a link.** `publish` puts the demo online and prints its URL.
+  Publishing again updates the same link, so embeds keep working.
+- **Or host it yourself.** `build` writes a self-contained folder that runs on
+  any static host. Nothing in it phones home, and the embed snippets are
+  identical either way — only the origin differs.
+- **A React component too.** `<Demo>` and `<DemoModal>`, if your site is React.
+- **Capture from the live app.** Click through your product in Chrome; every
+  click becomes a step, with the pointer where you clicked. Scroll or type
+  before a click and that step is recorded as a short video instead.
 
 ## Quickstart
 
 ```sh
 npx @inkly-org/interactive-demo-cli init my-demos
 cd my-demos && npm install
-npm run dev          # http://localhost:3000 — preview, and the editor under /__demo/editor/
 ```
 
-Record a demo from your product (needs Google Chrome; see [requirements](#requirements)):
+**Record your product** (needs Google Chrome — see [requirements](#requirements)):
 
 ```sh
 npx interactive-demo capture start https://app.example.com --name "Onboarding"
-# click through the product in the Chrome window that opens
-npx interactive-demo capture stop     # writes demos/onboarding/
-npm run dev                           # open it, then click Edit to add captions
+# click through the product in the window that opens
+npx interactive-demo capture stop
 ```
 
-Put it online:
+**Write it up.** Capture gives you structure, not writing — the captions are
+the demo:
 
 ```sh
-npx interactive-demo login            # once per machine
-npx interactive-demo publish          # prints the demo's URL
+npm run dev     # preview on :3000, editor at /__demo/editor/
 ```
 
-That is the whole hosting step — there is nothing to deploy and nothing to
-configure. Publishing the same demo again updates the URL in place, so any
-embed of it keeps working.
-
-### Host it yourself instead
-
-If you would rather serve it, `build` writes a folder that runs anywhere:
+**Ship it:**
 
 ```sh
-npm run build                         # dist/<slug>/index.html, player.js, player.css, player-fonts.css + fonts/, assets/ (+ brand/ for a local logo)
+npx interactive-demo login && npx interactive-demo publish
 ```
 
-Deploy `dist/` (or one `dist/<slug>/` folder) to any static host. Everything
-below works the same with either URL:
+That is the whole hosting step. Nothing to deploy, nothing to configure.
 
-```html
-<iframe
-  src="https://your-site.com/demos/onboarding/"
-  width="960" height="600"
-  loading="lazy" allow="fullscreen"
-  style="border:0; max-width:100%">
-</iframe>
+## The editor
+
+`dev` serves a browser editor that writes straight back to the demo's files in
+your repo — captions, hotspots, chapters, step order, the cover. Your
+hand-written `demo.config.json` survives a round trip through it: key order
+kept, `$schema` first, defaults you never set left out.
+
+![The editor: the filmstrip on the right, the preview in the middle, the annotation toolbar below](docs/images/editor-anim.webp)
+
+## Host it yourself instead
+
+```sh
+npx interactive-demo build    # dist/<slug>/ — index.html, player.js, player.css, assets/
 ```
 
-Or open it from a button in a pop-up with the loader `build` puts next to the demos:
+Deploy `dist/` to any static host. Everything below works the same against
+either URL.
+
+## Put it in front of someone
+
+Send the link, frame the page, or render it inside your own React app. The
+first two use the built page; the third skips it.
 
 ```html
+<!-- inline -->
+<iframe src="https://your-site.com/demos/onboarding/"
+        width="960" height="600" loading="lazy"
+        allow="fullscreen" style="border:0; max-width:100%"></iframe>
+
+<!-- or a button that opens it over your page -->
 <script src="https://your-site.com/demos/embed.js" async></script>
 <button onclick="InteractiveDemo.open('https://your-site.com/demos/onboarding/')">Try the demo</button>
 ```
-
-There are three ways to put a demo in front of someone: send the link, frame
-the page (inline or as a pop-up), or render it inside your own React app with
-`<Demo>` / `<DemoModal>`. The first two use the built page; the third skips it.
-[docs/embedding.md](docs/embedding.md) walks the choice, then hosting, sizing
-and events.
-
-## Use the player as a React component
-
-```sh
-npm install @inkly-org/interactive-demo react react-dom
-```
-
-Copy the demo folder into your app's static files and point the player at it:
 
 ```tsx
 import { Demo } from '@inkly-org/interactive-demo';
 import '@inkly-org/interactive-demo/styles.css';
 
-export function OnboardingDemo() {
-  return <Demo src="/demos/onboarding/" />;
-}
+<Demo src="/demos/onboarding/" />
 ```
 
-`src` is the folder: the component fetches `demo.config.json` from it and
-loads the screenshots next to it. If you already have the config in hand,
-pass the object instead: `<Demo src={config} baseUrl="/demos/onboarding/" />`.
-See the [runtime README](packages/runtime/README.md) for the other props.
+`src` is the folder — the component fetches `demo.config.json` from it and
+loads the media next to it. [docs/embedding.md](docs/embedding.md) walks the
+whole choice, plus hosting, sizing and events.
 
-## The static page contract
+<details>
+<summary><strong>The static page contract</strong> — assemble a page yourself</summary>
 
-Every built page is the same four lines, so you can also assemble one yourself:
+Every built page is the same four lines:
 
 ```html
 <link rel="stylesheet" href="./player.css">
@@ -113,69 +119,54 @@ Every built page is the same four lines, so you can also assemble one yourself:
 ```
 
 `player.js` bundles React and the player. Media paths in the config
-(`assets/<file>`) resolve relative to the page, so keep the page in the
-demo folder.
+(`assets/<file>`) resolve relative to the page, so keep the page in the demo
+folder.
+
+</details>
 
 ## Requirements
 
-- Node.js 20 or newer.
-- Google Chrome (or Chromium) for `capture`. Found automatically, or pass
-  `--browser`.
-- `ffmpeg` on `PATH`, only for video steps during capture. Without it, every
-  step is a still image.
+- **Node.js 20+**
+- **Google Chrome or Chromium** for `capture` — found automatically, or pass `--browser`
+- **`ffmpeg` on `PATH`** only for video steps. Without it every step is a still.
 
-## How it's organised
+## Packages
 
 | package | npm | what it is |
 |---|---|---|
-| [`packages/runtime`](packages/runtime) | `@inkly-org/interactive-demo` | the React player, the demo schema and the self-contained `player.js` |
+| [`packages/runtime`](packages/runtime) | `@inkly-org/interactive-demo` | the React player, the demo schema, the self-contained `player.js` |
 | [`packages/cli`](packages/cli) | `@inkly-org/interactive-demo-cli` | `init`, `dev`, `capture`, `validate`, `build`, `embed`, `login`, `publish` |
 | [`packages/editor`](packages/editor) | not published | the local editor, built into the CLI and served by `dev` |
 
-Docs ([index](docs/README.md)):
+## Docs
 
-- [Authoring demos](docs/authoring.md) — project layout, steps, hotspots,
-  captions, chapters, voiceover, assets.
-- [Capturing from a live app](docs/capture.md) — the record-and-click loop,
-  video steps, recovering a session.
-- [The local editor](docs/editor.md) — what you can change, autosave, and how
-  edits are written back into your files.
-- [CLI reference](docs/cli.md) — every command, flag and default.
-- [Runtime and React API](docs/runtime.md) — `<Demo>`, the page contract,
-  events, themes.
-- [`demo.config.json` reference](docs/schema.md) — every field, generated from
-  the schema.
-- [Sharing and embedding](docs/embedding.md) — send the link, frame the page,
-  or render it in your React app; hosting, sizing and events.
-- [Architecture](docs/architecture.md) — how the packages fit together, the
-  build graph, the testbed, CI.
-- [`examples/getting-started`](examples/getting-started) — a minimal project
-  that CI validates and builds.
-- [`examples/self-demo`](examples/self-demo) — a walkthrough of this tool whose
-  screens are all produced from a real run (`node testbed/shoot.mjs`).
+| | |
+|---|---|
+| [Authoring](docs/authoring.md) | project layout, steps, hotspots, captions, chapters, voiceover |
+| [Capturing](docs/capture.md) | the record-and-click loop, video steps, recovering a session |
+| [The editor](docs/editor.md) | what you can change, autosave, how edits land in your files |
+| [CLI reference](docs/cli.md) | every command, flag and default |
+| [Runtime / React API](docs/runtime.md) | `<Demo>`, the page contract, events, themes |
+| [`demo.config.json`](docs/schema.md) | every field, generated from the schema |
+| [Sharing and embedding](docs/embedding.md) | link, iframe, pop-up or React — and who hosts it |
+| [Architecture](docs/architecture.md) | how the packages fit together, the build graph, CI |
 
-## Built-with badge
-
-The player shows a small "Built with Inkly" link in its corner. It is
-on by default; turn it off per demo with
-
-```json
-{ "chrome": { "branding": false } }
-```
+There is also an [agent skill](skills/interactive-demo/SKILL.md) — point Claude
+Code, Codex or another agent at it and it can drive the whole CLI for you.
 
 ## Contributing
 
-Pull requests are welcome. Commits are signed off under the Developer
-Certificate of Origin; see [CONTRIBUTING.md](CONTRIBUTING.md).
+Pull requests welcome. Commits are signed off under the Developer Certificate
+of Origin; see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ```sh
 npm install
 npm run build && npm run typecheck && npm run lint && npm test
-npm run testbed     # drives the built CLI, dev server, editor, capture and both embeds
+npm run testbed    # drives the built CLI, dev server, editor, capture and both embeds
 ```
 
-[`testbed/`](testbed) also holds a stand-in product to capture and a stand-in
-website to embed into, so you can exercise the whole loop offline.
+[`testbed/`](testbed) holds a stand-in product to capture and a stand-in website
+to embed into, so you can exercise the whole loop offline.
 
 ## License
 

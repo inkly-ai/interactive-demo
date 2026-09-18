@@ -11,8 +11,14 @@
 #               and stage)" on the @inkly-org SCOPE. Grant the scope rather
 #               than the package: a token can only name packages that already
 #               exist, so a package-scoped token cannot make a first publish.
-#               Check "Bypass two-factor authentication" only if the
-#               publishing account has 2FA on — CI cannot answer an OTP.
+#               Check "Bypass two-factor authentication". This is REQUIRED,
+#               not conditional on the account having 2FA enabled: the
+#               registry rejects the PUT with
+#                 403 ... Two-factor authentication or granular access token
+#                 with bypass 2fa enabled is required to publish packages.
+#               for a token without it, even from an account with 2FA off.
+#               CI cannot answer an OTP prompt, so the token is the only way
+#               to satisfy that policy from a workflow.
 #
 #               npm retired Classic ("Automation") tokens; the token UI now
 #               offers granular only. Note also that npm is removing direct

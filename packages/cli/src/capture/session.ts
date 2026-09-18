@@ -11,8 +11,9 @@ import { spawn } from 'node:child_process';
 import { mkdir, open, readFile, readdir, rm } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import type { CaptureClick } from '@inkly-org/interactive-demo/schema';
 import { atomicWriteFile } from '../fs-atomic.js';
-import type { CaptureClick } from './build.js';
+
 import { closeBrowserGracefully, reapByProfileDir, terminateProcessTree } from './chrome.js';
 import { sleep } from './options.js';
 import { captureHome } from './profiles.js';

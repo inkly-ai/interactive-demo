@@ -1,17 +1,19 @@
 /**
  * I/O-free transforms that turn captured screens into `demo.config.json`
- * step objects, click annotations and `assets.json` entry shapes.
+ * step objects and click annotations.
  *
- * Kept pure so the assembly step (`output.ts`) is the only place that reads
- * or writes files.
+ * Kept pure so the caller is the only place that reads or writes files —
+ * and because there is more than one caller. The CLI's `capture` assembles
+ * a demo folder on disk with it (`cli/src/capture/output.ts`); a browser
+ * extension recording the same clicks assembles one in memory. Both have
+ * to produce the same step for the same click, so the transform lives here,
+ * in the package they both already depend on, rather than being written
+ * twice and drifting the first time the zoom or the label rule changes.
  */
 
-import type {
-  Annotation,
-  AssetEntry,
-  AssetKind,
-  Demo,
-} from '@inkly-org/interactive-demo/schema';
+import type { Annotation } from './annotations';
+import type { AssetEntry, AssetKind } from './assets';
+import type { Demo } from './demo';
 
 // ─── ids ─────────────────────────────────────────────────────────────
 

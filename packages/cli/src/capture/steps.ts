@@ -5,7 +5,8 @@
 import { spawn } from 'node:child_process';
 import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import type { CaptureClick } from './build.js';
+
+import type { CaptureClick } from '@inkly-org/interactive-demo/schema';
 import {
   Cdp,
   DEFAULT_HEIGHT,

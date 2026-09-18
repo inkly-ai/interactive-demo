@@ -2,6 +2,7 @@ export * from './annotations';
 export * from './brand';
 export * from './button';
 export * from './caption';
+export * from './capture-build';
 export * from './assets';
 export * from './cover';
 export * from './demo';

@@ -5,15 +5,14 @@
 import { access, mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import {
-
+  buildImageStep,
   generateDemoId,
   parseDemo,
-
   type Demo,
 } from '@inkly-org/interactive-demo/schema';
 import { ASSETS_DIR } from '../assets.js';
 import { atomicWriteFile } from '../fs-atomic.js';
-import { buildImageStep } from './build.js';
+
 import type { CapturedScreen } from './session.js';
 
 export function slugifyName(name: string): string {

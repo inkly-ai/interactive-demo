@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import vm from 'node:vm';
 import { DemoSchema } from '@inkly-org/interactive-demo/schema';
-import { buildImageStep, cleanClickLabel, nextCaptureAssetId, screenIdFromIndex } from '../src/capture/build';
+import { buildImageStep, cleanClickLabel, nextCaptureAssetId, screenIdFromIndex } from '@inkly-org/interactive-demo/schema';
 import { profileNameFromUrl, resolveProfileDir, sanitizeProfileName } from '../src/capture/profiles';
 import {
   RECORDER_CLICK_BINDING,

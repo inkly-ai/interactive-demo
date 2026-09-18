@@ -4,7 +4,8 @@
  * page context back over a CDP binding, and holds anchor navigations until
  * the source page has been captured.
  */
-import type { CaptureClick } from './build.js';
+
+import type { CaptureClick } from '@inkly-org/interactive-demo/schema';
 import { Cdp, DEFAULT_HEIGHT, DEFAULT_WIDTH, evaluate } from './chrome.js';
 
 export type RecorderEventType = 'click' | 'input' | 'scroll';

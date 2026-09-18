@@ -22,7 +22,7 @@
   "bugs": "https://github.com/inkly-ai/interactive-demo/issues",
   "type": "module",
   "bin": {
-    "interactive-demo": "./dist/cli.js"
+    "interactive-demo": "dist/cli.js"
   },
   "files": [
     "dist",

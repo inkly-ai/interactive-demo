@@ -7,8 +7,21 @@
 # dependency that does not exist yet.
 #
 # Required GitHub Actions secret:
-#   NPM_TOKEN — npm token with publish rights on the @inkly-org scope. It
-#               must be an "Automation" token; only those skip OTP in CI.
+#   NPM_TOKEN — a npm Granular Access Token with "Read and write (publish
+#               and stage)" on the @inkly-org SCOPE. Grant the scope rather
+#               than the package: a token can only name packages that already
+#               exist, so a package-scoped token cannot make a first publish.
+#               Check "Bypass two-factor authentication" only if the
+#               publishing account has 2FA on — CI cannot answer an OTP.
+#
+#               npm retired Classic ("Automation") tokens; the token UI now
+#               offers granular only. Note also that npm is removing direct
+#               publish from granular tokens in January 2027, so this secret
+#               is a bootstrap, not the destination: once the package exists
+#               on the registry, configure a Trusted Publisher (GitHub
+#               Actions OIDC) on it and delete the token. This workflow
+#               already requests `id-token: write` for provenance, which is
+#               the same permission trusted publishing needs.
 
 name: publish-runtime
 

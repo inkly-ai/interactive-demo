@@ -57,9 +57,19 @@ a version that already exists on npm.
 
 ### One-time setup
 
-- Repository secret `NPM_TOKEN`: an npm **Automation** token with publish
-  rights on the `@inkly-org` scope. Granular or "Publish" tokens prompt for an
-  OTP and will hang the job.
-- Both packages publish with [npm provenance](https://docs.npmjs.com/generating-provenance-statements),
-  which requires the repository to be public and each package's
-  `repository.url` to point at it.
+There is no publish secret to hold or rotate. Both packages authenticate with
+[trusted publishing](https://docs.npmjs.com/trusted-publishers): the registry
+trusts this repository over OIDC, which is why the workflows ask for
+`id-token: write` and set `NODE_AUTH_TOKEN` empty — any token in the
+environment shadows OIDC and the publish fails with a misleading 404.
+
+It is configured already. Each package's Trusted Publisher, under Settings on
+npmjs.com, names this repository, its own workflow filename
+(`publish-runtime.yml` or `publish-cli.yml`) and no environment, with **Allow
+`npm publish`** checked — the default grants only `npm stage publish`, which
+would reject the direct publish the workflows do. Changing either workflow's
+filename breaks publishing until the connection is updated to match.
+
+Provenance is attested automatically. It needs the repository to be public and
+each package's `repository.url` to point at it, so those fields are load
+bearing rather than decorative.

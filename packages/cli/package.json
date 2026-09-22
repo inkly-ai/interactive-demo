@@ -1,6 +1,6 @@
 {
   "name": "@inkly-org/interactive-demo-cli",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Author, capture, preview and build interactive product demos.",
   "keywords": [
     "interactive-demo",

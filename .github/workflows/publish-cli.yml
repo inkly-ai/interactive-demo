@@ -42,9 +42,14 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'CLI version to publish (must match packages/cli/package.json#version)'
-        required: true
+        description: 'CLI version to publish (must match packages/cli/package.json#version). Not needed for a dry run.'
+        required: false
         type: string
+      dry_run:
+        description: 'Probe the OIDC exchange and publish nothing.'
+        required: false
+        default: false
+        type: boolean
 
 # Publishing is an explicit, tagged operation — never a push to main.
 permissions:
@@ -53,7 +58,49 @@ permissions:
   id-token: write
 
 jobs:
+  # Zero-cost proof that trusted publishing works, for `workflow_dispatch`
+  # with dry_run. It has to live in THIS file: npm binds the trusted publisher
+  # to the workflow FILENAME, so a probe anywhere else proves nothing about
+  # this workflow's ability to publish.
+  probe:
+    if: inputs.dry_run
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: 'https://registry.npmjs.org'
+      - run: npm install -g npm@11.19.1
+      - run: npm ci
+      - name: Exchange an OIDC token without publishing
+        env:
+          NODE_AUTH_TOKEN: ""
+        run: |
+          set -euo pipefail
+          # `--dry-run` still performs the exchange: publish.js calls oidc()
+          # before the dry-run gate. oidc() is written never to throw, so the
+          # only evidence it worked is the verbose log.
+          # `--force` skips the "version already published" precondition, which
+          # runs after the exchange and would otherwise abort the probe.
+          # `--provenance` is deliberately omitted: passing it explicitly makes
+          # npm skip the visibility call that gives the clearest success line.
+          set +e
+          npm publish --workspace @inkly-org/interactive-demo-cli \
+            --dry-run --force --access public --loglevel=silly > probe.log 2>&1
+          set -e
+          grep -iE 'oidc' probe.log || true
+          if grep -q 'Successfully retrieved and set token' probe.log; then
+            echo "::notice::OIDC exchange succeeded — the trusted publisher binding for publish-cli.yml is correct."
+          else
+            echo "::error::OIDC exchange did not succeed; this workflow cannot publish."
+            grep -iE 'oidc|ENEEDAUTH|E404|403' probe.log | head -40
+            exit 1
+          fi
+
   publish:
+    if: ${{ !inputs.dry_run }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
@@ -133,6 +180,10 @@ jobs:
             TAG_VERSION="${GITHUB_REF_NAME#cli-v}"
           else
             TAG_VERSION="${{ github.event.inputs.version }}"
+            if [[ -z "$TAG_VERSION" ]]; then
+              echo "::error::A manual publish needs the version input (it is optional only for dry_run)."
+              exit 1
+            fi
           fi
           if [[ "$PKG_VERSION" != "$TAG_VERSION" ]]; then
             echo "::error::$PKG version ($PKG_VERSION) does not match tag/input ($TAG_VERSION). Bump the package version, commit, and re-tag."

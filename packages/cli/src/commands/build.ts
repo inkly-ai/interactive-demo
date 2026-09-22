@@ -1,6 +1,6 @@
-import { copyFile, cp, mkdir, rm, writeFile } from 'node:fs/promises';
+import { copyFile, cp, mkdir, readdir, rm, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
-import { basename, join, resolve } from 'node:path';
+import { basename, join, relative, resolve, sep } from 'node:path';
 import { ASSETS_DIR } from '../assets.js';
 import { brandLogoSourcePath, loadProject, orderDemos } from '../project.js';
 import {
@@ -21,6 +21,8 @@ export interface BuildOptions {
   cwd: string;
   /** Output folder, relative to the project root. Default `dist`. */
   out?: string;
+  /** Reclaim a non-empty output folder this tool did not create. */
+  force?: boolean;
   /** Suppress stdout. Used by tests. */
   silent?: boolean;
 }
@@ -44,6 +46,67 @@ export interface BuildResult {
  * Deploy the folder anywhere that serves static files and embed the demo
  * with an iframe pointing at `<slug>/`.
  */
+/**
+ * Written into the output folder so a later build can recognise the folder as
+ * its own. `build` empties its output before writing, and the output path is
+ * user-supplied — without a marker, `--out .` or `--out ~/Documents` would
+ * delete a directory the tool never created.
+ */
+const BUILD_MARKER = '.interactive-demo-build';
+
+/** True when `child` is `parent` or sits above it. */
+function containsOrEquals(child: string, parent: string): boolean {
+  if (child === parent) return true;
+  const rel = relative(child, parent);
+  return rel !== '' && !rel.startsWith('..') && !rel.startsWith(`..${sep}`);
+}
+
+/**
+ * Decide whether the output folder may be emptied. Missing and empty folders
+ * are always fine; a folder carrying our marker is a previous build and is
+ * ours to replace. Anything else needs `--force`, and the project root is
+ * refused outright — emptying it would delete the sources being built.
+ */
+async function assertOutDirIsSafe(
+  outDir: string,
+  projectRoot: string,
+  force: boolean,
+): Promise<void> {
+  if (containsOrEquals(outDir, projectRoot)) {
+    throw new Error(
+      `Refusing to build into ${outDir}: it is the project folder (or contains it), ` +
+        `and building empties the output folder first. Pick a subfolder, e.g. --out dist.`,
+    );
+  }
+
+  if (!existsSync(outDir)) return;
+
+  const entries = await readdir(outDir, { withFileTypes: true });
+  if (entries.length === 0) return;
+  if (entries.some((entry) => entry.name === BUILD_MARKER)) return;
+  if (force) return;
+
+  // Output written before the marker existed still belongs to us. Every entry
+  // has to be recognisable — the embed loader, or a demo folder with a page in
+  // it — so a folder holding anything we did not write is still refused.
+  let sawDemoFolder = false;
+  const recognised = entries.every((entry) => {
+    if (entry.name === EMBED_LOADER_FILE) return true;
+    if (entry.isDirectory() && existsSync(join(outDir, entry.name, 'index.html'))) {
+      sawDemoFolder = true;
+      return true;
+    }
+    return false;
+  });
+  if (recognised && sawDemoFolder) return;
+
+  throw new Error(
+    `Refusing to empty ${outDir}: it is not empty and was not created by ` +
+      `\`interactive-demo build\` (no ${BUILD_MARKER} marker). ` +
+      `Delete it yourself, pick another --out, or pass --force to overwrite it.`,
+  );
+}
+
 export async function runBuild(options: BuildOptions): Promise<BuildResult> {
   const loaded = await loadProject(options.cwd);
   const outDir = resolve(loaded.root, options.out ?? 'dist');
@@ -52,8 +115,10 @@ export async function runBuild(options: BuildOptions): Promise<BuildResult> {
   const backgroundsDir = resolveRuntimeBackgroundsDir(loaded.root);
   const template = await readTemplate();
 
+  await assertOutDirIsSafe(outDir, loaded.root, options.force === true);
   await rm(outDir, { recursive: true, force: true });
   await mkdir(outDir, { recursive: true });
+  await writeFile(join(outDir, BUILD_MARKER), 'interactive-demo\n', 'utf8');
 
   const built: BuildResult['demos'] = [];
   for (const demo of orderDemos(loaded.demos, loaded.project)) {

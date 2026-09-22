@@ -23,6 +23,73 @@ describe('runBuild', () => {
     await rm(workdir, { recursive: true, force: true });
   });
 
+  it('refuses to build into the project folder itself', async () => {
+    await expect(runBuild({ cwd: projectDir, out: '.', silent: true })).rejects.toThrow(
+      /it is the project folder/,
+    );
+    // The sources the build reads must survive a refused build.
+    expect(existsSync(join(projectDir, PROJECT_FILE))).toBe(true);
+    expect(existsSync(join(projectDir, 'demos'))).toBe(true);
+  });
+
+  it('refuses to build into a folder that escapes upward', async () => {
+    await expect(runBuild({ cwd: projectDir, out: '..', silent: true })).rejects.toThrow(
+      /it is the project folder \(or contains it\)/,
+    );
+    expect(existsSync(join(projectDir, PROJECT_FILE))).toBe(true);
+  });
+
+  it('refuses to empty a non-empty folder it did not create', async () => {
+    const out = join(projectDir, 'precious');
+    await mkdir(out, { recursive: true });
+    await writeFile(join(out, 'keep.txt'), 'irreplaceable', 'utf8');
+
+    await expect(runBuild({ cwd: projectDir, out: 'precious', silent: true })).rejects.toThrow(
+      /was not created by/,
+    );
+    expect(await readFile(join(out, 'keep.txt'), 'utf8')).toBe('irreplaceable');
+  });
+
+  it.skipIf(!runtimeBuilt)('overwrites an unrelated folder only when forced', async () => {
+    const out = join(projectDir, 'precious');
+    await mkdir(out, { recursive: true });
+    await writeFile(join(out, 'keep.txt'), 'irreplaceable', 'utf8');
+
+    await runBuild({ cwd: projectDir, out: 'precious', force: true, silent: true });
+    expect(existsSync(join(out, 'keep.txt'))).toBe(false);
+    expect(existsSync(join(out, 'getting-started'))).toBe(true);
+  });
+
+  it.skipIf(!runtimeBuilt)('rebuilds over its own output without --force', async () => {
+    const first = await runBuild({ cwd: projectDir, silent: true });
+    expect(existsSync(join(first.outDir, '.interactive-demo-build'))).toBe(true);
+    // A second build reclaims the folder because the marker identifies it as ours.
+    const second = await runBuild({ cwd: projectDir, silent: true });
+    expect(second.demos.map((d) => d.slug)).toEqual(['getting-started']);
+  });
+
+  it.skipIf(!runtimeBuilt)('reclaims build output written before the marker existed', async () => {
+    const first = await runBuild({ cwd: projectDir, silent: true });
+    // Simulate a dist produced by an older version: same files, no marker.
+    await rm(join(first.outDir, '.interactive-demo-build'));
+    const second = await runBuild({ cwd: projectDir, silent: true });
+    expect(second.demos.map((d) => d.slug)).toEqual(['getting-started']);
+  });
+
+  it('still refuses a folder holding anything it did not write', async () => {
+    const out = join(projectDir, 'mixed');
+    await mkdir(join(out, 'getting-started'), { recursive: true });
+    await writeFile(join(out, 'getting-started', 'index.html'), '<html></html>', 'utf8');
+    await writeFile(join(out, 'embed.js'), '', 'utf8');
+    // Looks like build output except for one file that is not ours.
+    await writeFile(join(out, 'notes.txt'), 'irreplaceable', 'utf8');
+
+    await expect(runBuild({ cwd: projectDir, out: 'mixed', silent: true })).rejects.toThrow(
+      /was not created by/,
+    );
+    expect(await readFile(join(out, 'notes.txt'), 'utf8')).toBe('irreplaceable');
+  });
+
   it.skipIf(!runtimeBuilt)('writes a self-contained folder per demo', async () => {
     const result = await runBuild({ cwd: projectDir, silent: true });
     expect(result.outDir).toBe(join(projectDir, 'dist'));

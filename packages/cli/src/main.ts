@@ -82,10 +82,13 @@ Options:
 const BUILD_USAGE = `${BIN} build — write a static folder per demo
 
 Usage:
-  ${BIN} build [--out <dir>]
+  ${BIN} build [--out <dir>] [--force]
 
 Options:
   --out <dir>  Output folder, relative to the project root (default: dist).
+--force      Overwrite the output folder even if this tool did not create
+             it. Building empties the folder first, so without this a
+             non-empty folder with no build marker is refused.
 
 Each demo is written to <out>/<slug>/ as index.html + player.js + player.css
 + assets/, ready to deploy as static files and embed with an iframe.
@@ -222,7 +225,7 @@ function waitForSignal(): Promise<void> {
 export async function main(argv: string[], io: MainIo = defaultIo): Promise<number> {
   const args = mri(argv, {
     alias: { h: 'help', p: 'port', v: 'version' },
-    boolean: ['help', 'json', 'strict', 'version', 'list', 'local', 'new', 'status'],
+    boolean: ['help', 'json', 'strict', 'version', 'list', 'local', 'new', 'status', 'force'],
     string: [
       'browser',
       'connect-to-browser',
@@ -323,7 +326,11 @@ export async function main(argv: string[], io: MainIo = defaultIo): Promise<numb
         return 0;
       }
       try {
-        await runBuild({ cwd: io.cwd, out: readOptionalStringOption(args, 'out') || undefined });
+        await runBuild({
+          cwd: io.cwd,
+          out: readOptionalStringOption(args, 'out') || undefined,
+          force: Boolean(args.force),
+        });
         return 0;
       } catch (err) {
         io.stderr(`${BIN} build failed: ${(err as Error).message}\n`);

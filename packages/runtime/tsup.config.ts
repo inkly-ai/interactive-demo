@@ -2,14 +2,26 @@ import { defineConfig } from "tsup";
 
 export default defineConfig([
   {
-    // Library build: consumers bring their own React.
+    // Library build: consumers bring their own React, and the output has to
+    // survive being imported in Node. `platform: "browser"` would resolve the
+    // `browser` export condition of transitive deps — which made
+    // decode-named-character-reference (react-markdown -> micromark) inline its
+    // DOM build, so `import "@inkly-org/interactive-demo"` threw
+    // `document is not defined` at module scope under SSR. "neutral" keeps the
+    // bundle isomorphic; the browser-only builds below still target browsers.
     entry: {
       index: "src/index.ts",
       "schema/index": "src/schema/index.ts",
       "themes/index": "src/themes/index.ts",
     },
     format: ["esm", "cjs"],
-    platform: "browser",
+    platform: "neutral",
+    // "neutral" clears the default resolution fields; restore the ones a
+    // browser/bundler consumer expects, without adding `browser`.
+    esbuildOptions(options) {
+      options.mainFields = ["module", "main"];
+      options.conditions = ["import", "module", "default"];
+    },
     dts: true,
     sourcemap: false,
     clean: true,

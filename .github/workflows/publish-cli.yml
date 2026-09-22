@@ -20,10 +20,14 @@
 #   1. `id-token: write` (below) — the OIDC token the registry exchanges.
 #   2. npm >= 11.5.1 on Node >= 22.14.0. Node 22 bundles npm 10.x, which has
 #      no OIDC support, so the run upgrades npm before publishing.
-#   3. No auth token in the environment. `actions/setup-node` writes an
-#      .npmrc that reads NODE_AUTH_TOKEN, and any value there — including one
-#      the action defaults in — shadows OIDC and the publish fails with a
-#      confusing 404. Setting it empty is what keeps the OIDC path selected.
+#   3. NODE_AUTH_TOKEN empty. npm calls the OIDC exchange unconditionally,
+#      before it reads credentials, and overwrites whatever token is
+#      configured — so a stale token does not block the exchange. What it does
+#      is MASK a failure: left truthy, npm treats itself as authenticated,
+#      proceeds to the upload, and the registry answers an unexplained 404
+#      instead of a clear ENEEDAUTH. `actions/setup-node` defaults the
+#      variable to a placeholder, so the empty value below is what keeps a
+#      failed exchange legible rather than what makes a good one work.
 #
 # Trusted publishing replaced a granular access token that had to carry
 # "bypass 2FA" to publish at all. npm removes direct publish from granular
@@ -68,18 +72,52 @@ jobs:
           registry-url: 'https://registry.npmjs.org'
 
       # Node 22 bundles npm 10.x, which cannot exchange an OIDC token.
-      # Trusted publishing needs 11.5.1 or newer.
-      - name: Upgrade npm for trusted publishing
+      # Pinned rather than `@latest`: this is the one build nobody gets to
+      # re-do, and npm majors change installer behaviour (12 blocks dependency
+      # install scripts by default, which CI's bundled npm 10 still runs).
+      # Bump this deliberately, not by drifting.
+      - name: Install the npm that trusted publishing needs
         run: |
           set -euo pipefail
-          npm install -g npm@latest
-          NPM_VERSION="$(npm --version)"
-          echo "npm $NPM_VERSION"
-          MAJOR="${NPM_VERSION%%.*}"
-          if (( MAJOR < 11 )); then
-            echo "::error::npm $NPM_VERSION is too old for trusted publishing (need >= 11.5.1)."
-            exit 1
-          fi
+          npm install -g npm@11.19.1
+          npm --version
+          node --version
+
+      # Assert rather than trust the pin: a wrong npm here fails at the
+      # registry with a misleading 404 rather than saying it is too old.
+      # Compare the whole version, not the major — npm 11.0.0 through 11.4.x
+      # ship no lib/utils/oidc.js at all and would sail past a major check.
+      - name: Verify npm and Node meet the trusted-publishing floor
+        run: |
+          set -euo pipefail
+          node -e '
+            const { execSync } = require("node:child_process");
+            const cmp = (a, b) => {
+              const pa = a.split("-")[0].split(".").map(Number);
+              const pb = b.split("-")[0].split(".").map(Number);
+              for (let i = 0; i < 3; i++) {
+                if ((pa[i] ?? 0) !== (pb[i] ?? 0)) return (pa[i] ?? 0) - (pb[i] ?? 0);
+              }
+              return 0;
+            };
+            const checks = [
+              ["npm", execSync("npm --version").toString().trim(), "11.5.1"],
+              ["Node", process.versions.node, "22.14.0"],
+            ];
+            let bad = false;
+            for (const [name, have, min] of checks) {
+              if (!/^\d+\.\d+\.\d+/.test(have)) {
+                console.log(`::error::Could not parse ${name} version "${have}".`);
+                bad = true;
+              } else if (cmp(have, min) < 0) {
+                console.log(`::error::${name} ${have} is below the trusted-publishing floor ${min}.`);
+                bad = true;
+              } else {
+                console.log(`${name} ${have} >= ${min}`);
+              }
+            }
+            process.exit(bad ? 1 : 0);
+          '
 
       - name: Install dependencies
         run: npm ci
@@ -163,8 +201,11 @@ jobs:
 
       - name: Publish to npm
         env:
-          # Empty, not unset: setup-node's .npmrc reads this variable, and any
-          # value in it shadows OIDC and 404s the publish.
+          # Empty, not unset. Unset leaves the literal `${NODE_AUTH_TOKEN}` in
+          # setup-node's .npmrc, which is truthy; the action also defaults it
+          # to a placeholder. OIDC overwrites either, so this is not what makes
+          # publishing work — it is what makes a failed exchange say ENEEDAUTH
+          # instead of 404.
           NODE_AUTH_TOKEN: ""
         run: |
           set -euo pipefail

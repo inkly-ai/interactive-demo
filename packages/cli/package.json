@@ -1,6 +1,6 @@
 {
   "name": "@inkly-org/interactive-demo-cli",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Author, capture, preview and build interactive product demos.",
   "keywords": [
     "interactive-demo",
@@ -37,7 +37,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@inkly-org/interactive-demo": "^0.1.0",
+    "@inkly-org/interactive-demo": "^0.1.1",
     "chokidar": "^4.0.1",
     "mri": "^1.2.0",
     "sharp": "^0.34.5",

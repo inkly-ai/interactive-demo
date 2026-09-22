@@ -60,8 +60,13 @@ a version that already exists on npm.
 There is no publish secret to hold or rotate. Both packages authenticate with
 [trusted publishing](https://docs.npmjs.com/trusted-publishers): the registry
 trusts this repository over OIDC, which is why the workflows ask for
-`id-token: write` and set `NODE_AUTH_TOKEN` empty — any token in the
-environment shadows OIDC and the publish fails with a misleading 404.
+`id-token: write`.
+
+They also set `NODE_AUTH_TOKEN` empty, which is worth understanding correctly:
+npm runs the OIDC exchange before it reads credentials and overwrites whatever
+token is configured, so a leftover token does not prevent publishing. It hides
+the failure instead — npm believes it is authenticated, uploads anyway, and the
+registry returns a bare 404. Empty turns that into an honest `ENEEDAUTH`.
 
 It is configured already. Each package's Trusted Publisher, under Settings on
 npmjs.com, names this repository, its own workflow filename

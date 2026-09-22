@@ -103,7 +103,7 @@ describe('runBuild', () => {
       'geist-mono-latin-wght-normal.woff2',
       'inter-latin-wght-normal.woff2',
     ]);
-    expect((await stat(join(dir, 'assets', 'placeholder.svg'))).isFile()).toBe(true);
+    expect((await stat(join(dir, 'assets', 'placeholder.png'))).isFile()).toBe(true);
 
     const html = await readFile(join(dir, 'index.html'), 'utf8');
     expect(html).toContain('<title>Getting Started</title>');
@@ -111,7 +111,7 @@ describe('runBuild', () => {
     expect(html).toContain('href="./player-fonts.css"');
     expect(html).toContain('src="./player.js"');
     expect(html).toContain('<script id="demo-config" type="application/json">{');
-    expect(html).toContain('"src":"assets/placeholder.svg"');
+    expect(html).toContain('"src":"assets/placeholder.png"');
     expect(html).not.toContain('/@vite/client');
     expect(html).not.toContain('__demo');
 

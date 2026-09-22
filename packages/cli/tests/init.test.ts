@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { mkdtemp, mkdir, rm, readFile, stat, writeFile } from 'node:fs/promises';
+import { mkdtemp, mkdir, readdir, rm, readFile, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { DemoSchema, isValidDemoId } from '@inkly-org/interactive-demo/schema';
@@ -17,6 +17,23 @@ describe('runInit', () => {
     await rm(workdir, { recursive: true, force: true });
   });
 
+  it('scaffolds a placeholder the hosted service will accept', async () => {
+    const result = await runInit({ name: 'site', cwd: workdir, silent: true });
+    const placeholder = join(result.dir, 'demos', 'getting-started', 'assets', 'placeholder.png');
+
+    // Not just the extension: the bytes have to be a real PNG. An earlier
+    // version copied the field list by hand, dropped `copyFrom`, and wrote a
+    // zero-byte file that still ended in .png.
+    const bytes = await readFile(placeholder);
+    expect(bytes.byteLength).toBeGreaterThan(1000);
+    expect([...bytes.subarray(0, 8)]).toEqual([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+
+    // SVG is refused by the hosted allowlist — it can carry script — so a
+    // scaffolded SVG could be built locally but never published.
+    const files = await readdir(join(result.dir, 'demos', 'getting-started', 'assets'));
+    expect(files.some((f) => f.endsWith('.svg'))).toBe(false);
+  });
+
   it('scaffolds a project with a valid project file and starter demo', async () => {
     const result = await runInit({ name: 'sample', cwd: workdir, silent: true });
 
@@ -28,7 +45,7 @@ describe('runInit', () => {
         'package.json',
         PROJECT_FILE,
         join('demos', 'getting-started', 'demo.config.json'),
-        join('demos', 'getting-started', 'assets', 'placeholder.svg'),
+        join('demos', 'getting-started', 'assets', 'placeholder.png'),
       ].sort(),
     );
 
@@ -58,10 +75,10 @@ describe('runInit', () => {
     expect(demo.steps[0].widgets[0].cta.animation).toBe('shimmer');
     expect(demo.steps[1].kind).toBe('content');
     expect(demo.steps[1].background.type).toBe('image');
-    expect(demo.steps[1].background.src).toBe('assets/placeholder.svg');
+    expect(demo.steps[1].background.src).toBe('assets/placeholder.png');
     expect(demo.steps[2].kind).toBe('cover');
 
-    expect((await stat(join(result.dir, 'demos', 'getting-started', 'assets', 'placeholder.svg'))).isFile()).toBe(true);
+    expect((await stat(join(result.dir, 'demos', 'getting-started', 'assets', 'placeholder.png'))).isFile()).toBe(true);
 
     const ignore = await readFile(join(result.dir, '.gitignore'), 'utf8');
     expect(ignore).toContain('node_modules/');
@@ -129,7 +146,7 @@ describe('runAddDemo', () => {
     expect(demo.id).toBe(result.id);
     expect(demo.title).toBe('Checkout');
     expect(demo.steps).toHaveLength(3);
-    expect((await stat(join(result.demoDir, 'assets', 'placeholder.svg'))).isFile()).toBe(true);
+    expect((await stat(join(result.demoDir, 'assets', 'placeholder.png'))).isFile()).toBe(true);
 
     expect(result.registered).toBe(true);
     const project = JSON.parse(await readFile(join(projectDir, PROJECT_FILE), 'utf8'));

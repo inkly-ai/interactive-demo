@@ -33,6 +33,7 @@
   },
   "scripts": {
     "build": "tsup",
+    "build:placeholder": "node scripts/build-placeholder.mjs",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
   },

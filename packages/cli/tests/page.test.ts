@@ -29,7 +29,7 @@ describe('renderDemoPage', () => {
     expect(html).toContain('<title>My &lt;/script&gt; Tour</title>');
     // A `</script>` inside the JSON must not close the tag.
     expect(html).toContain('My <\\/script> Tour');
-    expect(html).toContain('"src":"assets/placeholder.svg"');
+    expect(html).toContain('"src":"assets/placeholder.png"');
     expect(html).not.toContain('demo-assets');
     expect(html).not.toContain('type="application/json">null</script>');
   });

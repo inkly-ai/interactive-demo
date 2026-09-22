@@ -3,6 +3,7 @@ import {
   DemoSchema,
   generateDemoId,
 } from '@inkly-org/interactive-demo/schema';
+import { resolveTemplate } from './page.js';
 import { PROJECT_FILE, ProjectSchema } from './project.js';
 
 /**
@@ -17,7 +18,13 @@ export const DEFAULT_THEME_ID = 'default';
 export interface SkeletonFile {
   /** Forward-slash path relative to the project root. */
   path: string;
-  contents: string;
+  /** Text contents. Mutually exclusive with `copyFrom`. */
+  contents?: string;
+  /**
+   * Absolute path of a file to copy verbatim. Used for binary template
+   * assets, which cannot round-trip through a string.
+   */
+  copyFrom?: string;
 }
 
 /** Convert a kebab-case slug into a human-readable Title Case title. */
@@ -46,17 +53,30 @@ const DEFAULT_DEMO_CHROME = {
   autoplay: false,
 } as const;
 
-/** File name of the starter's placeholder shot under `assets/`. */
-export const PLACEHOLDER_FILE = 'placeholder.svg';
+/**
+ * File name of the starter's placeholder shot under `assets/`.
+ *
+ * PNG, not SVG. The hosted service's asset allowlist takes images, video and
+ * audio but refuses SVG, which can carry script — so a scaffold that shipped
+ * an SVG could be built and served locally but never published, and the very
+ * first thing a new user does (`init` then `publish`) failed on it.
+ */
+export const PLACEHOLDER_FILE = 'placeholder.png';
 const PLACEHOLDER_WIDTH = 1920;
 const PLACEHOLDER_HEIGHT = 1080;
 
 /**
- * The placeholder screenshot bytes for a scaffolded demo. A self-contained
- * 16:9 SVG (no external refs) the CLI writes to the demo's `assets/` so the
- * middle content step renders something the moment it's added. The author
- * swaps it for a real capture (run `interactive-demo capture`, or upload a
- * screenshot in the editor and point the step at it).
+ * The design of the placeholder screenshot, as a self-contained 16:9 SVG.
+ *
+ * This is the SOURCE of `src/template/placeholder.png`, not what gets
+ * scaffolded — see PLACEHOLDER_FILE for why the shipped asset is a PNG.
+ * Regenerate the PNG after changing this:
+ *
+ *   npm run build:placeholder -w @inkly-org/interactive-demo-cli
+ *
+ * The author swaps the placeholder for a real capture (run
+ * `interactive-demo capture`, or upload a screenshot in the editor and point
+ * the step at it).
  */
 export function placeholderSvg(): string {
   const w = PLACEHOLDER_WIDTH;
@@ -237,7 +257,6 @@ export function starterDemoFiles(slug: string, title?: string): {
   files: SkeletonFile[];
   id: string;
 } {
-  const svg = placeholderSvg();
   const demoConfig = starterDemoConfig(slug, title);
 
   const demoParsed = DemoSchema.safeParse(demoConfig);
@@ -250,7 +269,7 @@ export function starterDemoFiles(slug: string, title?: string): {
     id: demoParsed.data.id,
     files: [
       { path: 'demo.config.json', contents: JSON.stringify(demoConfig, null, 2) + '\n' },
-      { path: `assets/${PLACEHOLDER_FILE}`, contents: svg },
+      { path: `assets/${PLACEHOLDER_FILE}`, copyFrom: resolveTemplate(PLACEHOLDER_FILE) },
     ],
   };
 }
@@ -288,7 +307,9 @@ export function getProjectSkeleton(options: ProjectSkeletonOptions): SkeletonFil
 
   files.push({ path: PROJECT_FILE, contents: JSON.stringify(project, null, 2) + '\n' });
   for (const file of starterDemoFiles(STARTER_SLUG, 'Getting Started').files) {
-    files.push({ path: `demos/${STARTER_SLUG}/${file.path}`, contents: file.contents });
+    // Spread, don't re-wrap: picking fields off by hand dropped `copyFrom`
+    // and scaffolded a zero-byte placeholder.
+    files.push({ ...file, path: `demos/${STARTER_SLUG}/${file.path}` });
   }
   return files;
 }

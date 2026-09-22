@@ -14,7 +14,12 @@ import {
   ProjectSchema,
   type ProjectConfig,
 } from '../project.js';
-import { getProjectSkeleton, starterDemoFiles, titleFromSlug } from '../starter.js';
+import {
+  getProjectSkeleton,
+  starterDemoFiles,
+  titleFromSlug,
+  type SkeletonFile,
+} from '../starter.js';
 import { readCliVersion } from './version.js';
 
 export interface InitOptions {
@@ -52,6 +57,24 @@ function checkTheme(theme: string | undefined): void {
   }
 }
 
+/**
+ * Write one skeleton file. Text files carry their contents inline; binary
+ * template assets (the placeholder screenshot) are copied byte-for-byte,
+ * because routing them through a string would corrupt them.
+ */
+async function writeSkeletonFile(
+  full: string,
+  file: SkeletonFile,
+  write: (path: string, data: string | Buffer) => Promise<void> = (path, data) =>
+    writeFile(path, data),
+): Promise<void> {
+  if (file.copyFrom) {
+    await write(full, await readFile(file.copyFrom));
+    return;
+  }
+  await write(full, file.contents ?? '');
+}
+
 export async function runInit(options: InitOptions): Promise<InitResult> {
   const { name, cwd, theme, silent } = options;
 
@@ -87,7 +110,7 @@ export async function runInit(options: InitOptions): Promise<InitResult> {
       const localPath = toLocalPath(file.path);
       const full = join(dir, localPath);
       await mkdir(dirname(full), { recursive: true });
-      await writeFile(full, file.contents, 'utf8');
+      await writeSkeletonFile(full, file);
     }),
   );
 
@@ -212,7 +235,7 @@ export async function runAddDemo(options: AddDemoOptions): Promise<AddDemoResult
 async function scaffoldDemoFolder(slug: string, destDir: string): Promise<string> {
   const { files, id } = starterDemoFiles(slug, titleFromSlug(slug));
   for (const file of files) {
-    await atomicWriteFile(join(destDir, toLocalPath(file.path)), file.contents);
+    await writeSkeletonFile(join(destDir, toLocalPath(file.path)), file, atomicWriteFile);
   }
   return id;
 }

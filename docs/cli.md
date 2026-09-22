@@ -59,7 +59,7 @@ intro cover, one content step on a placeholder SVG, an outro cover) and the
 placeholder in `assets/`. It prints the next steps.
 
 `init --demo <slug>` writes `demos/<slug>/demo.config.json` and
-`demos/<slug>/assets/placeholder.svg`, mints the demo's permanent id and
+`demos/<slug>/assets/placeholder.png`, mints the demo's permanent id and
 prints it. If the project file keeps a `demos` list, the new slug is appended
 to it so the ordering stays explicit.
 

@@ -42,15 +42,16 @@ Scaffolds a new project, or adds a demo to one you already have.
 
 ```sh
 interactive-demo init <name> [--theme <preset>] [--no-starter-demo]
-interactive-demo init --demo <slug> [--from <dir>]
+interactive-demo init --demo <slug> [--from <dir|zip>]
+interactive-demo init --from <dir|zip>
 ```
 
 | Flag | Default | What it does |
 |---|---|---|
 | `--theme <preset>` | `default` | Theme preset id written to `interactive-demo.json`. `default` and `mono` ship. |
 | `--no-starter-demo` | off | Scaffold an empty project with no `getting-started` demo. |
-| `--demo <slug>` | — | Inside an existing project: add `demos/<slug>/`. |
-| `--from <dir>` | — | With `--demo`: import an existing demo folder instead of scaffolding one. |
+| `--demo <slug>` | — | Inside an existing project: add `demos/<slug>/`. Optional when `--from` is given. |
+| `--from <dir\|zip>` | — | Import an existing demo folder, or a `.zip` of one, instead of scaffolding. |
 
 `init <name>` creates `<name>/` and writes `README.md`, `.gitignore`,
 `package.json`, `interactive-demo.json` and — unless you pass
@@ -63,16 +64,25 @@ placeholder in `assets/`. It prints the next steps.
 prints it. If the project file keeps a `demos` list, the new slug is appended
 to it so the ordering stays explicit.
 
-`--from <dir>` copies an existing demo folder in wholesale — the config and
+`--from` copies an existing demo folder in wholesale — the config and
 everything beside it, skipping `node_modules/` and `.git/`. The source must
 hold a schema-valid `demo.config.json`. Its id is kept if it is a valid
 12-character id, and re-minted if not.
+
+The source may also be a `.zip` of such a folder, which is what the capture
+extension downloads. It is unpacked to a temporary directory and imported the
+same way, so there is no unzip step; a zip that wraps the demo in a
+`<slug>/` folder and one that holds `demo.config.json` at its root both work.
+
+Without `--demo`, the slug is taken from the source name — `onboarding.zip`
+becomes `demos/onboarding/`. Pass `--demo` to choose a different one.
 
 ```sh
 interactive-demo init acme-demos --theme mono
 cd acme-demos
 interactive-demo init --demo billing
 interactive-demo init --demo onboarding --from ~/captures/onboarding
+interactive-demo init --from ~/Downloads/acme-3f91b2.zip
 ```
 
 Common failures:

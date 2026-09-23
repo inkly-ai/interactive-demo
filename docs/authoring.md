@@ -22,8 +22,8 @@ The default preset paints its watercolor behind cover steps; give a cover its
 own `background` to replace it.
 `brand` fills the page header (below).
 
-Add a demo with `interactive-demo init --demo <slug>`, import a folder with
-`--from <dir>`, or record one with `capture` (below). The editor at
+Add a demo with `interactive-demo init --demo <slug>`, import a folder or a
+capture zip with `--from <dir|zip>`, or record one with `capture` (below). The editor at
 `/__demo/editor/#/<slug>` edits `demo.config.json` in place.
 
 ### Brand and the page header

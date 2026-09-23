@@ -1,3 +1,4 @@
+import { tmpdir } from 'node:os';
 import { describe, expect, it } from 'vitest';
 import { main, type MainIo } from '../src/main';
 
@@ -71,6 +72,16 @@ describe('interactive-demo help', () => {
     const noSlug = await run(['init', '--demo']);
     expect(noSlug.code).toBe(1);
     expect(noSlug.stderr).toContain('--demo needs a <slug>');
+  });
+
+  it('takes the slug from --from when --demo is omitted', async () => {
+    // Run outside a project: reaching the "not inside a project" error proves
+    // the slug was derived and the add-demo path was entered, rather than
+    // bailing at the argument check the way a bare --demo does.
+    const { code, stderr } = await run(['init', '--from', '/tmp/acme-3f91b2.zip'], tmpdir());
+    expect(code).toBe(1);
+    expect(stderr).not.toContain('--demo needs a <slug>');
+    expect(stderr).toContain('Not inside a project');
   });
 
   it('prints a package version', async () => {

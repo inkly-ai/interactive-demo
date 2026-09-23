@@ -1,3 +1,4 @@
+import { basename } from 'node:path';
 import mri from 'mri';
 import { runAddDemo, runInit } from './commands/init.js';
 import { runDev } from './commands/dev.js';
@@ -36,7 +37,8 @@ const INIT_USAGE = `${BIN} init — scaffold a new project, or add a demo to one
 
 Usage:
   ${BIN} init <name> [--theme <preset>] [--no-starter-demo]
-  ${BIN} init --demo <slug> [--from <dir>]
+  ${BIN} init --demo <slug> [--from <dir|zip>]
+  ${BIN} init --from <dir|zip>
 
 Arguments:
   <name>                 Folder name for the new project (kebab-case).
@@ -48,7 +50,10 @@ Options:
   --demo <slug>          Inside an existing project: add demos/<slug>/ with a
                          starter demo (an intro cover, one content step on a
                          placeholder screenshot, an outro cover).
-  --from <dir>           With --demo: import an existing demo folder (one with
+  --from <dir|zip>       Import an existing demo folder, or a .zip of one (as
+                         downloaded by the capture extension), instead of
+                         scaffolding. Without --demo the slug is taken from the
+                         source name. The folder must hold a demo.config.json;
                          a demo.config.json) instead of scaffolding. Copies the
                          folder as-is, minus node_modules/ and .git/.
 `;
@@ -222,6 +227,11 @@ function waitForSignal(): Promise<void> {
   });
 }
 
+/** Demo slug implied by a --from source: its file or folder name. */
+function slugFromSource(source: string): string {
+  return basename(source.replace(/[\\/]+$/, '')).replace(/\.zip$/i, '');
+}
+
 export async function main(argv: string[], io: MainIo = defaultIo): Promise<number> {
   const args = mri(argv, {
     alias: { h: 'help', p: 'port', v: 'version' },
@@ -277,9 +287,13 @@ export async function main(argv: string[], io: MainIo = defaultIo): Promise<numb
         return 0;
       }
       const demo = readOptionalStringOption(args, 'demo');
-      if (demo !== undefined) {
-        const from = readOptionalStringOption(args, 'from');
-        const slug = demo || rest[0] || '';
+      const fromOpt = readOptionalStringOption(args, 'from');
+      if (demo !== undefined || fromOpt) {
+        const from = fromOpt;
+        // With --from and no --demo, name the demo after the source. A capture
+        // zip is already named for the page it came from, so repeating that
+        // name as --demo was pure typing.
+        const slug = demo || rest[0] || (from ? slugFromSource(from) : '');
         if (!slug) {
           io.stderr(`${BIN} init: --demo needs a <slug>\n\n` + INIT_USAGE);
           return 1;

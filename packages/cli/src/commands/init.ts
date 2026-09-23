@@ -1,4 +1,6 @@
-import { access, cp, mkdir, readFile, writeFile } from 'node:fs/promises';
+import { access, cp, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { unzipSync } from 'fflate';
 import { basename, dirname, join, resolve, sep } from 'node:path';
 import {
   DemoSchema,
@@ -206,7 +208,7 @@ export async function runAddDemo(options: AddDemoOptions): Promise<AddDemoResult
   // Either import an existing demo folder, or scaffold a fresh starter.
   let id: string;
   if (from) {
-    id = await importDemoFolder(resolve(cwd, from), demoDir);
+    id = await importDemoSource(resolve(cwd, from), demoDir);
   } else {
     id = await scaffoldDemoFolder(slug, demoDir);
   }
@@ -246,6 +248,60 @@ async function scaffoldDemoFolder(slug: string, destDir: string): Promise<string
  * bytes) is copied so the demo is self-contained. The demo's opaque id
  * is preserved when valid and re-minted otherwise.
  */
+/**
+ * Import a demo from either a folder or a `.zip` of one. The capture
+ * extension downloads a zip, and requiring a manual unzip before this command
+ * made a two-step chore out of a one-command import.
+ */
+async function importDemoSource(src: string, destDir: string): Promise<string> {
+  if (!src.toLowerCase().endsWith('.zip')) {
+    return importDemoFolder(src, destDir);
+  }
+  const staged = await mkdtemp(join(tmpdir(), 'interactive-demo-import-'));
+  try {
+    const root = await unpackDemoZip(src, staged);
+    return await importDemoFolder(root, destDir);
+  } finally {
+    await rm(staged, { recursive: true, force: true });
+  }
+}
+
+/**
+ * Unpack `zipPath` into `destDir` and return the directory holding
+ * `demo.config.json` — the zip wraps the demo in a `<slug>/` folder, but a
+ * hand-made one may not, so both shapes are accepted.
+ */
+async function unpackDemoZip(zipPath: string, destDir: string): Promise<string> {
+  let entries: Record<string, Uint8Array>;
+  try {
+    entries = unzipSync(await readFile(zipPath));
+  } catch (err) {
+    throw new Error(`Could not read ${zipPath} as a zip: ${(err as Error).message}`);
+  }
+
+  const configEntry = Object.keys(entries)
+    .filter((name) => basename(name) === 'demo.config.json')
+    // Shallowest wins: a nested demo folder should not beat the real root.
+    .sort((a, b) => a.split('/').length - b.split('/').length)[0];
+  if (!configEntry) {
+    throw new Error(`No demo.config.json inside ${zipPath} — that is not a demo zip.`);
+  }
+  const prefix = configEntry.slice(0, configEntry.length - 'demo.config.json'.length);
+
+  for (const [name, bytes] of Object.entries(entries)) {
+    if (!name.startsWith(prefix) || name.endsWith('/')) continue;
+    const rel = name.slice(prefix.length);
+    // Refuse anything that would escape the staging directory.
+    const target = resolve(destDir, rel);
+    if (target !== destDir && !target.startsWith(destDir + sep)) {
+      throw new Error(`Refusing to unpack ${name}: it escapes the target directory.`);
+    }
+    await mkdir(dirname(target), { recursive: true });
+    await writeFile(target, bytes);
+  }
+  return destDir;
+}
+
 async function importDemoFolder(srcDir: string, destDir: string): Promise<string> {
   const srcConfigPath = join(srcDir, 'demo.config.json');
   let raw: string;

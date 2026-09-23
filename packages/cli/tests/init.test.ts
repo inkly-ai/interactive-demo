@@ -1,7 +1,8 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { mkdtemp, mkdir, readdir, rm, readFile, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, sep } from 'node:path';
+import { zipSync } from 'fflate';
 import { DemoSchema, isValidDemoId } from '@inkly-org/interactive-demo/schema';
 import { runAddDemo, runInit } from '../src/commands/init';
 import { PROJECT_FILE, ProjectSchema } from '../src/project';
@@ -231,6 +232,47 @@ describe('runAddDemo', () => {
     expect((await stat(join(result.demoDir, 'assets', `${'a'.repeat(64)}.png`))).isFile()).toBe(true);
     const project = JSON.parse(await readFile(join(projectDir, PROJECT_FILE), 'utf8'));
     expect(project.demos).toContain('tour');
+  });
+
+  /** Zip a folder written by `writeCapturedFolder`, nested under `<slug>/` the
+   *  way the capture extension downloads it. */
+  async function zipCapturedFolder(srcDir: string, slug: string, zipPath: string) {
+    const files: Record<string, Uint8Array> = {};
+    for (const rel of ['demo.config.json', join('assets', `${'a'.repeat(64)}.png`)]) {
+      files[`${slug}/${rel.split(sep).join('/')}`] = new Uint8Array(
+        await readFile(join(srcDir, rel)),
+      );
+    }
+    await writeFile(zipPath, Buffer.from(zipSync(files)));
+  }
+
+  it('imports a .zip of a demo folder via --from, without unzipping first', async () => {
+    const src = join(workdir, 'zip-export');
+    await writeCapturedFolder(src);
+    const zipPath = join(workdir, 'my-capture-ab12cd.zip');
+    await zipCapturedFolder(src, 'my-capture-ab12cd', zipPath);
+
+    const result = await runAddDemo({
+      slug: 'from-zip', cwd: projectDir, from: zipPath, silent: true,
+    });
+
+    expect(result.id).toBe('CaPtUrEd0001'); // preserved, as with a folder
+    const config = JSON.parse(await readFile(join(result.demoDir, 'demo.config.json'), 'utf8'));
+    expect(DemoSchema.safeParse(config).success).toBe(true);
+    expect(
+      (await stat(join(result.demoDir, 'assets', `${'a'.repeat(64)}.png`))).isFile(),
+    ).toBe(true);
+  });
+
+  it('rejects a zip that holds no demo.config.json', async () => {
+    const zipPath = join(workdir, 'junk.zip');
+    await writeFile(
+      zipPath,
+      Buffer.from(zipSync({ 'notes.txt': new TextEncoder().encode('hi') })),
+    );
+    await expect(
+      runAddDemo({ slug: 'x', cwd: projectDir, from: zipPath, silent: true }),
+    ).rejects.toThrow(/not a demo zip/i);
   });
 
   it('rejects --from when the source has no demo.config.json', async () => {

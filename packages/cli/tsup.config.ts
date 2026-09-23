@@ -41,7 +41,7 @@ export default defineConfig({
   // The runtime resolves from node_modules at run time (it is a dependency);
   // vite and chokidar stay external too.
   external: ['vite', 'chokidar', 'sharp', 'ws', '@inkly-org/interactive-demo'],
-  noExternal: ['mri', 'zod'],
+  noExternal: ['mri', 'zod', 'fflate'],
   onSuccess: async () => {
     copyTemplateDir();
     copyEditorDist();

@@ -535,6 +535,8 @@ export async function main(argv: string[], io: MainIo = defaultIo): Promise<numb
         });
         return 0;
       } catch (err) {
+        // With --json the caller is parsing stdout; give it something to parse.
+        if (args.json) io.stdout(JSON.stringify({ ok: false, error: (err as Error).message }, null, 2) + '\n');
         io.stderr(`${BIN} publish failed: ${(err as Error).message}\n`);
         return 1;
       }
@@ -560,6 +562,7 @@ export async function main(argv: string[], io: MainIo = defaultIo): Promise<numb
         });
         return 0;
       } catch (err) {
+        if (args.json) io.stdout(JSON.stringify({ ok: false, error: (err as Error).message }, null, 2) + '\n');
         io.stderr(`${BIN} embed failed: ${(err as Error).message}\n`);
         return 1;
       }

@@ -2,7 +2,7 @@ import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { main, type MainIo } from '../src/main';
+import { main, OPTIONS_BY_COMMAND, type MainIo } from '../src/main';
 
 async function run(args: string[], cwd = process.cwd()) {
   let stdout = '';
@@ -96,6 +96,41 @@ describe('interactive-demo help', () => {
     const topic = await run(['help', 'sync']);
     expect(topic.code).toBe(1);
     expect(topic.stderr).toContain('unknown command "sync"');
+  });
+
+  it('rejects an option the command does not take, naming it as typed', async () => {
+    // Before this a typo'd --strict was dropped and the run exited 0.
+    const typo = await run(['validate', '--strcit'], tmpdir());
+    expect(typo.code).toBe(1);
+    expect(typo.stdout).toBe('');
+    expect(typo.stderr).toContain('interactive-demo validate: unknown option --strcit');
+    expect(typo.stderr).toContain('interactive-demo validate --help');
+
+    // An option another command owns is still unknown here.
+    const borrowed = await run(['build', '--new', '--json'], tmpdir());
+    expect(borrowed.code).toBe(1);
+    expect(borrowed.stderr).toContain('unknown options --new, --json');
+
+    const negated = await run(['capture', 'status', '--no-vidoe'], tmpdir());
+    expect(negated.code).toBe(1);
+    expect(negated.stderr).toContain('unknown option --no-vidoe');
+
+    // --help still answers, whatever else is on the line.
+    const help = await run(['validate', '--strcit', '--help']);
+    expect(help.code).toBe(0);
+    expect(help.stdout).toContain('--strict');
+  });
+
+  it('takes every option its help text documents', async () => {
+    for (const topic of ['init', 'dev', 'validate', 'build', 'capture', 'login', 'publish', 'embed']) {
+      const { stdout } = await run([topic, '--help']);
+      const documented = new Set([...stdout.matchAll(/(?<![\w-])--[a-z][a-z-]*/g)].map((m) => m[0]));
+      documented.delete('--help');
+      for (const option of documented) {
+        const key = option.replace(/^--(no-)?/, '');
+        expect(OPTIONS_BY_COMMAND[topic], `${topic} ${option}`).toContain(key);
+      }
+    }
   });
 
   it('rejects port zero at the CLI boundary', async () => {

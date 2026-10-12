@@ -201,6 +201,65 @@ const HELP_BY_COMMAND: Record<string, string> = {
   version: VERSION_USAGE,
 };
 
+/**
+ * The options each command reads. mri keeps whatever it is handed, so without
+ * this a typo was dropped in silence: `validate --strcit` skipped strict
+ * checking and still exited 0. Negated forms (`--no-video`) are listed by
+ * their positive name, which is the key mri files them under.
+ */
+export const OPTIONS_BY_COMMAND: Record<string, readonly string[]> = {
+  build: ['out', 'force'],
+  capture: [
+    'url',
+    'name',
+    'session',
+    'out',
+    'browser',
+    'connect-to-browser',
+    'width',
+    'height',
+    'window-size',
+    'timeout',
+    'headed',
+    'headless',
+    'profile',
+    'keep-profile',
+    'video',
+    'record-video',
+    'zoom',
+    'auto-apply-zoom',
+    'compress-images',
+    'compress-image',
+  ],
+  dev: ['port', 'p'],
+  embed: ['demo', 'mode', 'label', 'json'],
+  help: [],
+  init: ['demo', 'from', 'starter-demo', 'theme'],
+  login: ['token', 'open', 'local', 'status', 'json'],
+  logout: [],
+  publish: ['demo', 'new', 'list', 'json'],
+  validate: ['json', 'strict'],
+  version: [],
+};
+
+const GLOBAL_OPTIONS = ['help', 'h', 'version', 'v'];
+
+/** The options on the command line that `command` does not read, as typed. */
+function unknownOptions(command: string, args: Record<string, unknown>, argv: string[]): string[] {
+  const known = OPTIONS_BY_COMMAND[command];
+  if (!known) return [];
+  const allowed = new Set([...GLOBAL_OPTIONS, ...known]);
+  return Object.keys(args)
+    .filter((key) => key !== '_' && !allowed.has(key))
+    .map((key) => {
+      const typed = argv.find((token) => {
+        const name = token.split('=')[0];
+        return name === `--${key}` || name === `--no-${key}` || name === `-${key}`;
+      });
+      return typed?.split('=')[0] ?? `--${key}`;
+    });
+}
+
 function readOptionalStringOption(
   args: Record<string, unknown>,
   key: string,
@@ -269,6 +328,18 @@ export async function main(argv: string[], io: MainIo = defaultIo): Promise<numb
   if (!command) {
     io.stdout(USAGE);
     return args.help ? 0 : 1;
+  }
+
+  // --help wins: someone asking how a command works should get the answer.
+  if (!args.help) {
+    const unknown = unknownOptions(command, args, argv);
+    if (unknown.length > 0) {
+      io.stderr(
+        `${BIN} ${command}: unknown option${unknown.length > 1 ? 's' : ''} ${unknown.join(', ')}\n` +
+          `Run \`${BIN} ${command} --help\` for the options it takes.\n`,
+      );
+      return 1;
+    }
   }
 
   switch (command) {

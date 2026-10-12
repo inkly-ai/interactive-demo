@@ -39,8 +39,8 @@ It lives in <a href="examples/showcase">examples/showcase</a>, whose screens are
   every click becomes a step, with the pointer where you clicked; scroll or
   type before a click and that step is a short video instead. Or record in
   your own browser with the
-  [Chrome extension](https://docs.inklyai.dev/open-source/capture#the-chrome-extension)
-  and import the zip.
+  [Chrome extension](https://chromewebstore.google.com/detail/interactive-demo-capture/oiploenoaenglddfpcfkakfelpioocbg)
+  and import the zip ([how](https://docs.inklyai.dev/open-source/capture#the-chrome-extension)).
 - **An editor for the humans.** `dev` serves a local editor that writes
   straight back to the same files: hotspots, zoom, blur, covers, voiceover.
 - **One command to a link — or host it yourself.** `publish` puts the demo

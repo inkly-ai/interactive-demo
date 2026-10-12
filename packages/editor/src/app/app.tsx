@@ -34,25 +34,38 @@ function DemoPicker() {
     useEffect(() => {
         listDemos().then(setDemos, (err: Error) => setError(err.message));
     }, []);
+    // Laid out like the dev server's own index at `/`, which is where most
+    // people arrive from: one card per demo, the same widths and type sizes.
     return (
-        <main className="mx-auto max-w-xl p-8">
-            <h1 className="mb-4 text-lg font-semibold">Demos</h1>
+        <main className="mx-auto min-h-screen w-full max-w-[720px] px-6 pt-16 pb-24">
+            <header className="mb-6 flex items-end justify-between gap-4">
+                <div>
+                    <h1 className="text-[22px] font-semibold tracking-tight">Demos</h1>
+                    <p className="mt-1 text-[13px] text-muted-foreground">Pick one to edit.</p>
+                </div>
+                <a className="text-[13px] text-muted-foreground underline-offset-2 hover:underline" href="/">
+                    Back to previews
+                </a>
+            </header>
             {error ? <p className="text-sm text-destructive">{error}</p> : null}
             {demos && demos.length === 0 ? (
-                <p className="text-sm text-muted-foreground">
+                <p className="rounded-[10px] border border-dashed border-border px-4 py-7 text-center text-sm text-muted-foreground">
                     No demos yet. Run <code>interactive-demo init --demo &lt;slug&gt;</code>.
                 </p>
             ) : null}
-            <ul className="space-y-1">
+            <ul className="flex flex-col gap-2.5">
                 {(demos ?? []).map((d) => (
                     <li key={d.slug}>
                         <a
-                            className="text-sm underline-offset-2 hover:underline"
+                            className="flex items-center justify-between gap-4 rounded-[10px] border border-border bg-card px-4 py-3 shadow-xs transition-shadow hover:shadow-sm"
                             href={`#/${d.slug.split("/").map(encodeURIComponent).join("/")}`}
                         >
-                            {d.title}
-                        </a>{" "}
-                        <code className="text-xs text-muted-foreground">{d.slug}</code>
+                            <span className="flex min-w-0 flex-col gap-0.5">
+                                <span className="truncate text-sm font-medium">{d.title}</span>
+                                <code className="truncate text-xs text-muted-foreground">{d.slug}</code>
+                            </span>
+                            <span className="shrink-0 text-xs font-medium text-muted-foreground">Edit</span>
+                        </a>
                     </li>
                 ))}
             </ul>

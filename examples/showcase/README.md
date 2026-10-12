@@ -17,7 +17,7 @@ Then open the `interactive-demo` demo.
 
 | step | what the viewer sees | made with |
 | --- | --- | --- |
-| `cover-intro` | "Interactive demos your agent can make", beside a finished demo mid-play | cover with a `headline` widget: a `hero` `image` on the right, running off the corner, and one `next` button |
+| `cover-intro` | "Interactive product demos that live in your repo", beside a finished demo mid-play | cover with a `headline` widget: a `hero` `image` on the right, running off the corner, and one `next` button |
 | `agent` | Claude Code making a demo from one prompt | **video** step; `pointer` message beside the prompt; `voiceover` + `captions` |
 | `extension` | the Chrome extension recording the same app: Start Recording, three clicks, three steps | **video** step; `pointer` message beside the step counter; `voiceover` + `captions` |
 | `editor` | the local editor, a hotspot's text being edited | `transform` zoom that pushes in on the editor; `pointer` message; `voiceover` + `captions` |

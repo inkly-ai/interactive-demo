@@ -2,7 +2,7 @@
   "name": "interactive-demo-monorepo",
   "private": true,
   "version": "0.0.0",
-  "description": "Agent-native interactive product demos: an agent skill, an authoring CLI with a local editor, a React player and a static build.",
+  "description": "Interactive product demos that live in your repo: an agent skill, an authoring CLI with a local editor, a React player and a static build.",
   "license": "MIT",
   "type": "module",
   "workspaces": [

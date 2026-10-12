@@ -1,8 +1,8 @@
 <h1 align="center">interactive-demo</h1>
 
 <p align="center">
-  <strong>Agent-native interactive product demos.</strong><br>
-  Your agent records, writes and ships them — for product marketing, onboarding, pre-sales, training and enablement.
+  <strong>Interactive product demos that live in your repo.</strong><br>
+  Your agent records a real product flow, turns it into a click-through walkthrough, and publishes it wherever you need it.
 </p>
 
 <p align="center">

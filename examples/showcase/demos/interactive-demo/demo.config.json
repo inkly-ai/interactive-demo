@@ -2,8 +2,8 @@
   "$schema": "https://cdn.jsdelivr.net/npm/@inkly-org/interactive-demo/dist/schema/demo.config.json",
   "id": "showcaseDemo",
   "version": 1,
-  "title": "Interactive demos your agent can make",
-  "subtitle": "Recorded from your real app, kept as plain files, shipped as a link or an embed.",
+  "title": "Interactive product demos that live in your repo",
+  "subtitle": "Record a real product flow, turn it into a click-through walkthrough, and publish it as a link or embed.",
   "chrome": {
     "controls": "full",
     "autoplay": true,
@@ -17,8 +17,8 @@
         {
           "type": "headline",
           "id": "headline-intro",
-          "title": "Interactive demos your agent can make",
-          "description": "For product marketing, onboarding, pre-sales, training and enablement. Your agent records your real app and writes the demo up, as plain files in your repo.",
+          "title": "Interactive product demos that live in your repo",
+          "description": "Record a real product flow, turn it into a click-through walkthrough, and keep the plain files in your repo. Your agent can maintain them as the product changes.",
           "cta": {
             "label": "See it",
             "action": {

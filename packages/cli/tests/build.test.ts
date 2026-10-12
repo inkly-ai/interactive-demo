@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { mkdir, mkdtemp, readFile, readdir, rm, stat, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -129,6 +129,30 @@ describe('runBuild', () => {
     const second = await runBuild({ cwd: projectDir, out: 'out', silent: true });
     expect(second.demos).toEqual([]);
     expect(existsSync(join(projectDir, 'out', 'getting-started'))).toBe(false);
+  });
+
+  it.skipIf(!runtimeBuilt)('builds a demo with a missing asset, and says what validate would', async () => {
+    await rm(join(projectDir, 'demos', 'getting-started', 'assets', 'placeholder.png'));
+    const out: string[] = [];
+    const err: string[] = [];
+    const capture = (sink: string[]) =>
+      ((chunk: unknown) => {
+        sink.push(String(chunk));
+        return true;
+      }) as typeof process.stdout.write;
+    const stdout = vi.spyOn(process.stdout, 'write').mockImplementation(capture(out));
+    const stderr = vi.spyOn(process.stderr, 'write').mockImplementation(capture(err));
+    try {
+      const result = await runBuild({ cwd: projectDir });
+      expect(existsSync(join(result.outDir, 'getting-started', 'index.html'))).toBe(true);
+    } finally {
+      stdout.mockRestore();
+      stderr.mockRestore();
+    }
+    expect(err.join('')).toContain('ERROR demos/getting-started/demo.config.json: References assets/placeholder.png');
+    expect(err.join('')).toContain('Built anyway, with 1 error and 0 warnings');
+    // The snippets stay on stdout, clean for anything piping them.
+    expect(out.join('')).not.toContain('Built anyway');
   });
 
   it.skipIf(runtimeBuilt)('fails with a readable message when the player bundle is missing', async () => {

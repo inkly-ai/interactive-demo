@@ -6,6 +6,7 @@ import { ASSETS_DIR } from '../assets.js';
 import { brandLogoSourcePath, loadProject, orderDemos } from '../project.js';
 import { EMBED_HOST_PLACEHOLDER, embedSnippetsFor } from '../dev/editor-api.js';
 import { playerSizeForConfig } from '../player-size.js';
+import { runValidate } from './validate.js';
 import {
   EMBED_LOADER_FILE,
   PLAYER_BACKGROUND_FILES,
@@ -204,6 +205,21 @@ export async function runBuild(options: BuildOptions): Promise<BuildResult> {
 
   if (!options.silent) {
     process.stdout.write(formatBuildSummary(outDir, relative(loaded.root, outDir), summary));
+  }
+
+  // Building does not validate, and a missing asset or a reserved slug builds
+  // green. Failing here would break pipelines that run only `build`, so the
+  // folder is still written; this says what `validate` would have.
+  const checked = options.silent ? null : await runValidate({ cwd: options.cwd, silent: true });
+  if (checked && checked.issues.length > 0) {
+    for (const issue of checked.issues) {
+      process.stderr.write(`${issue.level.toUpperCase()} ${issue.file}: ${issue.message}\n`);
+    }
+    process.stderr.write(
+      `Built anyway, with ${checked.errors} error${checked.errors === 1 ? '' : 's'} and ` +
+        `${checked.warnings} warning${checked.warnings === 1 ? '' : 's'} from \`interactive-demo validate\`. ` +
+        'Run it before `build` to fail on these.\n',
+    );
   }
 
   return { projectRoot: loaded.root, outDir, demos: built };

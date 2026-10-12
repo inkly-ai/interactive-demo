@@ -7,6 +7,6 @@
     "build": "interactive-demo build"
   },
   "devDependencies": {
-    "@inkly-org/interactive-demo-cli": "^0.1.7"
+    "@inkly-org/interactive-demo-cli": "^0.1.8"
   }
 }

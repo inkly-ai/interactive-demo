@@ -13,9 +13,22 @@ async function waitForLoginUrl(writes: string[]): Promise<string> {
   throw new Error('Timed out waiting for CLI login URL.');
 }
 
+const realFetch = globalThis.fetch;
+
+/** Answer the reachability probe as a running service would; pass the rest through. */
+function stubReachable(): void {
+  vi.spyOn(globalThis, 'fetch').mockImplementation(((input: RequestInfo | URL, init?: RequestInit) => {
+    if (String(input).startsWith('http://localhost:3000/')) {
+      return Promise.resolve(new Response('{}', { status: 401 }));
+    }
+    return realFetch(input, init);
+  }) as typeof fetch);
+}
+
 beforeEach(() => {
   delete process.env.INTERACTIVE_DEMO_API_BASE;
   delete process.env.INTERACTIVE_DEMO_API_TOKEN;
+  stubReachable();
 });
 
 afterEach(() => {
@@ -82,6 +95,42 @@ describe('CLI browser login', () => {
     errorUrl.searchParams.set('state', loginUrl.searchParams.get('state') ?? '');
     errorUrl.searchParams.set('error', 'cancelled');
     await fetch(errorUrl, { redirect: 'manual' });
+    await expect(loginErrorPromise).resolves.toMatchObject({ message: 'cancelled' });
+  });
+
+  it('says so at once when the service cannot be reached, without opening a login', async () => {
+    const writes: string[] = [];
+    vi.spyOn(process.stdout, 'write').mockImplementation(((chunk: unknown) => {
+      writes.push(String(chunk));
+      return true;
+    }) as typeof process.stdout.write);
+    vi.spyOn(globalThis, 'fetch').mockRejectedValue(
+      Object.assign(new TypeError('fetch failed'), { cause: { code: 'ECONNREFUSED' } }),
+    );
+
+    await expect(runLogin({ cwd: process.cwd(), local: true, open: false })).rejects.toThrow(
+      'Could not reach http://localhost:3000 (ECONNREFUSED)',
+    );
+    expect(writes.join('')).not.toContain('/cli/login');
+  });
+
+  it('says it is waiting, and for how long', async () => {
+    const writes: string[] = [];
+    vi.spyOn(process.stdout, 'write').mockImplementation(((chunk: unknown) => {
+      writes.push(String(chunk));
+      return true;
+    }) as typeof process.stdout.write);
+
+    const loginErrorPromise = runLogin({ cwd: process.cwd(), local: true, open: false }).catch(
+      (err: unknown) => err,
+    );
+    const loginUrl = new URL(await waitForLoginUrl(writes));
+    expect(writes.join('')).toContain('gives up after 2 minutes');
+
+    const errorUrl = new URL(loginUrl.searchParams.get('callback') ?? '');
+    errorUrl.searchParams.set('state', loginUrl.searchParams.get('state') ?? '');
+    errorUrl.searchParams.set('error', 'cancelled');
+    await realFetch(errorUrl, { redirect: 'manual' });
     await expect(loginErrorPromise).resolves.toMatchObject({ message: 'cancelled' });
   });
 });

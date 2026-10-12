@@ -491,8 +491,9 @@ export async function main(argv: string[], io: MainIo = defaultIo): Promise<numb
       }
       try {
         if (args.status) {
-          await runStatus({ cwd: io.cwd, json: Boolean(args.json) });
-          return 0;
+          const status = await runStatus({ cwd: io.cwd, json: Boolean(args.json) });
+          // A check that ran and failed is a failure; "not logged in" is an answer.
+          return status.online === 'failed' ? 1 : 0;
         }
         // mri negates `--no-open` to `{ open: false }`.
         await runLogin({

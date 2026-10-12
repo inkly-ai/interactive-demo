@@ -47,6 +47,8 @@ export interface StatusResult {
   message?: string;
 }
 
+const REACHABILITY_TIMEOUT_MS = 8_000;
+
 export async function runLogin(options: LoginOptions): Promise<LoginResult> {
   const apiBase = normalizeApiBase(options.local ? LOCAL_API_BASE : DEFAULT_API_BASE);
   const token = options.token ?? process.env.INTERACTIVE_DEMO_API_TOKEN;
@@ -101,10 +103,16 @@ export async function runStatus(options: StatusOptions): Promise<StatusResult> {
     try {
       const verify = await verifyToken(apiBase, config.token);
       online = verify.valid ? 'ok' : 'failed';
-      if (online === 'failed') message = 'Token was rejected by the server.';
+      if (online === 'failed') {
+        message =
+          verify.status === 401 || verify.status === 403
+            ? 'Token was rejected by the server. Run `interactive-demo login` again.'
+            : `The server answered HTTP ${verify.status}; the token was not checked.`;
+      }
     } catch (err) {
       online = 'failed';
-      message = (err as Error).message;
+      const code = networkErrorCode(err);
+      message = code ? `Could not reach ${apiBase} (${code}).` : (err as Error).message;
     }
   }
 
@@ -134,6 +142,8 @@ export async function runStatus(options: StatusOptions): Promise<StatusResult> {
 
 interface VerifyResult {
   valid: boolean;
+  /** HTTP status of the probe; absent when the request never got an answer. */
+  status?: number;
   userId: string | null;
   email: string | null;
 }
@@ -143,7 +153,7 @@ async function verifyToken(apiBase: string, token: string): Promise<VerifyResult
     method: 'GET',
     headers: { authorization: `Bearer ${token}` },
   });
-  if (!res.ok) return { valid: false, userId: null, email: null };
+  if (!res.ok) return { valid: false, status: res.status, userId: null, email: null };
   let userId: string | null = null;
   let email: string | null = null;
   try {
@@ -153,7 +163,7 @@ async function verifyToken(apiBase: string, token: string): Promise<VerifyResult
   } catch {
     // A server without `userId`/`email` in the probe — token still valid.
   }
-  return { valid: true, userId, email };
+  return { valid: true, status: res.status, userId, email };
 }
 
 async function runBrowserLogin(args: {
@@ -161,6 +171,10 @@ async function runBrowserLogin(args: {
   shouldOpen: boolean;
   silent?: boolean;
 }): Promise<{ apiToken: string; apiBase: string }> {
+  // Without this an unreachable service meant a browser tab that never loads
+  // and two silent minutes in the terminal before the timeout said so.
+  await assertReachable(args.apiBase);
+
   const state = randomBytes(16).toString('hex');
   const server = createServer();
   const callback = await listenOnLoopback(server);
@@ -179,8 +193,34 @@ async function runBrowserLogin(args: {
     process.stdout.write(`Opening browser to log in:\n${loginUrl.toString()}\n`);
   }
   if (args.shouldOpen) openBrowser(loginUrl.toString());
+  if (!args.silent) {
+    process.stdout.write('Waiting for you to approve it there (gives up after 2 minutes; Ctrl+C to cancel)...\n');
+  }
 
   return resultPromise;
+}
+
+/** The system error code behind a failed fetch; a refused dual-stack connect nests it one deeper. */
+function networkErrorCode(err: unknown): string | undefined {
+  const cause = (err as { cause?: { code?: string; errors?: { code?: string }[] } }).cause;
+  return cause?.code ?? cause?.errors?.[0]?.code;
+}
+
+/** Any HTTP answer counts, including the 401 the unauthenticated probe gets. */
+async function assertReachable(apiBase: string): Promise<void> {
+  try {
+    await fetch(`${apiBase}/api/captures/verify`, {
+      method: 'GET',
+      signal: AbortSignal.timeout(REACHABILITY_TIMEOUT_MS),
+    });
+  } catch (err) {
+    const code = networkErrorCode(err);
+    throw new Error(
+      `Could not reach ${apiBase}${code ? ` (${code})` : ''}. Check your connection` +
+        (process.env.INTERACTIVE_DEMO_API_BASE ? ' and INTERACTIVE_DEMO_API_BASE' : '') +
+        ', then try again.',
+    );
+  }
 }
 
 async function listenOnLoopback(server: ReturnType<typeof createServer>): Promise<{

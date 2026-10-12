@@ -189,7 +189,8 @@ describe('publish against a fake hosting server', () => {
     expect(exchange).toBeTruthy();
     expect(exchange!.headers['content-type']).toBe('application/json');
     expect(JSON.parse(exchange!.body.toString('utf8'))).toEqual({ pairingToken: 'pair-123' });
-    const verify = requests.find((r) => r.url === '/api/captures/verify');
+    // The first hit on verify is the reachability probe, which carries no token.
+    const verify = requests.filter((r) => r.url === '/api/captures/verify').at(-1);
     expect(verify!.headers.authorization).toBe('Bearer idp_test-token');
     expect(writeConfigMock).toHaveBeenCalledWith({ apiBase: base, token: 'idp_test-token' });
   });

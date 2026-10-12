@@ -96,7 +96,7 @@ Worth knowing before you run it:
 | `interactive-demo publish [<path>\|--demo <slug>] [--new] [--json]` | Publish and print the URL. Publishing again **updates the same URL**, so embeds keep working; `--new` mints a fresh one instead. |
 | `interactive-demo publish --list` | Every demo in the project, with its URL or `(not published)`. |
 | `interactive-demo build [--out <dir>] [--force]` | Write a self-contained folder per demo (default `dist/`) plus `embed.js`, to host anywhere. **Empties the output folder first** — only one it created (it leaves a `.interactive-demo-build` marker) or an empty one, unless you pass `--force`. |
-| `interactive-demo embed [<path>\|--demo <slug>] [--mode inline\|popup] [--label <text>] [--json]` | Print the embed snippet for a published demo. Publishes it first if it was never deployed. |
+| `interactive-demo embed [<path>\|--demo <slug>] [--mode inline\|popup] [--label <text>] [--json]` | Print the embed snippet for a published demo. Refuses one that was never published; run `publish` first. |
 
 Publishing is the short path to a link — nothing to deploy. `build` is the
 self-host path. The embed snippets are identical either way; only the origin

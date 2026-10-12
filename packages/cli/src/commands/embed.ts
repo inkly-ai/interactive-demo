@@ -7,7 +7,7 @@ import {
 } from '../publish/embed-snippets.js';
 import { playerSizeForConfig } from '../player-size.js';
 import { loadProject } from '../project.js';
-import { runPublish, selectDemo } from './publish.js';
+import { selectDemo } from './publish.js';
 
 export interface EmbedOptions {
   cwd: string;
@@ -27,8 +27,9 @@ function out(silent: boolean | undefined, message: string): void {
 
 /**
  * Print the embed snippet for a demo's hosted deployment: an inline iframe,
- * or the pop-up loader plus a trigger button. Publishes the demo first when
- * it has never been deployed, so the snippet always points at a live URL.
+ * or the pop-up loader plus a trigger button. A demo that was never deployed
+ * is refused rather than published: this command used to publish it first, and
+ * a command that reads as "print" should not put a page on the internet.
  */
 export async function runEmbed(options: EmbedOptions): Promise<{ mode: EmbedMode; url: string }> {
   const config = await readConfig();
@@ -40,17 +41,16 @@ export async function runEmbed(options: EmbedOptions): Promise<{ mode: EmbedMode
   const project = await loadProject(options.cwd);
   const demo = selectDemo(project, { cwd: options.cwd, path: options.path, demo: options.demo });
 
-  let url: string;
   const status = demo.idHealed
     ? { deployed: false as const }
     : await fetchDeploymentStatus({ apiBase, token: config.token, demoId: demo.config.id });
-  if (status.deployed && status.latest) {
-    url = status.latest.url;
-  } else {
-    out(options.silent, `No deployment yet for "${demo.slug}" — publishing one first...\n`);
-    const result = await runPublish({ cwd: options.cwd, demo: demo.slug, silent: true });
-    url = result.url;
+  if (!status.deployed || !status.latest) {
+    throw new Error(
+      `"${demo.slug}" has not been published yet. Run \`interactive-demo publish ${demo.slug}\` first; ` +
+        'for a self-hosted build, `interactive-demo build` prints the same snippets.',
+    );
   }
+  const url = status.latest.url;
 
   const mode: EmbedMode = options.mode ?? 'inline';
   const label = options.label ?? 'Try the demo';

@@ -24,7 +24,7 @@ way; only the origin differs.
 | `capture start <url>` … `capture stop` | record a click-through of a live web app as a demo (see below) |
 | `login [--token <token>] [--local] [--status]`, `logout` | save or remove the hosting service credentials |
 | `publish [<path>\|--demo <slug>] [--new]`, `publish --list` | publish a demo and print its URL; list every demo's URL |
-| `embed [<path>\|--demo <slug>] [--mode inline\|popup]` | print the embed snippet for a published demo (publishes it first if it never was) |
+| `embed [<path>\|--demo <slug>] [--mode inline\|popup]` | print the embed snippet for a published demo (refuses one that never was — `publish` first) |
 | `build [--out <dir>] [--force]` | write a self-contained static folder per demo |
 | `version`, `help [command]` | |
 

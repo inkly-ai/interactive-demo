@@ -144,7 +144,8 @@ Options:
   --label <text>  Button text for popup mode. Default "Try the demo".
   --json          Print the snippets as JSON.
 
-Publishes the demo first when it has never been deployed.
+Prints only: a demo that was never published is refused, with the
+\`${BIN} publish\` command to run first.
 `;
 
 const PUBLISH_USAGE = `${BIN} publish — publish a demo to the hosting service

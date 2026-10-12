@@ -14,7 +14,7 @@ export type MadeWithBadgeProps = {
 const DEFAULT_LABEL = 'Built with Inkly';
 
 export function MadeWithBadge({
-  href = 'https://inklyai.dev',
+  href = 'https://www.inklyai.dev/interactive-demo',
   label = DEFAULT_LABEL,
   className,
 }: MadeWithBadgeProps = {}) {
